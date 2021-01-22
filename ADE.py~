@@ -1,0 +1,7 @@
+from ke import Pipeline
+import re
+
+
+data = []
+with open('ADE/DRUG-AE_BIOES.rel', 'r') as f:
+    data.append(re.split('|', f.readline()))
