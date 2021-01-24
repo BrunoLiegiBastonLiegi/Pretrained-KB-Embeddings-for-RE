@@ -39,27 +39,29 @@ class Pipeline(torch.nn.Module):
 
     def forward(self, x):
         x = self.BERT(x)
-        print('### BERT encoding:\n', x.shape)
+        #print('### BERT encoding:\n', x.shape)
         ner = self.NER(x)                                           # this is the output of the linear layer, should we use this as
-        x = torch.cat((x, self.sm(ner)), 1)                         # as embedding or rather the softmax of this?
-        print('### NER encoding:\n', x.shape)
+        #x = torch.cat((x, self.sm(ner)), 1)                         # as embedding or rather the softmax of this?
+        #print('### NER encoding:\n', x.shape)
         
         # remove non-entity tokens, before this we need to merge multi-token entities
-        x = self.Entity_filter(x)
-        print('### Entities found:\n', x.shape)
-        ned = self.NED(x)
-        x = torch.cat((x, ned), 1)
-        print('### NED encoding:\n', x.shape)
-        re = self.RE(x)
-        print('### RE encoding:\n', re.shape)
-        return ner, ned, re
+        #x = self.Entity_filter(x)
+        #print('### Entities found:\n', x.shape)
+        #ned = self.NED(x)
+        #x = torch.cat((x, ned), 1)
+        #print('### NED encoding:\n', x.shape)
+        #re = self.RE(x)
+        #print('### RE encoding:\n', re.shape)
+        #return ner, ned, re
+        return self.sm(ner)
 
 
         
 
     def BERT(self, x):
-        inputs = self.pretrained_tokenizer(x, return_tensors="pt", padding=True, truncation=True, max_length=128)
-        return self.pretrained_model(**inputs).last_hidden_state[0][1:-1]     # [0] explaination:
+        #inputs = self.pretrained_tokenizer(x, return_tensors="pt", padding=True, truncation=True, max_length=128)
+        return self.pretrained_model(**x).last_hidden_state[0][1:-1]
+        #return self.pretrained_model(**inputs).last_hidden_state[0][1:-1]     # [0] explaination:
                                                                    # The output of model(**x) is of shape (a,b,c) with a = batchsize,
                                                                    # which in our case equals 1 since we pass a single sentence,
                                                                    # b = max_lenght of the sentences in the batch and c = encoding_dim.
@@ -105,7 +107,7 @@ class Pipeline(torch.nn.Module):
 
 
 
-
+'''
 sents = ['Obesity is a cause for Diabetes Mellitus', 'Diabetes type 2a is common in obese people']
 
 bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
@@ -113,4 +115,4 @@ model = Pipeline(bert)
 #[ print(i.shape) for i in model(sents[0]) ]
 critetion = torch.nn.CrossEntropyLoss()
 model(sents[0])
-model.backward()
+'''
