@@ -11,13 +11,17 @@ class Scheme(ABC):
     def space_dim(self):
         return len(self.tag2index)
         
-    def to_tensor(self, *tag):
-        t = torch.zeros((len(tag),self.space_dim))
-        j = 0
-        for i in tag:
-            t[j][self.tag2index[i]] = 1
-            j += 1
-        return t
+    def to_tensor(self, *tag, index=False):
+        if index:
+            return torch.tensor([ self.tag2index[i] for i in tag ]) # return only index of the class
+        else:
+            t = torch.zeros((len(tag),self.space_dim))
+            j = 0
+            for i in tag:
+                t[j][self.tag2index[i]] = 1
+                j += 1
+            return t                                               # return 1-hot encoding tensor
+        
 
     def to_tag(self, tensor):
         return self.index2tag[int(torch.argmax(tensor))]

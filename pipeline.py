@@ -8,7 +8,7 @@ from transformers import AutoTokenizer, AutoModel
 
 class Pipeline(torch.nn.Module):
 
-    def __init__(self, bert):
+    def __init__(self, bert, ner_dim):
         super().__init__()
 
         self.sm = torch.nn.Softmax(dim=1)
@@ -19,7 +19,7 @@ class Pipeline(torch.nn.Module):
         self.bert_dim = 768  # BERT encoding dimension
         
         # NER
-        self.ner_dim = 10  # dimension of NER tagging scheme
+        self.ner_dim = ner_dim  # dimension of NER tagging scheme
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
 
         # NED
@@ -53,7 +53,7 @@ class Pipeline(torch.nn.Module):
         #re = self.RE(x)
         #print('### RE encoding:\n', re.shape)
         #return ner, ned, re
-        return self.sm(ner)
+        return ner
 
 
         
