@@ -8,7 +8,7 @@ from transformers import AutoTokenizer, AutoModel
 
 class Pipeline(torch.nn.Module):
 
-    def __init__(self, bert, ner_dim):
+    def __init__(self, bert, ner_dim, freeze_bert=True):
         super().__init__()
 
         self.sm = torch.nn.Softmax(dim=1)
@@ -17,11 +17,14 @@ class Pipeline(torch.nn.Module):
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
         self.pretrained_model = AutoModel.from_pretrained(bert)
         self.bert_dim = 768  # BERT encoding dimension
+        if freeze_bert:
+            for param in self.pretrained_model.base_model.parameters():  
+                param.requires_grad = False                              # freezing the BERT encoder
         
         # NER
         self.ner_dim = ner_dim  # dimension of NER tagging scheme
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
-
+        '''
         # NED
         self.ned_dim = 300  # dimension of the KB graph embedding space
         self.ned_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ned_dim)
@@ -36,6 +39,7 @@ class Pipeline(torch.nn.Module):
         self.re_bil = torch.nn.Bilinear(self.ht_dim, self.ht_dim, self.re_dim)
         self.re_lin = torch.nn.Linear(2*self.ht_dim, self.re_dim, bias=False)  # we need only one bias, we can decide to
                                                                                # switch off either the linear or bilinear bias
+        '''
 
     def forward(self, x):
         x = self.BERT(x)
