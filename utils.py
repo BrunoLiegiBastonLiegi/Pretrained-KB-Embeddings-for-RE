@@ -129,6 +129,9 @@ class Trainer(object):
 
             running_loss = 0.0
 
+            # shuffle training set
+            random.shuffle(self.train_set)
+
             for i in range(len(self.train_set)):
 
                 inputs = self.tokenizer(self.train_set[i][0], return_tensors="pt")
@@ -152,6 +155,36 @@ class Trainer(object):
                 running_loss += loss.item()
 
                 if i % 500 == 499:    # print every 500 sentences
-                    print('[%d, %5d] loss: %.3f' %
+                    try:
+                        val_loss = self.validation(loss)
+                        print('[%d, %5d] loss: %.3f val_loss: %.3f' %
+                          (epoch + 1, i + 1, running_loss / 500), val_loss)
+                    except:
+                        print('[%d, %5d] loss: %.3f' %
                           (epoch + 1, i + 1, running_loss / 500))
                     running_loss = 0.0
+
+        # save the model
+        print('> Save model to PATH: ')
+        PATH = input()
+        torch.save(self.model.state_dict(), PATH)
+
+
+    def validation_loss(self):
+
+        with torch.no_grad():
+            loss = 0.
+            for i in self.val_set:
+            
+                inputs = self.tokenizer(i[0], return_tensors="pt")
+                target = i[1]
+
+                # move inputs and labels to device
+                if self.device != torch.device("cpu"):
+                    inputs = inputs.to(self.device)
+                    target = target.to(self.device)
+
+                outputs = self.model(inputs)
+                loss += self.loss_f(outputs, target)
+
+            return loss / len(self.val_set)
