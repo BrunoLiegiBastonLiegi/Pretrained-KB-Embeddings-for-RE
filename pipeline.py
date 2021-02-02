@@ -8,7 +8,7 @@ from transformers import AutoTokenizer, AutoModel
 
 class Pipeline(torch.nn.Module):
 
-    def __init__(self, bert, ner_dim, freeze_bert=True):
+    def __init__(self, bert, ner_dim):
         super().__init__()
 
         self.sm = torch.nn.Softmax(dim=1)
@@ -17,13 +17,13 @@ class Pipeline(torch.nn.Module):
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
         self.pretrained_model = AutoModel.from_pretrained(bert)
         self.bert_dim = 768  # BERT encoding dimension
-        if freeze_bert:
-            for param in self.pretrained_model.base_model.parameters():  
+        for param in self.pretrained_model.base_model.parameters():  
                 param.requires_grad = False                              # freezing the BERT encoder
-        
+    
         # NER
         self.ner_dim = ner_dim  # dimension of NER tagging scheme
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
+        #self.ner_rnn = torch.nn.LSTM(self.ner_dim, self.ner_dim, bidirectional=False)
         '''
         # NED
         self.ned_dim = 300  # dimension of the KB graph embedding space
@@ -75,6 +75,9 @@ class Pipeline(torch.nn.Module):
                                                                    # [1:-1] : we want to get rid of [CLS] and [SEP] tokens
 
     def NER(self, x):
+        #x = self.ner_lin(x)
+        #x, _ = self.ner_rnn(x.view(len(x),1,-1))
+        #return x.view(x.size()[0], x.size()[2])
         return self.ner_lin(x)
 
     def Entity_filter(self, x):
@@ -106,8 +109,9 @@ class Pipeline(torch.nn.Module):
         x, y = self.HeadTail(x)
         return self.Biaffine(x,y)
 
-
-
+    def unfreeze_bert_layer(self, i):
+        for param in self.pretrained_model.base_model.encoder.layer[12-i].parameters():
+                param.requires_grad = True
 
 
 
