@@ -70,6 +70,10 @@ class Scheme(ABC):
         else:
             return self.index2tag[int(torch.argmax(tensor))]
 
+    @abstractmethod
+    def transition_M(self):
+        pass
+
     
 class BIOES(Scheme):
     
@@ -88,6 +92,35 @@ class BIOES(Scheme):
             i +=1
         self.tag2index['O'] = i
         self.index2tag = {v: k for k, v in self.tag2index.items()}
+
+    def transition_M(self):
+        p = 1./( 8*len(self.e_types) + 4*len(self.e_types) + 1)
+        self.intra_transition = torch.tensor([ [0,p,p,0],
+                                               [0,p,p,0],
+                                               [p,0,0,p],
+                                               [p,0,0,p] ])
+        
+        self.inter_transition = torch.tensor([ [0,0,0,0],
+                                               [0,0,0,0],
+                                               [p,0,0,p],
+                                               [p,0,0,p] ])
+
+        # should I consider transitions from initial tag <s> as well?
+        
+        boundary = torch.tensor([p,0,0,p])
+        for j in range(len(self.e_types) - 1):
+            boundary = torch.cat((boundary, self.intra_transition[2]))
+        
+        for i in range(len(self.e_types)):
+            row = self.intra_transition if i == 0 else self.inter_transition
+            for j in range(len(self.e_types) - 1):
+                row = torch.hstack((row,self.intra_transition)) if i == j else torch.hstack((tmp,self.inter_transition))
+            transition_M = row if i == 0 else torch.vstack((transition_M,row))
+
+        transition_M = torch.vstack(transition_M, boundary)
+        transition_M = torch.hstack(transition_M, torch.transpose(boundary.view(-1,1)))
+            
+        return transition_M
 
 
 
@@ -135,29 +168,34 @@ class Trainer(object):
 
                 if k < 4:
                     if i == one_3rd:
-                        k += 1
                         self.model.unfreeze_bert_layer(k) # gradually unfreeze the last  layers
+                        k += 1
                     elif i == 2*one_3rd:
-                        k += 1
                         self.model.unfreeze_bert_layer(k) # gradually unfreeze the last  layers
+                        k += 1
                     elif i == len(self.train_set):
-                        k += 1
                         self.model.unfreeze_bert_layer(k) # gradually unfreeze the last  layers
+                        k += 1
 
                 inputs = self.tokenizer(self.train_set[i][0], return_tensors="pt")
-                target = self.train_set[i][1]
+                ner_target = self.train_set[i][1]
+                re_target = self.train_set[i][1]
 
                 # move inputs and labels to device
                 if self.device != torch.device("cpu"):
                     inputs = inputs.to(self.device)
-                    target = target.to(self.device)
+                    ner_target = ner_target.to(self.device)
+                    re_target = re_target.to(self.device)
     
                 # zero the parameter gradients
                 self.optim.zero_grad()
 
                 # forward + backward + optimize
-                outputs = self.model(inputs)
-                loss = self.loss_f(outputs, target)
+                ner_output, re_output = self.model(inputs)
+                #print(re_output) # re output dimension depends on the number of entities found, how to implement the loss????
+                ner_loss = self.loss_f(ner_output, ner_target)
+                re_loss = 0#self.loss_f(re_output, re_target) if re_output != None else 0
+                loss = ner_loss + re_loss
                 loss.backward()
                 self.optim.step()
 
@@ -204,38 +242,3 @@ class Trainer(object):
 
 
 
-
-
-# ------------------------ F1 score -------------------------------------
-
-
-class F1(object):
-
-    def __init__(self, prediction, groundtruth):
-        self.pred = prediction
-        self.gt = groundtruth
-
-    def __call__(self, prediction, groundtruth):
-
-        TP, FP, FN = 0, 0, 0
-
-        for i in range(len(groundtruth)):
-            print(i,'-->',self.subtract(prediction,groundtruth))
-            #j = 0
-            #while groundtruth[i][j] == 'O' and groundtruth[i][j] == prediction[i][j]:
-             #   j += 1
-            #if groundtruth[i][j] != 'O':
-             #   while groundtruth[i][j] == prediction[i][j]:
-             #       j +=1
-
-    def subtract(self, prediction, groundtruth):
-        sub = []
-        for i in range(len(groundtruth)):
-            if groundtruth[i] == prediction[i]:
-                if groundtruth[i] != 'O':
-                    sub.append(1)
-                else:
-                    sub.append(0)
-            else:
-                sub.append(-1)
-        return sub

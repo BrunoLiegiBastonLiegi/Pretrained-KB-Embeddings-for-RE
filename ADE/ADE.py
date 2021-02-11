@@ -2,7 +2,7 @@ import re, torch, sys, random, argparse
 sys.path.append('../')
 from pipeline import Pipeline
 from transformers import AutoTokenizer
-from utils import Trainer, BIOES, F1
+from utils import Trainer, BIOES
 
 
 # arguments parser
@@ -19,14 +19,16 @@ data = []
 with open('DRUG-AE_BIOES.rel', 'r') as f:
     for x in f:
         tmp = re.split('\|', x)
-        data.append((tmp[0],bioes.to_tensor(*tmp[1:-1], index=True))) # -1 cause we need to get rid of the '\n'
+        data.append((tmp[0], bioes.to_tensor(*tmp[1:-1], index=True), 1))
+                                                                      # -1 cause we need to get rid of the '\n'
                                                                       # directly convert tag labels to: torch tensors
-                                                                      # in the ner embedding space/class indexes
+                                                                      # in the ner embedding space/class indexes.
+                                                                      # Format: (sent, ner_labels, re_label)
 
 # set up the tokenizer and the pre-trained BERT
 bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 tokenizer = AutoTokenizer.from_pretrained(bert)
-model = Pipeline(bert, ner_dim=bioes.space_dim)
+model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, re_dim=2)
 
 # check if GPU is avilable
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -52,7 +54,7 @@ trainer = Trainer(data=data,
 
 if args.load_model != None:
     # load pretrained model
-    model.load_state_dict(torch.load('bert_gradually_unfreezed.pth'))
+    model.load_state_dict(torch.load(args.load_model))
 else:
     trainer.train(2)
     
@@ -64,21 +66,30 @@ for d in trainer.val_set:
     inputs = tokenizer(d[0], return_tensors="pt").to(device)
     prediction.append([bioes.to_tag(i) for i in sm(model(inputs))])
     groundtruth.append([ bioes.index2tag[int(i)] for i in d[1] ])
-    
+    #groundtruth.append(d[1].tolist())
 
+'''
 for i in range(20):
     print('>> PREDICTION', prediction[i])
     print('>> GROUNDTRUTH', groundtruth[i], '\n')
+'''
 
+#from sklearn.metrics import accuracy_score, f1_score
+#import numpy as np
 
-from sklearn.metrics import accuracy_score, f1_score
-from sklearn.preprocessing import MultiLabelBinarizer
-import numpy as np
+#groundtruth = np.hstack(groundtruth)
+#prediction = np.hstack(prediction)
 
+#print('> Accuracy:', accuracy_score(groundtruth, prediction))
+#print('> Micro F1:', f1_score(groundtruth, prediction, average='micro'))
+#print('> Macro F1:', f1_score(groundtruth, prediction, average='macro'))
+#print('\n## Ignoring negative labels (\'O\')')
+#print('> Micro F1:', f1_score(groundtruth, prediction, average='micro', labels=list(range(8))))
+#print('> Macro F1:', f1_score(groundtruth, prediction, average='macro', labels=list(range(8))))
 
-mlb = MultiLabelBinarizer()
-groundtruth = mlb.fit_transform(groundtruth)
-prediction  = mlb.fit_transform(prediction)
-print('> Accuracy:', accuracy_score(groundtruth, prediction))
-print('> Micro F1:', f1_score(groundtruth, prediction, average='micro'))
-print('> Macro F1:', f1_score(groundtruth, prediction, average='macro'))
+from seqeval.metrics import accuracy_score
+from seqeval.metrics import classification_report
+from seqeval.metrics import f1_score
+from seqeval.scheme import IOBES
+
+print(classification_report(groundtruth, prediction, mode='strict', scheme=IOBES))
