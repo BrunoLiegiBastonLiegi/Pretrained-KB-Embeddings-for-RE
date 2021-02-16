@@ -1,4 +1,4 @@
-import re, torch, sys, random, argparse
+import re, torch, sys, random, argparse, pickle
 sys.path.append('../')
 from pipeline import Pipeline
 from transformers import AutoTokenizer
@@ -15,16 +15,19 @@ args = parser.parse_args()
 bioes = BIOES(['AE','DRUG'])
 
 # Load the data
+with open(args.input_data, 'rb') as f:               
+    pkl = pickle.load(f)
+    
 data = []
-with open('DRUG-AE_BIOES.rel', 'r') as f:
-    for x in f:
-        tmp = re.split('\|', x)
-        data.append((tmp[0], bioes.to_tensor(*tmp[1:-1], index=True), 1))
-                                                                      # -1 cause we need to get rid of the '\n'
-                                                                      # directly convert tag labels to: torch tensors
-                                                                      # in the ner embedding space/class indexes.
-                                                                      # Format: (sent, ner_labels, re_label)
-
+for d in pkl:
+    data.append( ( d['sentence']['sentence'],
+                   bioes.to_tensor(*d['sentence']['tag'], index=True),
+                   torch.tensor([ ( v['tokenized'][0][-1], v['tokenized'][1][-1], torch.tensor([1]) ) for v in d['relations'].values() ])
+    ))                                                                                  # 1 stands for ADVERSE_EFFECT_OF, 0 for NO_RELATION
+                                                                                        # format : (head, tail, relation)
+                                                                                        # -1 cause our RE module express relations between
+                                                                                        # the last tokens of the two entities
+                                                                      
 # set up the tokenizer and the pre-trained BERT
 bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 tokenizer = AutoTokenizer.from_pretrained(bert)
@@ -56,7 +59,7 @@ if args.load_model != None:
     # load pretrained model
     model.load_state_dict(torch.load(args.load_model))
 else:
-    trainer.train(2)
+    trainer.train(3)
     
 sm = torch.nn.Softmax(dim=1)
             
@@ -64,28 +67,14 @@ groundtruth = []
 prediction = []
 for d in trainer.val_set:
     inputs = tokenizer(d[0], return_tensors="pt").to(device)
-    prediction.append([bioes.to_tag(i) for i in sm(model(inputs))])
+    prediction.append([bioes.to_tag(i) for i in sm(model(inputs)[0])])
     groundtruth.append([ bioes.index2tag[int(i)] for i in d[1] ])
     #groundtruth.append(d[1].tolist())
-
-'''
+    
+# Some testing by hand
 for i in range(20):
     print('>> PREDICTION', prediction[i])
     print('>> GROUNDTRUTH', groundtruth[i], '\n')
-'''
-
-#from sklearn.metrics import accuracy_score, f1_score
-#import numpy as np
-
-#groundtruth = np.hstack(groundtruth)
-#prediction = np.hstack(prediction)
-
-#print('> Accuracy:', accuracy_score(groundtruth, prediction))
-#print('> Micro F1:', f1_score(groundtruth, prediction, average='micro'))
-#print('> Macro F1:', f1_score(groundtruth, prediction, average='macro'))
-#print('\n## Ignoring negative labels (\'O\')')
-#print('> Micro F1:', f1_score(groundtruth, prediction, average='micro', labels=list(range(8))))
-#print('> Macro F1:', f1_score(groundtruth, prediction, average='macro', labels=list(range(8))))
 
 from seqeval.metrics import accuracy_score
 from seqeval.metrics import classification_report

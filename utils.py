@@ -1,4 +1,5 @@
 import random, torch
+import numpy as np
 from abc import ABC, abstractmethod
 
 
@@ -168,18 +169,18 @@ class Trainer(object):
 
                 if k < 4:
                     if i == one_3rd:
-                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last  layers
+                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
                         k += 1
                     elif i == 2*one_3rd:
-                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last  layers
+                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
                         k += 1
                     elif i == len(self.train_set):
-                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last  layers
+                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
                         k += 1
 
                 inputs = self.tokenizer(self.train_set[i][0], return_tensors="pt")
                 ner_target = self.train_set[i][1]
-                re_target = self.train_set[i][1]
+                re_target = self.train_set[i][2]
 
                 # move inputs and labels to device
                 if self.device != torch.device("cpu"):
@@ -192,9 +193,8 @@ class Trainer(object):
 
                 # forward + backward + optimize
                 ner_output, re_output = self.model(inputs)
-                #print(re_output) # re output dimension depends on the number of entities found, how to implement the loss????
                 ner_loss = self.loss_f(ner_output, ner_target)
-                re_loss = 0#self.loss_f(re_output, re_target) if re_output != None else 0
+                re_loss = self.RE_loss(re_output, re_target) if re_output != None else 0
                 loss = ner_loss + re_loss
                 loss.backward()
                 self.optim.step()
@@ -208,7 +208,7 @@ class Trainer(object):
                     running_loss = 0.0
 
             try:
-                val_loss = self.validation_loss().item()
+                val_loss = self.validation_loss()
                 print('> Validation Loss: %3f' % val_loss, '\n')
             except:
                 pass
@@ -234,11 +234,25 @@ class Trainer(object):
                     inputs = inputs.to(self.device)
                     target = target.to(self.device)
 
-                outputs = self.model(inputs)
-                loss += self.loss_f(outputs, target)
+                ner_output, re_output = self.model(inputs)
+                ner_loss = self.loss_f(ner_output, target)
+                re_loss = 0
+                loss += ner_loss.item() + re_loss
 
             return loss / len(self.val_set)
 
+    def RE_loss(self, re_out, groundtruth):
+        loss = 0.
+        fake_target = []
+        for i in range(len(re_out[1])):
+            tg = None
+            for j in groundtruth:
+                if re_out[1][i][0] == j[0] and re_out[1][i][1] == j[1]:
+                    tg = j[2] 
+            if tg != None:
+                fake_target.append(tg)
+            else:
+                fake_target.append(torch.tensor(0, device=self.device)) # 0 for NO_RELATION
 
-
+        return self.loss_f(re_out[0], torch.stack(fake_target, dim=0)) 
 

@@ -46,7 +46,6 @@ class Pipeline(torch.nn.Module):
 
     def forward(self, x):
         inputs = x['input_ids'][0][1:-1] # CONSIDER MAKING THIS A self.inputs !!!!
-        #print(inputs)
         x = self.BERT(x)
         #print('### BERT encoding:\n', x.shape)
         ner = self.NER(x)                                           # this is the output of the linear layer, should we use this as
@@ -57,7 +56,6 @@ class Pipeline(torch.nn.Module):
         # remove non-entity tokens, before this we need to merge multi-token entities
         x, inputs = self.Entity_filter(x, inputs)
         if len(x) < 2:
-            #print('BREAKING')
             return (ner, None)
         #print('### Entities found:\n', x.shape)
         #ned = self.NED(x)
@@ -99,7 +97,7 @@ class Pipeline(torch.nn.Module):
                 encodings.append(x[i])
                 relative_input.append(inputs[i])
         if len(encodings) !=0:
-            return (torch.stack(encodings, dim=0), torch.tensor(relative_input))
+            return (torch.stack(encodings, dim=0), torch.stack(relative_input, dim=0))
         else:
             return ([], [])
 
@@ -131,8 +129,9 @@ class Pipeline(torch.nn.Module):
     def RE(self, x, inputs):
         x, y, relative_inputs = self.HeadTail(x, inputs)
         bi = self.Biaffine(x,y)
-        return { k : v for k, v in zip(relative_inputs,  bi) }
-        #return (self.Biaffine(x,y), relative_inputs)
+        #return { k : v for k, v in zip(relative_inputs,  bi) }
+        #return list(zip(bi, relative_inputs))
+        return (bi, relative_inputs)
     
     def unfreeze_bert_layer(self, i):
         for param in self.pretrained_model.base_model.encoder.layer[11-i].parameters():
