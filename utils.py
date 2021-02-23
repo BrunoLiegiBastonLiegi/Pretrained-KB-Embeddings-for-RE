@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 # ------------------------ Preprocessing ---------------------------------------------
 
 
-def split_sets(data, validation=0.2, test=0.1):
+def split_sets(data, validation=0.1, test=0.2):
     """
     Splits the dataset in train, validation and test datasets.
 
@@ -132,18 +132,19 @@ class BIOES(Scheme):
 
 class Trainer(object):
 
-    def __init__(self, data, model, tokenizer, optim, loss_f, device, validation=0., test=0.):     
-        self.data = data
+    def __init__(self, train_data, test_data, model, tokenizer, optim, loss_f, device):     
         self.model = model
         self.tokenizer = tokenizer
         self.optim = optim
         self.loss_f = loss_f
         self.device = device     
-        if validation != 0. or test != 0.:
-            self.train_set, self.val_set, self.test_set = self.split_sets(validation, test)
-        else:
-            self.train_set = self.data
-
+        #if validation != 0. or test != 0.:
+            #self.train_set, self.val_set, self.test_set = self.split_sets(validation, test)
+        #else:
+            #self.train_set = self.data
+        self.train_set = train_data
+        self.test_set = test_data
+        """
     def split_sets(self, validation, test):
         data = self.data      
         val_dim = int(validation*len(data))
@@ -152,16 +153,16 @@ class Trainer(object):
         val = [ data.pop(random.randint(0, len(data)-1)) for i in range(val_dim) ]
         test = [ data.pop(random.randint(0, len(data)-1)) for i in range(test_dim) ]
         return data, val, test
-
+        """
     def train(self, epochs):
 
         k = 0  # counter for bert layers unfreezing
-        one_3rd = int(len(self.train_set) / 3)
+        one_3rd = int(len(self.train_set) / 3) # after 1/3 of the data we unfreeze a layer
+        l = 0 # RE loss weight, gradually increased to 1
         
         for epoch in range(epochs):
 
             running_loss = 0.0
-
             # shuffle training set
             random.shuffle(self.train_set)
 
@@ -195,7 +196,10 @@ class Trainer(object):
                 ner_output, re_output = self.model(inputs)
                 ner_loss = self.loss_f(ner_output, ner_target)
                 re_loss = self.RE_loss(re_output, re_target) if re_output != None else 0
-                loss = ner_loss + re_loss
+                if epoch == 0:
+                    l = i / len(self.train_set)
+                loss = ner_loss + l * re_loss
+                #loss = ner_loss + re_loss
                 loss.backward()
                 self.optim.step()
 
@@ -208,8 +212,8 @@ class Trainer(object):
                     running_loss = 0.0
 
             try:
-                val_loss = self.validation_loss()
-                print('> Validation Loss: %3f' % val_loss, '\n')
+                test_loss = self.test_loss()
+                print('> Test Loss: %3f' % test_loss, '\n')
             except:
                 pass
             
@@ -218,28 +222,31 @@ class Trainer(object):
         PATH = input()
         if PATH != '':
             torch.save(self.model.state_dict(), PATH)
+            print('> Model saved to ', PATH)
         else:
             print('> Model not saved.')
 
-    def validation_loss(self):
+    def test_loss(self):
         with torch.no_grad():
             loss = 0.
-            for i in self.val_set:
+            for i in self.test_set:
             
                 inputs = self.tokenizer(i[0], return_tensors="pt")
-                target = i[1]
+                ner_target = i[1]
+                re_target = i[2]
 
                 # move inputs and labels to device
                 if self.device != torch.device("cpu"):
                     inputs = inputs.to(self.device)
-                    target = target.to(self.device)
+                    ner_target = ner_target.to(self.device)
+                    re_target = re_target.to(self.device)
 
                 ner_output, re_output = self.model(inputs)
-                ner_loss = self.loss_f(ner_output, target)
-                re_loss = 0
+                ner_loss = self.loss_f(ner_output, ner_target)
+                re_loss = self.RE_loss(re_output, re_target) if re_output != None else 0
                 loss += ner_loss.item() + re_loss
 
-            return loss / len(self.val_set)
+            return loss / len(self.test_set)
 
     def RE_loss(self, re_out, groundtruth):
         loss = 0.

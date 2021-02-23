@@ -91,9 +91,8 @@ class Pipeline(torch.nn.Module):
         encodings = []
         relative_input = []
         for i in range(x.size()[0]): # consider doing this with map() for some speed up
-            #if int(torch.argmax(xx[-self.ner_dim:])) != self.ner_dim - 1 :
-             #   tmp.append(xx)
-            if self.scheme.to_tag(x[i][-self.ner_dim:])[0] == 'E': # keep only End entity tokens
+            tag = self.scheme.to_tag(x[i][-self.ner_dim:])[0]
+            if tag == 'E' or tag == 'S': # keep only End/Single entity tokens
                 encodings.append(x[i])
                 relative_input.append(inputs[i])
         if len(encodings) !=0:
@@ -112,8 +111,8 @@ class Pipeline(torch.nn.Module):
         h = self.h_lin(x)
         t = self.t_lin(x)
         # Building candidate pairs
-        #head = torch.stack([ h for i in range(x.shape[0])], dim=1).view(x.shape[0]**2, h.shape[1])    # Combining all possible heads
-        #tail = torch.stack([ t for i in range(x.shape[0])]).view(x.shape[0]**2, t.shape[1])           # with every possible tail
+        # Combining all possible heads
+        # with every possible tail
         ht = list(product(h,t))
         relative_inputs = list(product(inputs,inputs))
         # removing self-relations pairs
