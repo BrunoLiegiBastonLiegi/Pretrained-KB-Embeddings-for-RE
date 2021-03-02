@@ -94,6 +94,7 @@ class BIOES(Scheme):
         self.tag2index['O'] = i
         self.index2tag = {v: k for k, v in self.tag2index.items()}
 
+    # WARNING: to be tested!
     def transition_M(self):
         p = 1./( 8*len(self.e_types) + 4*len(self.e_types) + 1)
         self.intra_transition = torch.tensor([ [0,p,p,0],
@@ -138,10 +139,6 @@ class Trainer(object):
         self.optim = optim
         self.loss_f = loss_f
         self.device = device     
-        #if validation != 0. or test != 0.:
-            #self.train_set, self.val_set, self.test_set = self.split_sets(validation, test)
-        #else:
-            #self.train_set = self.data
         self.train_set = train_data
         self.test_set = test_data
         """
@@ -158,11 +155,14 @@ class Trainer(object):
 
         k = 0  # counter for bert layers unfreezing
         one_3rd = int(len(self.train_set) / 3) # after 1/3 of the data we unfreeze a layer
-        l = 0 # RE loss weight, gradually increased to 1
+        l = 0. # RE loss weight, gradually increased to 1
         
         for epoch in range(epochs):
 
             running_loss = 0.0
+            ner_running_loss = 0.0
+            ned_running_loss = 0.0
+            re_running_loss = 0.0
             # shuffle training set
             random.shuffle(self.train_set)
 
@@ -181,41 +181,48 @@ class Trainer(object):
 
                 inputs = self.tokenizer(self.train_set[i][0], return_tensors="pt")
                 ner_target = self.train_set[i][1]
-                re_target = self.train_set[i][2]
+                ned_target = self.train_set[i][2]
+                re_target = self.train_set[i][3]
 
                 # move inputs and labels to device
                 if self.device != torch.device("cpu"):
                     inputs = inputs.to(self.device)
                     ner_target = ner_target.to(self.device)
+                    ned_target = ned_target.to(self.device)
                     re_target = re_target.to(self.device)
-    
+
                 # zero the parameter gradients
                 self.optim.zero_grad()
 
                 # forward + backward + optimize
-                ner_output, re_output = self.model(inputs)
+                ner_output, ned_output, re_output= self.model(inputs)
                 ner_loss = self.loss_f(ner_output, ner_target)
-                re_loss = self.RE_loss(re_output, re_target) if re_output != None else 0
+                ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(0., device=self.device)
+                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(0., device=self.device)
                 if epoch == 0:
                     l = i / len(self.train_set)
-                loss = ner_loss + l * re_loss
+                loss = ner_loss + l * (re_loss + ned_loss)
                 #loss = ner_loss + re_loss
                 loss.backward()
                 self.optim.step()
 
                 # print statistics
+                ner_running_loss += ner_loss.item()
+                ned_running_loss += ned_loss.item()
+                re_running_loss += re_loss.item()
                 running_loss += loss.item()
 
                 if i % 500 == 499:    # print every 500 sentences
-                    print('[%d, %5d] loss: %.3f' %
-                          (epoch + 1, i + 1, running_loss / 500))
+                    print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED: %.3f, RE: %.3f' %
+                          (epoch + 1, i + 1, running_loss / 500, ner_running_loss / 500, ned_running_loss / 500, re_running_loss / 500))
                     running_loss = 0.0
-
-            try:
-                test_loss = self.test_loss()
-                print('> Test Loss: %3f' % test_loss, '\n')
-            except:
-                pass
+                    ner_running_loss = 0.
+                    ned_running_loss = 0.
+                    re_running_loss = 0.
+                    
+            test_loss = self.test_loss()
+            print('> Test Loss\n Total: %.3f, NER: %.3f, NED: %.3f, RE: %.3f' %
+                  (test_loss[0], test_loss[1], test_loss[2], test_loss[3]), '\n')
             
         # save the model
         print('> Save model to PATH (leave blank for not saving): ')
@@ -229,37 +236,80 @@ class Trainer(object):
     def test_loss(self):
         with torch.no_grad():
             loss = 0.
-            for i in self.test_set:
+            test_ner_loss = torch.tensor(0., device=self.device)
+            test_ned_loss = torch.tensor(0., device=self.device)
+            test_re_loss = torch.tensor(0., device=self.device)
             
+            for i in self.test_set:
                 inputs = self.tokenizer(i[0], return_tensors="pt")
                 ner_target = i[1]
-                re_target = i[2]
+                ned_target = i[2]
+                re_target = i[3]
 
                 # move inputs and labels to device
                 if self.device != torch.device("cpu"):
                     inputs = inputs.to(self.device)
                     ner_target = ner_target.to(self.device)
+                    ned_target = ned_target.to(self.device)
                     re_target = re_target.to(self.device)
 
-                ner_output, re_output = self.model(inputs)
+                ner_output, ned_output, re_output = self.model(inputs)
                 ner_loss = self.loss_f(ner_output, ner_target)
-                re_loss = self.RE_loss(re_output, re_target) if re_output != None else 0
-                loss += ner_loss.item() + re_loss
+                ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(0., device=self.device)
+                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(0., device=self.device)
+                loss += ner_loss.item() + ned_loss.item() + re_loss.item()
+                test_ner_loss += ner_loss.item()
+                test_ned_loss += ned_loss.item()
+                test_re_loss += re_loss.item()
 
-            return loss / len(self.test_set)
+            return (loss / len(self.test_set), test_ner_loss / len(self.test_set), test_ned_loss / len(self.test_set), test_re_loss / len(self.test_set))
 
     def RE_loss(self, re_out, groundtruth):
         loss = 0.
         fake_target = []
-        for i in range(len(re_out[1])):
+        for i in range(len(re_out[0])):
             tg = None
             for j in groundtruth:
-                if re_out[1][i][0] == j[0] and re_out[1][i][1] == j[1]:
+                if re_out[0][i][0] == j[0] and re_out[0][i][1] == j[1]:
                     tg = j[2] 
             if tg != None:
                 fake_target.append(tg)
             else:
                 fake_target.append(torch.tensor(0, device=self.device)) # 0 for NO_RELATION
 
-        return self.loss_f(re_out[0], torch.stack(fake_target, dim=0)) 
+        return self.loss_f(re_out[1], torch.stack(fake_target, dim=0))
 
+    def NED_loss(self, ned_out, groundtruth):
+        loss = torch.tensor(0., device=self.device)
+        mse = torch.nn.MSELoss(reduction='sum')
+        ned_dim = self.model.ned_dim
+        gt = dict(zip(groundtruth[:,0].int().tolist(), groundtruth[:,1:]))
+        #print(gt)
+        ned = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1]))
+        #print(ned)
+        """"
+        gt = dict(zip(
+            [ str(i.tolist()) for i in groundtruth[:, :-ned_dim] ],
+            groundtruth[:, -ned_dim:] ))
+        ned = dict(zip(
+            [ str(i.tolist()) for i in ned_out[:, :-ned_dim] ],
+            ned_out[:, -ned_dim:] ))
+        """
+        fake_target = torch.zeros(ned_dim, device=self.device)
+        
+        # maybe it would be better to take for good also entity predictions that contain all
+        # the groundtruth tokens + something else, for example:
+        # GT: [1127, 897]  PRED: [6725, 1127, 897]
+        # they are not the same, but the prediction was mostly correct
+        # the easiest way would be to just stick with the previous approach of considering
+        # the last token only
+        for k, v in gt.items():
+            try:
+                loss += torch.sqrt(mse(ned.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
+            except:
+                loss += torch.sqrt(mse(fake_target, v))
+        for v in ned.values():
+            loss += torch.sqrt(mse(v, fake_target))
+  
+        return loss
+            

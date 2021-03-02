@@ -8,7 +8,7 @@ from itertools import product
 
 class Pipeline(torch.nn.Module):
 
-    def __init__(self, bert, ner_dim, ner_scheme, re_dim):
+    def __init__(self, bert, ner_dim, ner_scheme, ned_dim, re_dim):
         super().__init__()
 
         self.scheme = ner_scheme
@@ -21,21 +21,20 @@ class Pipeline(torch.nn.Module):
         for param in self.pretrained_model.base_model.parameters():  
                 param.requires_grad = False                              # freezing the BERT encoder
     
-        # NER
+        # NER # think about adding transition matrix for improvement
         self.ner_dim = ner_dim  # dimension of NER tagging scheme
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
-        #self.ner_rnn = torch.nn.LSTM(self.ner_dim, self.ner_dim, bidirectional=False)
         
         # NED
-        #self.ned_dim = 300  # dimension of the KB graph embedding space
-        #self.ned_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ned_dim)
+        self.ned_dim = ned_dim  # dimension of the KB graph embedding space
+        self.ned_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ned_dim)
 
         # Head-Tail
         self.ht_dim = 128  # dimension of head/tail embedding
-        #self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
-        #self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
-        self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
-        self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
+        self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
+        self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
+        #self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
+        #self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
 
         # RE
         self.re_dim = re_dim  # dimension of RE classification space
@@ -47,24 +46,21 @@ class Pipeline(torch.nn.Module):
     def forward(self, x):
         inputs = x['input_ids'][0][1:-1] # CONSIDER MAKING THIS A self.inputs !!!!
         x = self.BERT(x)
-        #print('### BERT encoding:\n', x.shape)
         ner = self.NER(x)                                           # this is the output of the linear layer, should we use this as
         x = torch.cat((x, self.sm(ner)), 1)                         # as embedding or rather the softmax of this?
         #x = torch.cat((x, ner), 1)
-        #print('### NER encoding:\n', x.shape)
-        
-        # remove non-entity tokens, before this we need to merge multi-token entities
-        x, inputs = self.Entity_filter(x, inputs)
+        # remove non-entity tokens and merge multi-token entities
+        x, inputs = self.Entity_filter(x, inputs, filt='merge')
+        if len(x) == 0:
+            return (ner, None, None)
+        ned = self.NED(x)
         if len(x) < 2:
-            return (ner, None)
-        #print('### Entities found:\n', x.shape)
-        #ned = self.NED(x)
-        #x = torch.cat((x, ned), 1)
-        #print('### NED encoding:\n', x.shape)
+            ned = (inputs, ned)
+            return (ner, ned, None)
+        x = torch.cat((x, ned), 1)
+        ned = (inputs, ned)
         re = self.RE(x, inputs)
-        #print('### RE encoding:\n', re.shape)
-        #return ner, ned, re
-        return (ner, re)
+        return ner, ned, re
 
 
         
@@ -82,30 +78,63 @@ class Pipeline(torch.nn.Module):
                                                                    # [1:-1] : we want to get rid of [CLS] and [SEP] tokens
 
     def NER(self, x):
-        #x = self.ner_lin(x)
-        #x, _ = self.ner_rnn(x.view(len(x),1,-1))
-        #return x.view(x.size()[0], x.size()[2])
         return self.ner_lin(x)
 
-    def Entity_filter(self, x, inputs):
+    def Entity_filter(self, x, inputs, filt='E'): # filt can be 'E'/'B' for last/first token filtering or 'merge' for merging
+        #for i in range(x.size()[0]): # consider doing this with map() for some speed up
+         #       tag = self.scheme.to_tag(x[i][-self.ner_dim:])[0]
+          #      print(tag)
         encodings = []
         relative_input = []
-        for i in range(x.size()[0]): # consider doing this with map() for some speed up
-            tag = self.scheme.to_tag(x[i][-self.ner_dim:])[0]
-            if tag == 'E' or tag == 'S': # keep only End/Single entity tokens
-                encodings.append(x[i])
-                relative_input.append(inputs[i])
+        if filt != 'merge':
+            for i in range(x.size()[0]): # consider doing this with map() for some speed up
+                tag = self.scheme.to_tag(x[i][-self.ner_dim:])[0]
+                if tag == 'E' or tag == 'S': # keep only End/Single entity tokens
+                    encodings.append(x[i])
+                    relative_input.append(inputs[i])
+        else:
+            i = 0
+            while i < x.size()[0]:
+                tag = self.scheme.to_tag(x[i][-self.ner_dim:])[0]
+                if tag == 'B':
+                    tensor_mean = [ x[i] ]
+                    #input_mean = [ inputs[i].view(1) ]
+                    # maybe its's better not just to stop for 'E' but also for 'O', in case we don't find any
+                    while tag != 'E':
+                        i += 1
+                        if i >= x.size()[0]:
+                            break
+                        tag = self.scheme.to_tag(x[i][-self.ner_dim:])[0]
+                        tensor_mean.append(x[i])
+                        #input_mean.append(inputs[i].view(1))
+                    tensor_mean = torch.stack(tensor_mean, dim=0)
+                    #input_mean = torch.cat(input_mean)
+                    encodings.append(torch.mean(tensor_mean, 0))
+                    #relative_input.append(input_mean)
+                    if i < x.size()[0]:
+                        relative_input.append(inputs[i].view(1))
+                    else:
+                        relative_input.append(inputs[i-1].view(1))
+                elif tag == 'S':
+                    encodings.append(x[i])
+                    relative_input.append(inputs[i].view(1))
+                    i += 1
+                # could be a good idea to consider also 'E' tags alone without an initial 'B', so elif tag == 'E':
+                else:
+                    i += 1
+                        
         if len(encodings) !=0:
+            """
+            if filt == 'merge':
+                max_len = max([len(i) for i in relative_input])
+                relative_input = [torch.nn.functional.pad(i, pad=(0, max_len - i.numel()), mode='constant', value=-1) for i in relative_input]
+            """
             return (torch.stack(encodings, dim=0), torch.stack(relative_input, dim=0))
         else:
             return ([], [])
 
     def NED(self, x):
-        return self.ned_lin(x) # it's missing the dot product in the graph embedding space, the idea would be to find the closest
-                               # concepts in embedding space and then return the closest in a greedy approach, or the closest ones
-                               # with beam search. We also need to decide if it's better to use the predicted graph embedding of
-                               # the concept or to map the predicted embedding to the corresponding true graph embedding and then 
-                               # use this for RE.
+        return self.ned_lin(x)
 
     def HeadTail(self, x, inputs):
         h = self.h_lin(x)
@@ -130,7 +159,7 @@ class Pipeline(torch.nn.Module):
         bi = self.Biaffine(x,y)
         #return { k : v for k, v in zip(relative_inputs,  bi) }
         #return list(zip(bi, relative_inputs))
-        return (bi, relative_inputs)
+        return (relative_inputs, bi)
     
     def unfreeze_bert_layer(self, i):
         for param in self.pretrained_model.base_model.encoder.layer[11-i].parameters():
