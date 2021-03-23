@@ -20,11 +20,12 @@ with open(args.input_data, 'rb') as f:
     pkl = pickle.load(f)
 pkl = pkl['fold_0'] # get only the 0-fold for testing
 
-rel2index = {'NO_RELATION': 0, 'ADVERSE_EFFECT_OF': 1, 'HAS_ADVERSE_EFFECT': 2} # consider adding a thrid relation HAS_AE
+rel2index = {'NO_RELATION': 0, 'ADVERSE_EFFECT_OF': 1, 'HAS_ADVERSE_EFFECT': 2} # consider adding a third relation HAS_AE
                                                                                 # i.e. AE_OF^-1
                                                  
 # Prepare train and test set with labels
 data = {}
+embeddings = {}
 for s, d in pkl.items():
     data[s] = []
     for i in d:
@@ -32,15 +33,18 @@ for s, d in pkl.items():
         sent = i['sentence']['sentence']
         # tags for the sentence ['O', 'B-DRUG', 'E-DRUG', 'O', 'O', ...]
         tagged_sent = bioes.to_tensor(*i['sentence']['tag'], index=True)
-        # entities
-        ents = []
         # pretrained graph embeddings of the disambiguated entities
         # for simplicity we take only the last token of each entity as its identifier
-        embs = torch.vstack([
-            torch.hstack((
-                torch.tensor(v['tokenized'][-1]),    # last token of the entity
-                torch.mean(v['embedding'], dim=0)))  # mean graph embedding
-            for v in i['entities'].values() ]).float()
+        embs = []
+        for v in i['entities'].values():
+            mean = torch.mean(v['embedding'], dim=0)
+            embs.append(torch.hstack((
+                #torch.tensor(v['tokenized'][-1]),    # last token of the entity
+                torch.tensor(v['span'][-1]),          # last token of the entity
+                mean                                  # mean graph embedding
+            )))
+            embeddings[v['concept'][-1]] = mean       # taking last concept as identifier
+        embs = torch.vstack(embs)
         """
         # this is the more strict approach where we consider the full list of tokens to identify
         # an entity and its graph embedding
@@ -65,8 +69,10 @@ for s, d in pkl.items():
         """
         # relations 
         rels = torch.tensor([ (
-            v['tokenized'][0][-1],
-            v['tokenized'][1][-1],
+            #v['tokenized'][0][-1],
+            v['span'][0][-1],
+            #v['tokenized'][1][-1],
+            v['span'][1][-1],
             torch.tensor([rel2index[v['type']]]) )
                               for v in i['relations'].values() ])
         
@@ -75,7 +81,9 @@ for s, d in pkl.items():
                                                                                                             # -1 cause our RE module express relations between
                                                                                                             # the last tokens of the two entities
 
-                                                                                                     
+
+
+
 # set up the tokenizer and the pre-trained BERT
 bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 tokenizer = AutoTokenizer.from_pretrained(bert)
@@ -109,7 +117,7 @@ trainer = Trainer(train_data=data['train'],
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    trainer.train(3)
+    trainer.train(12)
 
 
 # ------------------------- Evaluation 
@@ -119,17 +127,39 @@ sm0 = torch.nn.Softmax(dim=0)
 
 ner_groundtruth = []
 ner_prediction = []
+ned_prediction = []
+ned_groundtruth = []
 re_groundtruth = []
 re_prediction = []
 re_gt_pred = []
 
-# making predictions on the validation set
+# making predictions on the test set
+model.eval()
 for d in trainer.test_set:
     inputs = tokenizer(d[0], return_tensors="pt").to(device)
     ner_outs, ned_outs, re_outs = model(inputs)
-    ner_prediction.append([bioes.to_tag(i) for i in sm1(ner_outs)])
+
+    # NER
     ner_groundtruth.append([ bioes.index2tag[int(i)] for i in d[1] ])
-    
+    ner_prediction.append([ bioes.to_tag(i) for i in sm1(ner_outs) ])
+
+    # NED
+    ned_groundtruth.append( (d[2][:,0].tolist(), d[2][:,1:]) )
+    if ned_outs != None:
+        ned_prediction.append( (torch.flatten(ned_outs[0]).tolist(), ned_outs[1].detach().cpu()) )
+    else:
+        ned_prediction.append(None)
+
+    # RE
+    re_groundtruth.append(d[3])
+    if re_outs != None:
+        re_prediction.append(torch.hstack((
+            re_outs[0],
+            torch.argmax(sm1(re_outs[1]), dim=1).view(-1,1)
+        )))
+    else:
+        re_prediction.append(None)
+    """
     re_outs = list(zip(*re_outs)) if re_outs != None else None
     if re_outs != None:
         re_outs = { (i[0][0].item(), i[0][1].item()): torch.argmax(sm0(i[1])).item() for i in re_outs }
@@ -149,15 +179,43 @@ for d in trainer.test_set:
     re_gt_pred = torch.tensor(list(re_gt_pred.values()))
     re_groundtruth.append(re_gt_pred[:,0].tolist())
     re_prediction.append(re_gt_pred[:,1].tolist())
-    
-    
+    """
+
 # Some testing by hand
 for i in range(5):
     print('>> NER GROUNDTRUTH\n', ner_groundtruth[i])
     print('>> NER PREDICTION\n', ner_prediction[i])
     print('>> RE GROUNDTRUTH\n', re_groundtruth[i])
     print('>> RE PREDICTION\n', re_prediction[i], '\n')
-    
+
+# plot predicted/pretrained graph embeddings
+from evaluation import plot_embedding
+#plot_embedding(ned_prediction, ned_groundtruth)
+
+# mean neighbors distance in graph embedding space
+from evaluation import mean_neighbors_distance
+print('Mean distance between neighbors:',
+      mean_neighbors_distance(torch.vstack(list(embeddings.values()))))
+
+from evaluation import ClassificationReport
+
+with open('UMLS-embeddings.pkl', 'rb') as f:
+    KB = pickle.load(f)
+
+cr = ClassificationReport(
+    ner_predictions=ner_prediction,
+    ner_groundtruth=ner_groundtruth,
+    ned_predictions=ned_prediction,
+    ned_groundtruth=ned_groundtruth,
+    re_predictions=re_prediction,
+    re_groundtruth=re_groundtruth,
+    re_classes=rel2index,
+    ner_scheme='IOBES',
+    ned_embeddings=embeddings
+)
+
+print(cr.ned_report())
+
 # Performance metrics
 from seqeval.metrics import classification_report
 from seqeval.scheme import IOBES
@@ -172,3 +230,27 @@ print(classification_report(ner_groundtruth, ner_prediction, mode='strict', sche
 # RE
 print('------------------------------ RE SCORES ----------------------------------------')
 print(skm.classification_report(np.concatenate(re_groundtruth), np.concatenate(re_prediction), labels=[1], target_names=['ADVERSE_EFFECT_OF']))
+
+"""
+# finding nearest concepts in the KB
+with open('UMLS-embeddings.pkl', 'rb') as f:
+    KB = pickle.load(f)
+
+from sklearn.neighbors import NearestNeighbors
+
+ids = list(KB.keys())
+#print(len(ids))
+#print(len(list(KB.values())))
+#[ print(i.shape) for i in KB.values() ] 
+#print(torch.vstack(list(KB.values())).shape)
+nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(list(KB.values()))
+for p in ned_prediction:
+    distances, indices = nbrs.kneighbors(p)
+    for i in range(len(distances)):
+        print('ID:', ids[int(indices[i])], 'Distance:', distances[i])
+    #print('indices:',index)
+    #print('distances:',distance)
+    #for i in nbrs.kneighbors(p):
+     #   print(i)
+      #  print('ID:', ids[int(i[1])])
+"""

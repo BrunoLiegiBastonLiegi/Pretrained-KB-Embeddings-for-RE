@@ -27,10 +27,18 @@ class Pipeline(torch.nn.Module):
         
         # NED
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
-        self.ned_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ned_dim)
-
+        self.dropout = torch.nn.Dropout(p=0.2)
+        #self.ned_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ned_dim)
+        self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, 778)
+        self.ned_lin2 = torch.nn.Linear(778, 778)
+        self.ned_lin3 = torch.nn.Linear(778, 778)
+        #self.ned_lin4 = torch.nn.Linear(512, 512)
+        #self.ned_lin5 = torch.nn.Linear(512, 512)
+        #self.ned_lin6 = torch.nn.Linear(512, 256)
+        self.ned_lin = torch.nn.Linear(778, self.ned_dim)
+        
         # Head-Tail
-        self.ht_dim = 128  # dimension of head/tail embedding
+        self.ht_dim = 32#128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
         self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
         self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
         #self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
@@ -44,7 +52,10 @@ class Pipeline(torch.nn.Module):
         
 
     def forward(self, x):
-        inputs = x['input_ids'][0][1:-1] # CONSIDER MAKING THIS A self.inputs !!!!
+        #inputs = x['input_ids'][0][1:-1] # CONSIDER MAKING THIS A self.inputs !!!!
+        inputs = torch.tensor(range(1, len(x['input_ids'][0][1:-1]) + 1))
+        if torch.cuda.is_available():
+            inputs = inputs.cuda()
         x = self.BERT(x)
         ner = self.NER(x)                                           # this is the output of the linear layer, should we use this as
         x = torch.cat((x, self.sm(ner)), 1)                         # as embedding or rather the softmax of this?
@@ -114,7 +125,7 @@ class Pipeline(torch.nn.Module):
                     if i < x.size()[0]:
                         relative_input.append(inputs[i].view(1))
                     else:
-                        relative_input.append(inputs[i-1].view(1))
+                        relative_input.append(inputs[i-1].view(1)) # problem if B is the last token
                 elif tag == 'S':
                     encodings.append(x[i])
                     relative_input.append(inputs[i].view(1))
@@ -134,8 +145,16 @@ class Pipeline(torch.nn.Module):
             return ([], [])
 
     def NED(self, x):
+        tanh = torch.nn.Tanh()
+        relu = torch.nn.ReLU()
+        x = self.dropout(relu(self.ned_lin1(x)))
+        x = self.dropout(relu(self.ned_lin2(x)))
+        x = self.dropout(relu(self.ned_lin3(x)))
+        #x = relu(self.ned_lin4(x))
+        #x = relu(self.ned_lin5(x))
+        #x = relu(self.ned_lin6(x))
         return self.ned_lin(x)
-
+        
     def HeadTail(self, x, inputs):
         h = self.h_lin(x)
         t = self.t_lin(x)
@@ -159,7 +178,7 @@ class Pipeline(torch.nn.Module):
         bi = self.Biaffine(x,y)
         #return { k : v for k, v in zip(relative_inputs,  bi) }
         #return list(zip(bi, relative_inputs))
-        return (relative_inputs, bi)
+        return (torch.tensor(relative_inputs).cuda(), bi)
     
     def unfreeze_bert_layer(self, i):
         for param in self.pretrained_model.base_model.encoder.layer[11-i].parameters():

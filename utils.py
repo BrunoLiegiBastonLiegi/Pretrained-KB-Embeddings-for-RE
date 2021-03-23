@@ -155,7 +155,8 @@ class Trainer(object):
 
         k = 0  # counter for bert layers unfreezing
         one_3rd = int(len(self.train_set) / 3) # after 1/3 of the data we unfreeze a layer
-        l = 0. # RE loss weight, gradually increased to 1
+        l_re = 0. # RE loss weight, gradually increased to 1
+        l_ned = 0.
         
         for epoch in range(epochs):
 
@@ -165,6 +166,8 @@ class Trainer(object):
             re_running_loss = 0.0
             # shuffle training set
             random.shuffle(self.train_set)
+            # set model in train mode
+            self.model.train()
 
             for i in range(len(self.train_set)):
 
@@ -197,12 +200,12 @@ class Trainer(object):
                 # forward + backward + optimize
                 ner_output, ned_output, re_output= self.model(inputs)
                 ner_loss = self.loss_f(ner_output, ner_target)
-                ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(0., device=self.device)
-                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(0., device=self.device)
+                ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(1., device=self.device)
+                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
                 if epoch == 0:
-                    l = i / len(self.train_set)
-                loss = ner_loss + l * (re_loss + ned_loss)
-                #loss = ner_loss + re_loss
+                    l_re = i / len(self.train_set)
+                    l_ned = min(3*l_re, 1)
+                loss = ner_loss + l_re * re_loss + l_ned * 100*ned_loss
                 loss.backward()
                 self.optim.step()
 
@@ -234,6 +237,8 @@ class Trainer(object):
             print('> Model not saved.')
 
     def test_loss(self):
+        # set model in eval mode
+        self.model.eval()
         with torch.no_grad():
             loss = 0.
             test_ner_loss = torch.tensor(0., device=self.device)
@@ -255,8 +260,8 @@ class Trainer(object):
 
                 ner_output, ned_output, re_output = self.model(inputs)
                 ner_loss = self.loss_f(ner_output, ner_target)
-                ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(0., device=self.device)
-                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(0., device=self.device)
+                ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(1., device=self.device)
+                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
                 loss += ner_loss.item() + ned_loss.item() + re_loss.item()
                 test_ner_loss += ner_loss.item()
                 test_ned_loss += ned_loss.item()
@@ -266,6 +271,7 @@ class Trainer(object):
 
     def RE_loss(self, re_out, groundtruth):
         loss = 0.
+        """
         fake_target = []
         for i in range(len(re_out[0])):
             tg = None
@@ -276,9 +282,20 @@ class Trainer(object):
                 fake_target.append(tg)
             else:
                 fake_target.append(torch.tensor(0, device=self.device)) # 0 for NO_RELATION
-
         return self.loss_f(re_out[1], torch.stack(fake_target, dim=0))
-
+        """
+        pred = []
+        target = []
+        for i in range(len(re_out[0])):
+            for j in groundtruth:
+                if re_out[0][i][0] == j[0] and re_out[0][i][1] == j[1]:
+                    pred.append(re_out[1][i])
+                    target.append(j[2])
+        if len(pred) > 1:
+            return self.loss_f(torch.vstack(pred), torch.stack(target, dim=0))
+        else:
+            return torch.tensor(1., device=self.device)
+        
     def NED_loss(self, ned_out, groundtruth):
         loss = torch.tensor(0., device=self.device)
         mse = torch.nn.MSELoss(reduction='sum')
@@ -296,7 +313,8 @@ class Trainer(object):
             ned_out[:, -ned_dim:] ))
         """
         fake_target = torch.zeros(ned_dim, device=self.device)
-        
+        #fake_target = torch.ones(ned_dim, device=self.device)
+
         # maybe it would be better to take for good also entity predictions that contain all
         # the groundtruth tokens + something else, for example:
         # GT: [1127, 897]  PRED: [6725, 1127, 897]
@@ -307,9 +325,13 @@ class Trainer(object):
             try:
                 loss += torch.sqrt(mse(ned.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
             except:
-                loss += torch.sqrt(mse(fake_target, v))
-        for v in ned.values():
-            loss += torch.sqrt(mse(v, fake_target))
-  
-        return loss
+                #loss += torch.sqrt(mse(fake_target, v))
+                pass
+        #for v in ned.values():
+         #   loss += torch.sqrt(mse(v, fake_target))
+
+        if loss != 0: 
+            return loss
+        else:
+            return torch.tensor(1., device=self.device)
             
