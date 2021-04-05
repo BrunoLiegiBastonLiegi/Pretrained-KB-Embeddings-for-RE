@@ -4,6 +4,7 @@ from pipeline import Pipeline
 from transformers import AutoTokenizer
 from utils import Trainer, BIOES
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 # Arguments parser
@@ -85,9 +86,11 @@ for s, d in pkl.items():
 
 
 # set up the tokenizer and the pre-trained BERT
-bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
+#bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
+bert = "bert-base-uncased"
 tokenizer = AutoTokenizer.from_pretrained(bert)
-model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=50, re_dim=2)
+#model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=50, re_dim=2)
+model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=0, re_dim=2)
 
 # check if GPU is avilable
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -113,12 +116,24 @@ trainer = Trainer(train_data=data['train'],
                   loss_f=criterion,
                   device=device)
 
-# load pretrained model
+# load pretrained model or train
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    trainer.train(12)
-
+    plots = trainer.train(1)
+    ones = np.ones(10)
+    ner_plot = np.convolve(plots['train']['NER'], ones, 'valid') / len(ones)
+    ned_plot = np.convolve(plots['train']['NED'], ones, 'valid') / len(ones)
+    re_plot = np.convolve(plots['train']['RE'], ones, 'valid') / len(ones)
+    # show the plots
+    r = range(len(ner_plot))
+    plt.plot(
+        r, ner_plot, 'r-',
+        r, ned_plot, 'b-',
+        r, re_plot, 'g-'
+    )
+    #plt.axis([0,len(r),0,1])
+    plt.show()
 
 # ------------------------- Evaluation 
     
@@ -127,11 +142,10 @@ sm0 = torch.nn.Softmax(dim=0)
 
 ner_groundtruth = []
 ner_prediction = []
-ned_prediction = []
 ned_groundtruth = []
+ned_prediction = []
 re_groundtruth = []
 re_prediction = []
-re_gt_pred = []
 
 # making predictions on the test set
 model.eval()
@@ -159,27 +173,6 @@ for d in trainer.test_set:
         )))
     else:
         re_prediction.append(None)
-    """
-    re_outs = list(zip(*re_outs)) if re_outs != None else None
-    if re_outs != None:
-        re_outs = { (i[0][0].item(), i[0][1].item()): torch.argmax(sm0(i[1])).item() for i in re_outs }
-    else:
-        re_outs = {}
-    re_gt = { (r[0].item(), r[1].item()): r[2].item() for r in d[3] }
-    re_gt_pred = {}
-    # filling groundtruth and prediction with the corresponding missing elements
-    for k, v in re_outs.items():
-        if k not in re_gt.keys():
-            re_gt_pred[k] = (0, v)
-        else:
-            re_gt_pred[k] = (re_gt[k], v)
-    for k, v in re_gt.items():
-        if k not in re_outs.keys():
-            re_gt_pred[k] = (v, 0)
-    re_gt_pred = torch.tensor(list(re_gt_pred.values()))
-    re_groundtruth.append(re_gt_pred[:,0].tolist())
-    re_prediction.append(re_gt_pred[:,1].tolist())
-    """
 
 # Some testing by hand
 for i in range(5):
@@ -194,13 +187,13 @@ from evaluation import plot_embedding
 
 # mean neighbors distance in graph embedding space
 from evaluation import mean_neighbors_distance
-print('Mean distance between neighbors:',
-      mean_neighbors_distance(torch.vstack(list(embeddings.values()))))
+#print('Mean distance between neighbors:',
+ #     mean_neighbors_distance(torch.vstack(list(embeddings.values()))))
 
 from evaluation import ClassificationReport
 
-with open('UMLS-embeddings.pkl', 'rb') as f:
-    KB = pickle.load(f)
+#with open('UMLS-embeddings.pkl', 'rb') as f:
+ #   KB = pickle.load(f)
 
 cr = ClassificationReport(
     ner_predictions=ner_prediction,
@@ -214,7 +207,10 @@ cr = ClassificationReport(
     ned_embeddings=embeddings
 )
 
-print(cr.ned_report())
+print('------------------------------ NED SCORES ---------------------------------------')
+#print(cr.ned_report())
+print('------------------------------ RE SCORES ----------------------------------------')
+print(cr.re_report())
 
 # Performance metrics
 from seqeval.metrics import classification_report
@@ -227,9 +223,6 @@ import sklearn.metrics as skm
 print('------------------------------ NER SCORES ----------------------------------------')
 print(classification_report(ner_groundtruth, ner_prediction, mode='strict', scheme=IOBES))
 
-# RE
-print('------------------------------ RE SCORES ----------------------------------------')
-print(skm.classification_report(np.concatenate(re_groundtruth), np.concatenate(re_prediction), labels=[1], target_names=['ADVERSE_EFFECT_OF']))
 
 """
 # finding nearest concepts in the KB

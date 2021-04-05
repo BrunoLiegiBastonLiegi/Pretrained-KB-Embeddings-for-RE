@@ -32,9 +32,9 @@ class Pipeline(torch.nn.Module):
         self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, 778)
         self.ned_lin2 = torch.nn.Linear(778, 778)
         self.ned_lin3 = torch.nn.Linear(778, 778)
-        #self.ned_lin4 = torch.nn.Linear(512, 512)
-        #self.ned_lin5 = torch.nn.Linear(512, 512)
-        #self.ned_lin6 = torch.nn.Linear(512, 256)
+        self.ned_lin4 = torch.nn.Linear(778, 778)
+        self.ned_lin5 = torch.nn.Linear(778, 778)
+        self.ned_lin6 = torch.nn.Linear(778, 778)
         self.ned_lin = torch.nn.Linear(778, self.ned_dim)
         
         # Head-Tail
@@ -64,14 +64,16 @@ class Pipeline(torch.nn.Module):
         x, inputs = self.Entity_filter(x, inputs, filt='merge')
         if len(x) == 0:
             return (ner, None, None)
-        ned = self.NED(x)
+        #ned = self.NED(x)
         if len(x) < 2:
-            ned = (inputs, ned)
-            return (ner, ned, None)
-        x = torch.cat((x, ned), 1)
-        ned = (inputs, ned)
+            #ned = (inputs, ned)
+            #return (ner, ned, None)
+            return (ner, None, None)
+        #x = torch.cat((x, ned), 1)
+        #ned = (inputs, ned)
         re = self.RE(x, inputs)
-        return ner, ned, re
+        #return ner, ned, re
+        return ner, None, re
 
 
         
@@ -147,11 +149,11 @@ class Pipeline(torch.nn.Module):
     def NED(self, x):
         tanh = torch.nn.Tanh()
         relu = torch.nn.ReLU()
-        x = self.dropout(relu(self.ned_lin1(x)))
-        x = self.dropout(relu(self.ned_lin2(x)))
-        x = self.dropout(relu(self.ned_lin3(x)))
-        #x = relu(self.ned_lin4(x))
-        #x = relu(self.ned_lin5(x))
+        x = relu(self.ned_lin1(x))
+        x = relu(self.ned_lin2(x))
+        x = relu(self.ned_lin3(x))
+        x = relu(self.ned_lin4(x))
+        x = relu(self.ned_lin5(x))
         #x = relu(self.ned_lin6(x))
         return self.ned_lin(x)
         

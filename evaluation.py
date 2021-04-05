@@ -22,6 +22,13 @@ class ClassificationReport(object):
         self.re_classes = re_classes
         self.ner_scheme = ner_scheme
         self.ned_embeddings = ned_embeddings
+        self.embedding2id = { tuple(v.tolist()): k for k,v in ned_embeddings.items() }
+        #for k,v in self.embedding2id.items():
+         #   print(k,':',v)
+        #for i in self.ned_embeddings:
+         #   for j in i[1]:
+          #      print(j)
+           #     print(self.embedding2id[tuple(j.tolist())])
         
     def ner_report(self):
         print('-------------------------- NER SCORES ------------------------------------')
@@ -29,14 +36,48 @@ class ClassificationReport(object):
         print(ner_cr)
 
     def re_report(self):
-        print('------------------------------ RE SCORES ----------------------------------------')
-        print(skm.classification_report(np.concatenate(re_groundtruth), np.concatenate(re_prediction), labels=[1], target_names=['ADVERSE_EFFECT_OF']))
+        gt = []
+        pred = []
+        for i in range(len(self.re_gt)):
+            if self.re_pred[i] != None:
+                d = dict(zip(
+                    zip(self.re_gt[i][:,0].tolist(), self.re_gt[i][:,1].tolist()),
+                    self.re_gt[i][:,2]
+                ))
+                for j in self.re_pred[i]:
+                    try:
+                        gt.append(d.pop(tuple(j[:2].tolist())).item())
+                        pred.append(j[2].item())
+                    except:
+                        pass
+                for v in d.values():
+                    gt.append(v.item())
+                    pred.append(not j[2])
+                    #pred.append(-1)
+            else:
+                for j in self.re_gt[i]:
+                    gt.append(j[2].item())
+                    pred.append(not j[2])
+                    #pred.append(-1)
+        
+                        
+        print(skm.confusion_matrix(np.array(gt), np.array(pred), labels=[0,1]))
+        return skm.classification_report(np.array(gt), np.array(pred), labels=[0,1], target_names=['NO_RELATION', 'ADVERSE_EFFECT_OF'])
+        #return skm.classification_report(np.array(gt), np.array(pred), labels=[-1,0,1], target_names=['WRONG_ENTITIES','NO_RELATION', 'ADVERSE_EFFECT_OF'])
 
     def ned_report(self):
         gt = []
         pred = []
         mean = 0.
         for i in range(len(self.ned_gt)):
+            print('>',i)
+            #print('>>>GT:\n',self.ned_gt[i])
+            m = 10
+            for v in self.ned_embeddings.values():
+                m = min(torch.sqrt(torch.sum((self.ned_gt[i][1][0] - v)**2)), m)
+            print(m)
+            print(self.embedding2id[tuple(self.ned_gt[i][1][0].tolist())])
+            #print('>>>PRED:\n',self.ned_pred[i])
             if self.ned_pred[i] != None:
                 for j in range(len(self.ned_gt[i][0])):
                     try:

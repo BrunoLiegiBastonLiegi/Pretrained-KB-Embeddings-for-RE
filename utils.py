@@ -4,41 +4,6 @@ from abc import ABC, abstractmethod
 
 
 
-# ------------------------ Preprocessing ---------------------------------------------
-
-
-def split_sets(data, validation=0.1, test=0.2):
-    """
-    Splits the dataset in train, validation and test datasets.
-
-    Parameters:
-    data (list): list of tuples of the form (train_example, label)
-    validation (float): portion of data destinated to the validation set
-    test (float): portion of data destinated to the test set
-
-    Returns:
-    data (list): the final train set
-    val (list): the validation set
-    test (list): the test set
-    """
-    
-    val_dim = int(validation*len(data))
-    test_dim = int(test*len(data))
-
-    random.shuffle(data)
-
-    val = [ data.pop(random.randint(0, len(data)-1)) for i in range(val_dim) ]
-    if test_dim != 0:
-        test = [ data.pop(random.randint(0, len(data)-1)) for i in range(test_dim) ]
-
-    if test_dim == 0:
-        return data, val
-    else:
-        return data, val, test
-
-
-
-
 # ------------------------ NER tagging schemes ----------------------------------------
 
 
@@ -141,22 +106,20 @@ class Trainer(object):
         self.device = device     
         self.train_set = train_data
         self.test_set = test_data
-        """
-    def split_sets(self, validation, test):
-        data = self.data      
-        val_dim = int(validation*len(data))
-        test_dim = int(test*len(data))       
-        random.shuffle(data)
-        val = [ data.pop(random.randint(0, len(data)-1)) for i in range(val_dim) ]
-        test = [ data.pop(random.randint(0, len(data)-1)) for i in range(test_dim) ]
-        return data, val, test
-        """
+
     def train(self, epochs):
 
+        # BERT layers unfreezing
         k = 0  # counter for bert layers unfreezing
         one_3rd = int(len(self.train_set) / 3) # after 1/3 of the data we unfreeze a layer
+        # Losses weights
         l_re = 0. # RE loss weight, gradually increased to 1
         l_ned = 0.
+        # Losses plots
+        self.loss_plots = {
+            'train': {'NER':[], 'NED':[], 'RE':[]},
+            'test': {'NER':[], 'NED':[], 'RE':[]}
+        }
         
         for epoch in range(epochs):
 
@@ -197,16 +160,22 @@ class Trainer(object):
                 # zero the parameter gradients
                 self.optim.zero_grad()
 
-                # forward + backward + optimize
+                # forward 
                 ner_output, ned_output, re_output= self.model(inputs)
+                # losses
                 ner_loss = self.loss_f(ner_output, ner_target)
+                self.loss_plots['train']['NER'].append(ner_loss)
                 ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(1., device=self.device)
+                self.loss_plots['train']['NED'].append(ned_loss)
                 re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
+                self.loss_plots['train']['RE'].append(re_loss)
                 if epoch == 0:
                     l_re = i / len(self.train_set)
                     l_ned = min(3*l_re, 1)
                 loss = ner_loss + l_re * re_loss + l_ned * 100*ned_loss
+                # backprop
                 loss.backward()
+                # optimize
                 self.optim.step()
 
                 # print statistics
@@ -235,6 +204,8 @@ class Trainer(object):
             print('> Model saved to ', PATH)
         else:
             print('> Model not saved.')
+            
+        return self.loss_plots
 
     def test_loss(self):
         # set model in eval mode
@@ -260,8 +231,11 @@ class Trainer(object):
 
                 ner_output, ned_output, re_output = self.model(inputs)
                 ner_loss = self.loss_f(ner_output, ner_target)
+                self.loss_plots['test']['NER'].append(ner_loss)
                 ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(1., device=self.device)
+                self.loss_plots['test']['NED'].append(ned_loss)
                 re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
+                self.loss_plots['test']['RE'].append(re_loss)
                 loss += ner_loss.item() + ned_loss.item() + re_loss.item()
                 test_ner_loss += ner_loss.item()
                 test_ned_loss += ned_loss.item()
@@ -286,11 +260,21 @@ class Trainer(object):
         """
         pred = []
         target = []
+        
         for i in range(len(re_out[0])):
             for j in groundtruth:
                 if re_out[0][i][0] == j[0] and re_out[0][i][1] == j[1]:
                     pred.append(re_out[1][i])
                     target.append(j[2])
+                    
+        # they should be equal, the one below probably more efficient
+        """
+        for j in groundtruth:
+            for i,p in zip(re_out[0], re_out[1]):
+                if j[0] == i[0] and j[1] == i[1]:
+                    pred.append(p)
+                    target.append(j[2])
+        """
         if len(pred) > 1:
             return self.loss_f(torch.vstack(pred), torch.stack(target, dim=0))
         else:

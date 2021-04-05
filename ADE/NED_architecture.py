@@ -1,5 +1,6 @@
 import torch, pickle
 import matplotlib.pyplot as plt
+from transformers import Autotokenizer
 
 
 with open('DRUG-AE_BIOES_10-fold.pkl', 'rb') as f:               
@@ -8,11 +9,15 @@ pkl = pkl['fold_0'] # get only the 0-fold for testing
 
 bert_dim = 778
 
+bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
+tokenizer = AutoTokenizer.from_pretrained(bert)
+
 data = {}
 embeddings = {} 
 for s, d in pkl.items():
     data[s] = []
     for i in d:
+        sent = i['sentence']['sentence']
         embs = []
         for v in i['entities'].values():
             mean = torch.mean(v['embedding'], dim=0)
