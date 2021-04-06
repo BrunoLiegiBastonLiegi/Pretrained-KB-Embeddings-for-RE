@@ -89,8 +89,8 @@ for s, d in pkl.items():
 bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 #bert = "bert-base-uncased"
 tokenizer = AutoTokenizer.from_pretrained(bert)
-#model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=50, re_dim=2)
-model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=0, re_dim=2)
+model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=50, re_dim=2)
+#model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=0, re_dim=2)
 
 # check if GPU is avilable
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

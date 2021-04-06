@@ -70,7 +70,7 @@ class Pipeline(torch.nn.Module):
             return (ner, ned, None)
             #return (ner, None, None)
         x = torch.cat((x, ned), 1)
-        #ned = (inputs, ned)
+        ned = (inputs, ned)
         re = self.RE(x, inputs)
         return ner, ned, re
         #return ner, None, re
