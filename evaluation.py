@@ -23,13 +23,7 @@ class ClassificationReport(object):
         self.ner_scheme = ner_scheme
         self.ned_embeddings = ned_embeddings
         self.embedding2id = { tuple(v.tolist()): k for k,v in ned_embeddings.items() }
-        #for k,v in self.embedding2id.items():
-         #   print(k,':',v)
-        #for i in self.ned_embeddings:
-         #   for j in i[1]:
-          #      print(j)
-           #     print(self.embedding2id[tuple(j.tolist())])
-        
+                
     def ner_report(self):
         print('-------------------------- NER SCORES ------------------------------------')
         ner_cr = classification_report(self.ner_gt, ner_pred, mode='strict', scheme=self.ner_scheme)
@@ -70,24 +64,15 @@ class ClassificationReport(object):
         pred = []
         mean = 0.
         for i in range(len(self.ned_gt)):
-            print('>',i)
-            #print('>>>GT:\n',self.ned_gt[i])
-            m = 10
-            for v in self.ned_embeddings.values():
-                m = min(torch.sqrt(torch.sum((self.ned_gt[i][1][0] - v)**2)), m)
-            print(m)
-            print(self.embedding2id[tuple(self.ned_gt[i][1][0].tolist())])
-            #print('>>>PRED:\n',self.ned_pred[i])
-            if self.ned_pred[i] != None:
-                for j in range(len(self.ned_gt[i][0])):
-                    try:
-                        ind = self.ned_pred[i][0].index(self.ned_gt[i][0][j])
-                        pred.append(self.ned_pred[i][1][ind])
-                        gt.append(self.ned_gt[i][1][j])
-                        mean += distance.euclidean(self.ned_pred[i][1][ind], self.ned_gt[i][1][j])
-                    except:
-                        pred.append('***ERR***')
-                        gt.append(self.ned_gt[i][1][j])
+            for j in range(len(self.ned_gt[i][0])):
+                try:
+                    ind = self.ned_pred[i][0].index(self.ned_gt[i][0][j])
+                    pred.append(self.ned_pred[i][1][ind])
+                    gt.append(self.ned_gt[i][1][j])
+                    mean += distance.euclidean(self.ned_pred[i][1][ind], self.ned_gt[i][1][j])
+                except:
+                    pred.append('***ERR***')
+                    gt.append(self.ned_gt[i][1][j])
         self.ned_gt = gt
         self.ned_pred = pred
         nbrs = NearestNeighbors(n_neighbors=1, algorithm='auto')
@@ -95,18 +80,19 @@ class ClassificationReport(object):
         concepts = list(self.ned_embeddings.keys())
         embs =  list(self.ned_embeddings.values())
         for i in range(len(gt)):
-            for l, e in enumerate(embs):
-                if torch.sum(gt[i]!=e) == 0:
-                    j = l
-            gt[i] = concepts[j]
+            #for l, e in enumerate(embs):
+             #   if torch.sum(gt[i]!=e) == 0:
+              #      j = l
+            gt[i] = self.embedding2id[tuple(gt[i].tolist())]
+            #gt[i] = concepts[j]
             if pred[i] != '***ERR***':
                 _, k = nbrs.kneighbors(pred[i].view(1,-1))
                 pred[i] = concepts[k[0][0]]
-        print('------------------------------ NED SCORES ----------------------------------------')
+
+        print('> Mean distance between predictions and groundtruth for NED:', mean / len(gt))
         labels = { v: k for k, v in enumerate(gt)}
         labels = list(labels.keys())
-        print(skm.classification_report(gt, pred, labels=labels))
-        return mean / len(gt)
+        return skm.classification_report(gt, pred, labels=labels)
 
         
 # Plot graph embedding

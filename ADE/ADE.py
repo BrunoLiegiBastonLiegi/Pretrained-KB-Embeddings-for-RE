@@ -44,7 +44,7 @@ for s, d in pkl.items():
                 torch.tensor(v['span'][-1]),          # last token of the entity
                 mean                                  # mean graph embedding
             )))
-            embeddings[v['concept'][-1]] = mean       # taking last concept as identifier
+            embeddings['-'.join(v['concept'])] = mean       
         embs = torch.vstack(embs)
         """
         # this is the more strict approach where we consider the full list of tokens to identify
@@ -140,12 +140,9 @@ else:
 sm1 = torch.nn.Softmax(dim=1)
 sm0 = torch.nn.Softmax(dim=0)
 
-ner_groundtruth = []
-ner_prediction = []
-ned_groundtruth = []
-ned_prediction = []
-re_groundtruth = []
-re_prediction = []
+ner_groundtruth, ner_prediction = [], []
+ned_groundtruth, ned_prediction = [], []
+re_groundtruth, re_prediction = [], []
 
 # making predictions on the test set
 model.eval()
@@ -208,7 +205,7 @@ cr = ClassificationReport(
 )
 
 print('------------------------------ NED SCORES ---------------------------------------')
-#print(cr.ned_report())
+print(cr.ned_report())
 print('------------------------------ RE SCORES ----------------------------------------')
 print(cr.re_report())
 
