@@ -187,7 +187,7 @@ from evaluation import mean_neighbors_distance
 #print('Mean distance between neighbors:',
  #     mean_neighbors_distance(torch.vstack(list(embeddings.values()))))
 
-from evaluation import ClassificationReport
+from evaluation import ClassificationReport, KG
 
 #with open('UMLS-embeddings.pkl', 'rb') as f:
  #   KB = pickle.load(f)
@@ -203,6 +203,9 @@ cr = ClassificationReport(
     ner_scheme='IOBES',
     ned_embeddings=embeddings
 )
+
+index2rel = {0: 'NO_RELATION', 1: 'ADVERSE_EFFECT_OF'}
+KG(ned_prediction, re_prediction, embeddings, index2rel)
 
 print('------------------------------ NED SCORES ---------------------------------------')
 print(cr.ned_report())

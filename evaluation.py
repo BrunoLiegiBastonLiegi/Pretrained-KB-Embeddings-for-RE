@@ -1,7 +1,8 @@
+import torch, random
 import numpy as np
+import networkx as nx
 from scipy.spatial import distance
 from sklearn.neighbors import NearestNeighbors
-import torch
 
 # Performance metrics
 from seqeval.metrics import classification_report
@@ -88,6 +89,8 @@ class ClassificationReport(object):
             if pred[i] != '***ERR***':
                 _, k = nbrs.kneighbors(pred[i].view(1,-1))
                 pred[i] = concepts[k[0][0]]
+            else:
+                pred[i] = random.choice(concepts)
 
         print('> Mean distance between predictions and groundtruth for NED:', mean / len(gt))
         labels = { v: k for k, v in enumerate(gt)}
@@ -133,3 +136,25 @@ def mean_distance(embeddings):
             if i != j:
                 mean += distance.euclidean(embeddings[i], embeddings[j])
     return mean / (len(embeddings)**2 - len(embeddings))
+
+
+
+# KG
+def KG(ned_predictions, re_predictions, embeddings, relations):
+    #embedding2id = { tuple(v.tolist()): k for k,v in ned_embeddings.items() }
+    nbrs = NearestNeighbors(n_neighbors=1, algorithm='auto')
+    nbrs.fit(torch.vstack(list(embeddings.values())))
+    concepts = list(embeddings.keys())
+    kg = nx.Graph()
+    for i in range(len(ned_predictions)):
+        if re_predictions[i] != None:
+            ids = {
+                k : concepts[ nbrs.kneighbors(p.reshape(1,-1))[1][0][0] ]
+                for k,p in zip(ned_predictions[i][0], ned_predictions[i][1])
+            }
+            for r in re_predictions[i]:
+                #kg.append({'head': ids[r[0].item()], 'tail': ids[r[1].item()], 'rel': relations[r[2].item()]})
+                if relations[r[2].item()] != 'NO_RELATION':
+                    kg.add_edge(ids[r[0].item()], ids[r[1].item()])
+    nx.draw(kg, with_labels=True)
+    return kg
