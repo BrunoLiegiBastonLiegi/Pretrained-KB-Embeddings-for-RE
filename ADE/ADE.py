@@ -86,8 +86,8 @@ for s, d in pkl.items():
 
 
 # set up the tokenizer and the pre-trained BERT
-#bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
-bert = "bert-base-uncased"
+bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
+#bert = "bert-base-uncased"
 tokenizer = AutoTokenizer.from_pretrained(bert)
 #model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=50, re_dim=2)
 model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=0, re_dim=2)
@@ -120,7 +120,7 @@ trainer = Trainer(train_data=data['train'],
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(1)
+    plots = trainer.train(12)
     ones = np.ones(10)
     ner_plot = np.convolve(plots['train']['NER'], ones, 'valid') / len(ones)
     ned_plot = np.convolve(plots['train']['NED'], ones, 'valid') / len(ones)
@@ -133,7 +133,7 @@ else:
         r, re_plot, 'g-'
     )
     #plt.axis([0,len(r),0,1])
-    plt.show()
+    #plt.show()
 
 # ------------------------- Evaluation 
     
