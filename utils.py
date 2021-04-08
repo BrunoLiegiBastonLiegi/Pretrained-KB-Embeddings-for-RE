@@ -205,7 +205,8 @@ class Trainer(object):
             print('> Model saved to ', PATH)
         else:
             print('> Model not saved.')
-            
+
+        self.model.eval()
         return self.loss_plots
 
     def test_loss(self):

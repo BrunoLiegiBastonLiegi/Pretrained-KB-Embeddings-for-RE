@@ -28,6 +28,7 @@ class Pipeline(torch.nn.Module):
         # NED
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
         self.dropout = torch.nn.Dropout(p=0.1)
+        self.bnorm = torch.nn.BatchNorm1d(778)
         #self.ned_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ned_dim)
         self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, 778)
         self.ned_lin2 = torch.nn.Linear(778, 778)
@@ -153,20 +154,19 @@ class Pipeline(torch.nn.Module):
             return ([], [])
 
     def NED(self, x):
-        tanh = torch.nn.Tanh()
         relu = torch.nn.ReLU()
-        x = self.dropout(relu(self.ned_lin1(x)))
-        x = self.dropout(relu(self.ned_lin2(x)))
-        x = self.dropout(relu(self.ned_lin3(x)))
-        x = self.dropout(relu(self.ned_lin4(x)))
-        x = self.dropout(relu(self.ned_lin5(x)))
-        x = self.dropout(relu(self.ned_lin6(x)))
-        x = self.dropout(relu(self.ned_lin7(x)))
-        x = self.dropout(relu(self.ned_lin8(x)))
-        x = self.dropout(relu(self.ned_lin9(x)))
-        x = self.dropout(relu(self.ned_lin10(x)))
-        x = self.dropout(relu(self.ned_lin11(x)))
-        x = self.dropout(relu(self.ned_lin12(x)))
+        x = relu(self.dropout(self.ned_lin1(x)))
+        x = relu(self.dropout(self.ned_lin2(x)))
+        x = relu(self.dropout(self.ned_lin3(x)))
+        x = relu(self.dropout(self.ned_lin4(x)))
+        x = relu(self.dropout(self.ned_lin5(x)))
+        x = relu(self.dropout(self.ned_lin6(x)))
+        x = relu(self.dropout(self.ned_lin7(x)))
+        x = relu(self.dropout(self.ned_lin8(x)))
+        x = relu(self.dropout(self.ned_lin9(x)))
+        x = relu(self.dropout(self.ned_lin10(x)))
+        x = relu(self.dropout(self.ned_lin11(x)))
+        x = relu(self.dropout(self.ned_lin12(x)))
         return self.ned_lin(x)
         
     def HeadTail(self, x, inputs):
