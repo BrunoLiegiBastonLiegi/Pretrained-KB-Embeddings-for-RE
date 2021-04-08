@@ -40,7 +40,7 @@ class Pipeline(torch.nn.Module):
         self.ned_lin9 = torch.nn.Linear(778, 778)
         self.ned_lin10 = torch.nn.Linear(778, 778)
         self.ned_lin11 = torch.nn.Linear(778, 778)
-        self.ned_lin11 = torch.nn.Linear(778, 778)
+        self.ned_lin12 = torch.nn.Linear(778, 778)
         self.ned_lin = torch.nn.Linear(778, self.ned_dim)
         
         # Head-Tail
