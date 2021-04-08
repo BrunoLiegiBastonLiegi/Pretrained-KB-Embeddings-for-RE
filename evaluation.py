@@ -1,4 +1,4 @@
-import torch, random
+import torch, random, json
 import numpy as np
 import networkx as nx
 from scipy.spatial import distance
@@ -140,7 +140,7 @@ def mean_distance(embeddings):
 
 
 # KG
-def KG(ned_predictions, re_predictions, embeddings, relations):
+def KG(ned_predictions, re_predictions, embeddings, relations, save=None, remove_disconnected_components=False):
     #embedding2id = { tuple(v.tolist()): k for k,v in ned_embeddings.items() }
     nbrs = NearestNeighbors(n_neighbors=1, algorithm='auto')
     nbrs.fit(torch.vstack(list(embeddings.values())))
@@ -156,5 +156,11 @@ def KG(ned_predictions, re_predictions, embeddings, relations):
                 #kg.append({'head': ids[r[0].item()], 'tail': ids[r[1].item()], 'rel': relations[r[2].item()]})
                 if relations[r[2].item()] != 'NO_RELATION':
                     kg.add_edge(ids[r[0].item()], ids[r[1].item()])
+    if remove_disconnected_components:
+        pass # to implement
+    if save != None:
+        data = nx.readwrite.json_graph.node_link_data(kg)
+        json.dump(data, save, indent=4)
     nx.draw(kg, with_labels=True)
+    plt.show()
     return kg

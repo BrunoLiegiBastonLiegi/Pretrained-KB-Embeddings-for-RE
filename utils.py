@@ -166,6 +166,7 @@ class Trainer(object):
                 ner_loss = self.loss_f(ner_output, ner_target)
                 self.loss_plots['train']['NER'].append(ner_loss)
                 ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(1., device=self.device)
+                #ned_loss = torch.tensor(1., device=self.device)
                 self.loss_plots['train']['NED'].append(ned_loss)
                 re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
                 self.loss_plots['train']['RE'].append(re_loss)

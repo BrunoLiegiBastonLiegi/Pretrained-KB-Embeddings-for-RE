@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser(description='Train the model.')
 parser.add_argument('input_data', help='Path to input data file.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
+parser.add_argument('--fold', metavar='FOLD', help='Number of the fold for k-fold crossvalidation')
 args = parser.parse_args()
 
 # Define the tagging scheme
@@ -19,7 +20,10 @@ bioes = BIOES(['AE','DRUG'])
 # Load the data
 with open(args.input_data, 'rb') as f:               
     pkl = pickle.load(f)
-pkl = pkl['fold_0'] # get only the 0-fold for testing
+if args.fold != None:
+    pkl = pkl['fold_' + str(args.fold)]
+else:
+    pkl = pkl['fold_0'] 
 
 rel2index = {'NO_RELATION': 0, 'ADVERSE_EFFECT_OF': 1, 'HAS_ADVERSE_EFFECT': 2} # consider adding a third relation HAS_AE
                                                                                 # i.e. AE_OF^-1
@@ -121,17 +125,17 @@ if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
     plots = trainer.train(12)
-    ones = np.ones(10)
-    ner_plot = np.convolve(plots['train']['NER'], ones, 'valid') / len(ones)
-    ned_plot = np.convolve(plots['train']['NED'], ones, 'valid') / len(ones)
-    re_plot = np.convolve(plots['train']['RE'], ones, 'valid') / len(ones)
+    #ones = np.ones(10)
+    #ner_plot = np.convolve(plots['train']['NER'], ones, 'valid') / len(ones)
+    #ned_plot = np.convolve(plots['train']['NED'], ones, 'valid') / len(ones)
+    #re_plot = np.convolve(plots['train']['RE'], ones, 'valid') / len(ones)
     # show the plots
-    r = range(len(ner_plot))
-    plt.plot(
-        r, ner_plot, 'r-',
-        r, ned_plot, 'b-',
-        r, re_plot, 'g-'
-    )
+    #r = range(len(ner_plot))
+    #plt.plot(
+     #   r, ner_plot, 'r-',
+     #   r, ned_plot, 'b-',
+     #   r, re_plot, 'g-'
+    #)
     #plt.axis([0,len(r),0,1])
     #plt.show()
 
@@ -171,12 +175,6 @@ for d in trainer.test_set:
     else:
         re_prediction.append(None)
 
-# Some testing by hand
-for i in range(5):
-    print('>> NER GROUNDTRUTH\n', ner_groundtruth[i])
-    print('>> NER PREDICTION\n', ner_prediction[i])
-    print('>> RE GROUNDTRUTH\n', re_groundtruth[i])
-    print('>> RE PREDICTION\n', re_prediction[i], '\n')
 
 # plot predicted/pretrained graph embeddings
 from evaluation import plot_embedding
@@ -205,8 +203,9 @@ cr = ClassificationReport(
 )
 
 index2rel = {0: 'NO_RELATION', 1: 'ADVERSE_EFFECT_OF'}
-KG(ned_prediction, re_prediction, embeddings, index2rel)
-
+with open('graph.json', 'w') as f:
+    kg = KG(ned_prediction, re_prediction, embeddings, index2rel, save=f)
+    
 print('------------------------------ NED SCORES ---------------------------------------')
 print(cr.ned_report())
 print('------------------------------ RE SCORES ----------------------------------------')
