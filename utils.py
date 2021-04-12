@@ -263,12 +263,27 @@ class Trainer(object):
         pred = []
         target = []
         
+        gt = dict(zip(map(tuple, groundtruth[:,:2].tolist()), groundtruth[:,2]))
+        re = dict(zip(map(tuple, re_out[0].tolist()), re_out[1]))
+
+        for k,v in gt.items():
+            try:
+                p = re.pop(k)
+                target.append(v)
+                pred.append(p)
+            except:
+                pass
+        if self.model.training:
+            for v in re.values():
+                pred.append(v)
+                target.append(torch.tensor(0, device=self.device))
+        """    
         for i in range(len(re_out[0])):
             for j in groundtruth:
                 if re_out[0][i][0] == j[0] and re_out[0][i][1] == j[1]:
                     pred.append(re_out[1][i])
                     target.append(j[2])
-                    
+        """            
         # they should be equal, the one below probably more efficient
         """
         for j in groundtruth:
@@ -278,7 +293,7 @@ class Trainer(object):
                     target.append(j[2])
         """
         if len(pred) > 1:
-            return self.loss_f(torch.vstack(pred), torch.stack(target, dim=0))
+            return self.loss_f(torch.vstack(pred), torch.hstack(target))
         else:
             return torch.tensor(1., device=self.device)
         
@@ -313,8 +328,9 @@ class Trainer(object):
             except:
                 #loss += torch.sqrt(mse(fake_target, v))
                 pass
-        #for v in ned.values():
-         #   loss += torch.sqrt(mse(v, fake_target))
+        if self.model.training:
+            for v in ned.values():
+                loss += torch.sqrt(mse(v, fake_target))
 
         if loss != 0: 
             return loss

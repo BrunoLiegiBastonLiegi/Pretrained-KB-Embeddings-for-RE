@@ -124,7 +124,7 @@ trainer = Trainer(train_data=data['train'],
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(12)
+    plots = trainer.train(7)
     #ones = np.ones(10)
     #ner_plot = np.convolve(plots['train']['NER'], ones, 'valid') / len(ones)
     #ned_plot = np.convolve(plots['train']['NED'], ones, 'valid') / len(ones)
