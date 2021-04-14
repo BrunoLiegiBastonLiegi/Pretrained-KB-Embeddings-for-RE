@@ -25,7 +25,7 @@ if args.fold != None:
 else:
     pkl = pkl['fold_0'] 
 
-rel2index = {'NO_RELATION': 0, 'ADVERSE_EFFECT_OF': 1, 'HAS_ADVERSE_EFFECT': 2} # consider adding a third relation HAS_AE
+rel2index = {'NO_RELATION': 0, 'ADVERSE_EFFECT_OF': 1}#, 'HAS_ADVERSE_EFFECT': 2} # consider adding a third relation HAS_AE
                                                                                 # i.e. AE_OF^-1
                                                  
 # Prepare train and test set with labels
@@ -124,7 +124,7 @@ trainer = Trainer(train_data=data['train'],
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(7)
+    plots = trainer.train(24)
     #ones = np.ones(10)
     #ner_plot = np.convolve(plots['train']['NER'], ones, 'valid') / len(ones)
     #ned_plot = np.convolve(plots['train']['NED'], ones, 'valid') / len(ones)
@@ -202,7 +202,7 @@ cr = ClassificationReport(
     ned_embeddings=embeddings
 )
 
-index2rel = {0: 'NO_RELATION', 1: 'ADVERSE_EFFECT_OF'}
+index2rel = {v: k for k,v in rel2index.items()}
 with open('graph.json', 'w') as f:
     kg = KG(ned_prediction, re_prediction, embeddings, index2rel, save=f)
     

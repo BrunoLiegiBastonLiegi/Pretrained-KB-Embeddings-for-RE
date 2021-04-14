@@ -1,7 +1,12 @@
-import requests, regex, json
+import requests, regex, json, argparse
 from bs4 import BeautifulSoup
 import networkx as nx
 import matplotlib.pyplot as plt
+
+# Arguments parser
+parser = argparse.ArgumentParser(description='Convert the Knowledge Graph from CUIs to names.')
+parser.add_argument('input_graph', help='Path to input graph.json file.')
+args = parser.parse_args()
 
 UMLS_key = '38791509-7b9c-4aac-a6a2-8728faf28bc1'
 
@@ -13,7 +18,7 @@ soup = BeautifulSoup(r.text, "lxml")
 TGT = regex.search('TGT-(.+)-cas', soup.form['action']).group(0)
 print('> Generated TGT:\n\t', TGT)
 
-with open('ADE/graph.json') as f:
+with open(args.input_graph) as f:
     g = json.load(f)
 
 try:
@@ -23,6 +28,7 @@ except:
     cui2name = {}
     
 kg = nx.Graph()
+color_map = {}
 
 for l in g['links']:
 
@@ -47,13 +53,17 @@ for l in g['links']:
                 cui2name[c] = name
                 k[i] = name
                 print(c, ':', name)
-                
-    kg.add_edge('-'.join(s), '-'.join(t))
+
+    s = '-'.join(s)
+    t = '-'.join(t)
+    color_map[s] = 'orange'
+    color_map[t] = 'cyan'
+    kg.add_edge(s, t)
 
     
 #print(cui2name)
 kg = kg.subgraph(sorted(nx.connected_components(kg), key = len, reverse=True)[0])
-nx.draw(kg, with_labels=True)
+nx.draw(kg, with_labels=True, node_color=[color_map[n] for n in kg.nodes()])
 plt.show()
 
 with open('cui2name.json', 'w') as f:

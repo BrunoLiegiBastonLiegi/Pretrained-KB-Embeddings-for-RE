@@ -4,6 +4,7 @@ import math
 
 from transformers import AutoTokenizer, AutoModel
 from itertools import product
+from sklearn.neighbors import NearestNeighbors
 
 
 class Pipeline(torch.nn.Module):
@@ -11,7 +12,6 @@ class Pipeline(torch.nn.Module):
     def __init__(self, bert, ner_dim, ner_scheme, ned_dim, re_dim):
         super().__init__()
 
-        self.scheme = ner_scheme
         self.sm = torch.nn.Softmax(dim=1)
         
         # BERT
@@ -22,20 +22,22 @@ class Pipeline(torch.nn.Module):
                 param.requires_grad = False                              # freezing the BERT encoder
     
         # NER # think about adding transition matrix for improvement
+        self.scheme = ner_scheme
         self.ner_dim = ner_dim  # dimension of NER tagging scheme
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
         
         # NED
+        #self.KB = KB
+        #self.nbrs = NearestNeighbors(n_neighbors=10, algorithm='auto')
+        #self.nbrs.fit(torch.vstack(list(KB.values())))
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
         self.dropout = torch.nn.Dropout(p=0.1)
-        self.bnorm = torch.nn.BatchNorm1d(778)
-        #self.ned_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ned_dim)
         self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, 778)
         self.ned_lin2 = torch.nn.Linear(778, 778)
         self.ned_lin3 = torch.nn.Linear(778, 778)
-        self.ned_lin4 = torch.nn.Linear(778, 778)
-        self.ned_lin5 = torch.nn.Linear(778, 778)
-        self.ned_lin6 = torch.nn.Linear(778, 778)
+        #self.ned_lin4 = torch.nn.Linear(778, 778)
+        #self.ned_lin5 = torch.nn.Linear(778, 778)
+        #self.ned_lin6 = torch.nn.Linear(778, 778)
         #self.ned_lin7 = torch.nn.Linear(778, 778)
         #self.ned_lin8 = torch.nn.Linear(778, 778)
         #self.ned_lin9 = torch.nn.Linear(778, 778)
@@ -67,10 +69,14 @@ class Pipeline(torch.nn.Module):
         ner = self.NER(x)                                           # this is the output of the linear layer, should we use this as
         x = torch.cat((x, self.sm(ner)), 1)                         # as embedding or rather the softmax of this?
         #x = torch.cat((x, ner), 1)
+        # save the context
+        #ctx = x[0]
+        #x = x[1:]
         # remove non-entity tokens and merge multi-token entities
         x, inputs = self.Entity_filter(x, inputs, filt='merge')
         if len(x) == 0:
             return (ner, None, None)
+        #ned = self.NED(x, ctx)
         ned = self.NED(x)
         if len(x) < 2:
             ned = (inputs, ned)
@@ -88,6 +94,7 @@ class Pipeline(torch.nn.Module):
     def BERT(self, x):
         #inputs = self.pretrained_tokenizer(x, return_tensors="pt", padding=True, truncation=True, max_length=128)
         return self.pretrained_model(**x).last_hidden_state[0][1:-1]
+        #return self.pretrained_model(**x).last_hidden_state[0][:-1]
         #return self.pretrained_model(**inputs).last_hidden_state[0][1:-1]     # [0] explaination:
                                                                    # The output of model(**x) is of shape (a,b,c) with a = batchsize,
                                                                    # which in our case equals 1 since we pass a single sentence,
@@ -158,9 +165,9 @@ class Pipeline(torch.nn.Module):
         x = relu(self.ned_lin1(x))
         x = relu(self.ned_lin2(x))
         x = relu(self.ned_lin3(x))
-        x = relu(self.ned_lin4(x))
-        x = relu(self.ned_lin5(x))
-        x = relu(self.ned_lin6(x))
+        #x = relu(self.ned_lin4(x))
+        #x = relu(self.ned_lin5(x))
+        #x = relu(self.ned_lin6(x))
         #x = relu(self.ned_lin7(x))
         #x = relu(self.ned_lin8(x))
         #x = relu(self.ned_lin9(x))
