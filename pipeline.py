@@ -31,10 +31,14 @@ class Pipeline(torch.nn.Module):
         #self.nbrs = NearestNeighbors(n_neighbors=10, algorithm='auto')
         #self.nbrs.fit(torch.vstack(list(KB.values())))
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
+        hdim = 778
         self.dropout = torch.nn.Dropout(p=0.1)
-        self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, 778)
-        self.ned_lin2 = torch.nn.Linear(778, 778)
-        self.ned_lin3 = torch.nn.Linear(778, 778)
+        self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, hdim)
+        #self.ned_lin1 = torch.nn.Linear(hdim, hdim)
+        self.ned_lin2 = torch.nn.Linear(hdim, hdim)
+        self.ned_lin3 = torch.nn.Linear(hdim, hdim)
+        self.ned_bil = torch.nn.Bilinear(self.ned_dim, self.ned_dim, self.ned_dim)
+        self.ned_lin0 = torch.nn.Linear(2*self.ned_dim, self.ned_dim, bias=False)
         #self.ned_lin4 = torch.nn.Linear(778, 778)
         #self.ned_lin5 = torch.nn.Linear(778, 778)
         #self.ned_lin6 = torch.nn.Linear(778, 778)
@@ -44,7 +48,7 @@ class Pipeline(torch.nn.Module):
         #self.ned_lin10 = torch.nn.Linear(778, 778)
         #self.ned_lin11 = torch.nn.Linear(778, 778)
         #self.ned_lin12 = torch.nn.Linear(778, 778)
-        self.ned_lin = torch.nn.Linear(778, self.ned_dim)
+        self.ned_lin = torch.nn.Linear(hdim, self.ned_dim)
         
         # Head-Tail
         self.ht_dim = 32#128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
@@ -69,15 +73,16 @@ class Pipeline(torch.nn.Module):
         ner = self.NER(x)                                           # this is the output of the linear layer, should we use this as
         x = torch.cat((x, self.sm(ner)), 1)                         # as embedding or rather the softmax of this?
         #x = torch.cat((x, ner), 1)
-        # save the context
-        #ctx = x[0]
-        #x = x[1:]
+        # detach the context
+        ctx = x[0]
+        x = x[1:]
+        ner = ner[1:]
         # remove non-entity tokens and merge multi-token entities
         x, inputs = self.Entity_filter(x, inputs, filt='merge')
         if len(x) == 0:
             return (ner, None, None)
-        #ned = self.NED(x, ctx)
-        ned = self.NED(x)
+        ned = self.NED(x, ctx)
+        #ned = self.NED(x)
         if len(x) < 2:
             ned = (inputs, ned)
             return (ner, ned, None)
@@ -93,8 +98,8 @@ class Pipeline(torch.nn.Module):
 
     def BERT(self, x):
         #inputs = self.pretrained_tokenizer(x, return_tensors="pt", padding=True, truncation=True, max_length=128)
-        return self.pretrained_model(**x).last_hidden_state[0][1:-1]
-        #return self.pretrained_model(**x).last_hidden_state[0][:-1]
+        #return self.pretrained_model(**x).last_hidden_state[0][1:-1]
+        return self.pretrained_model(**x).last_hidden_state[0][:-1]
         #return self.pretrained_model(**inputs).last_hidden_state[0][1:-1]     # [0] explaination:
                                                                    # The output of model(**x) is of shape (a,b,c) with a = batchsize,
                                                                    # which in our case equals 1 since we pass a single sentence,
@@ -160,11 +165,18 @@ class Pipeline(torch.nn.Module):
         else:
             return ([], [])
 
-    def NED(self, x):
+    def NED(self, x, ctx):
         relu = torch.nn.ReLU()
+        #ctx = torch.vstack([ctx for i in range(len(x))])
+        x = torch.vstack((ctx, x))
+        #x = relu(self.ned_bil(ctx, x) + self.ned_lin0(torch.cat((ctx,x), dim=1)))
         x = relu(self.ned_lin1(x))
         x = relu(self.ned_lin2(x))
         x = relu(self.ned_lin3(x))
+        x = self.ned_lin(x)
+        ctx = torch.vstack([x[0] for i in range(len(x)-1)])
+        x = x[1:]
+        x = self.ned_bil(ctx, x) + self.ned_lin0(torch.cat((ctx,x), dim=1))
         #x = relu(self.ned_lin4(x))
         #x = relu(self.ned_lin5(x))
         #x = relu(self.ned_lin6(x))
@@ -174,7 +186,7 @@ class Pipeline(torch.nn.Module):
         #x = relu(self.ned_lin10(x))
         #x = relu(self.ned_lin11(x))
         #x = relu(self.ned_lin12(x))
-        return self.ned_lin(x)
+        return x#self.ned_lin(x)
         
     def HeadTail(self, x, inputs):
         h = self.h_lin(x)
