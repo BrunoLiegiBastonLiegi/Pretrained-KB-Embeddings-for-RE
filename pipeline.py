@@ -1,6 +1,4 @@
-import random
-import torch
-import math
+import random, torch, math, itertools
 
 from transformers import AutoTokenizer, AutoModel
 from itertools import product
@@ -9,7 +7,7 @@ from sklearn.neighbors import NearestNeighbors
 
 class Pipeline(torch.nn.Module):
 
-    def __init__(self, bert, ner_dim, ner_scheme, ned_dim, re_dim):
+    def __init__(self, bert, ner_dim, ner_scheme, ned_dim, KB, re_dim):
         super().__init__()
 
         self.sm = torch.nn.Softmax(dim=1)
@@ -27,9 +25,11 @@ class Pipeline(torch.nn.Module):
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
         
         # NED
-        #self.KB = KB
-        #self.nbrs = NearestNeighbors(n_neighbors=10, algorithm='auto')
-        #self.nbrs.fit(torch.vstack(list(KB.values())))
+        self.KB = KB
+        self.KB_embs = list(KB.values())
+        self.n_neighbors = 10
+        self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
+        self.nbrs.fit(torch.vstack(self.KB_embs))
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
         hdim = 778
         self.dropout = torch.nn.Dropout(p=0.1)
@@ -37,8 +37,8 @@ class Pipeline(torch.nn.Module):
         #self.ned_lin1 = torch.nn.Linear(hdim, hdim)
         self.ned_lin2 = torch.nn.Linear(hdim, hdim)
         self.ned_lin3 = torch.nn.Linear(hdim, hdim)
-        self.ned_bil = torch.nn.Bilinear(self.ned_dim, self.ned_dim, self.ned_dim)
-        self.ned_lin0 = torch.nn.Linear(2*self.ned_dim, self.ned_dim, bias=False)
+        #self.ned_bil = torch.nn.Bilinear(self.ned_dim, self.ned_dim, self.ned_dim)
+        self.ned_lin0 = torch.nn.Linear(2*self.ned_dim, 1)
         #self.ned_lin4 = torch.nn.Linear(778, 778)
         #self.ned_lin5 = torch.nn.Linear(778, 778)
         #self.ned_lin6 = torch.nn.Linear(778, 778)
@@ -174,9 +174,30 @@ class Pipeline(torch.nn.Module):
         x = relu(self.ned_lin2(x))
         x = relu(self.ned_lin3(x))
         x = self.ned_lin(x)
-        ctx = torch.vstack([x[0] for i in range(len(x)-1)])
-        x = x[1:]
-        x = self.ned_bil(ctx, x) + self.ned_lin0(torch.cat((ctx,x), dim=1))
+        ctx, x = x[0], x[1:]
+        ned_1 = x  # predicted graph embeddings
+        #print(x.shape)
+        _, indices = self.nbrs.kneighbors(x.detach().cpu())
+        x = torch.vstack([self.KB_embs[i] for i in indices.flatten()]).view(-1, self.n_neighbors, self.ned_dim)
+        x = x.cuda()
+        candidates = x # selected candidates in the KB
+        #print(x.shape)
+        x = torch.vstack(list(itertools.starmap(lambda x,y: x*y, zip(x, ned_1))))  # candidates*original_prediction (ned_1) product
+        #print(x.shape)
+        x = torch.vstack(list(map(lambda t: torch.hstack((t, ctx.squeeze(0))), x)))  # concatenation of context ctx
+        #print(x.shape)
+        x = self.ned_lin0(x).view(-1, self.n_neighbors, 1)
+        #print(x)
+        #print(x.shape)
+        x = self.sm(x)
+        indices = torch.argmax(x, dim=1)
+        #print(indices)
+        ned_2 = torch.vstack([ candidates[i][j] for i,j in enumerate(indices)]) # predicted true pre-trained embeddings
+        #print(ned_2)
+        #ctx = torch.vstack([x[0] for i in range(len(x)-1)])
+        #x = x[1:]
+        #x = self.ned_bil(ctx, x) + self.ned_lin0(torch.cat((ctx,x), dim=1))
+        
         #x = relu(self.ned_lin4(x))
         #x = relu(self.ned_lin5(x))
         #x = relu(self.ned_lin6(x))
@@ -186,7 +207,7 @@ class Pipeline(torch.nn.Module):
         #x = relu(self.ned_lin10(x))
         #x = relu(self.ned_lin11(x))
         #x = relu(self.ned_lin12(x))
-        return x#self.ned_lin(x)
+        return 0.5*(ned_1 + ned_2)#self.ned_lin(x)
         
     def HeadTail(self, x, inputs):
         h = self.h_lin(x)
