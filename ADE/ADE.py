@@ -118,7 +118,9 @@ trainer = Trainer(train_data=data['train'],
                   tokenizer=tokenizer,
                   optim=optimizer,
                   loss_f=criterion,
-                  device=device)
+                  device=device,
+                  save=False
+)
 
 # load pretrained model or train
 if args.load_model != None:
@@ -177,11 +179,11 @@ for d in trainer.test_set:
 
 
 # plot predicted/pretrained graph embeddings
-from evaluation import plot_embedding
+#from evaluation import plot_embedding
 #plot_embedding(ned_prediction, ned_groundtruth)
 
 # mean neighbors distance in graph embedding space
-from evaluation import mean_neighbors_distance
+#from evaluation import mean_neighbors_distance
 #print('Mean distance between neighbors:',
  #     mean_neighbors_distance(torch.vstack(list(embeddings.values()))))
 
@@ -202,47 +204,11 @@ cr = ClassificationReport(
     ned_embeddings=embeddings
 )
 
-index2rel = {v: k for k,v in rel2index.items()}
-with open('graph.json', 'w') as f:
-    kg = KG(ned_prediction, re_prediction, embeddings, index2rel, save=f)
-    
-print('------------------------------ NED SCORES ---------------------------------------')
-print(cr.ned_report())
-print('------------------------------ RE SCORES ----------------------------------------')
-print(cr.re_report())
+#index2rel = {v: k for k,v in rel2index.items()}
+#with open('graph.json', 'w') as f:
+ #   kg = KG(ned_prediction, re_prediction, embeddings, index2rel, save=f)
 
-# Performance metrics
-from seqeval.metrics import classification_report
-from seqeval.scheme import IOBES
-from sklearn.metrics import f1_score
-import sklearn.metrics as skm
+f1 = {'NER': cr.ner_report(), 'NED': cr.ned_report(), 'RE': cr.re_report()}
 
-
-# NER
-print('------------------------------ NER SCORES ----------------------------------------')
-print(classification_report(ner_groundtruth, ner_prediction, mode='strict', scheme=IOBES))
-
-
-"""
-# finding nearest concepts in the KB
-with open('UMLS-embeddings.pkl', 'rb') as f:
-    KB = pickle.load(f)
-
-from sklearn.neighbors import NearestNeighbors
-
-ids = list(KB.keys())
-#print(len(ids))
-#print(len(list(KB.values())))
-#[ print(i.shape) for i in KB.values() ] 
-#print(torch.vstack(list(KB.values())).shape)
-nbrs = NearestNeighbors(n_neighbors=1, algorithm='ball_tree').fit(list(KB.values()))
-for p in ned_prediction:
-    distances, indices = nbrs.kneighbors(p)
-    for i in range(len(distances)):
-        print('ID:', ids[int(indices[i])], 'Distance:', distances[i])
-    #print('indices:',index)
-    #print('distances:',distance)
-    #for i in nbrs.kneighbors(p):
-     #   print(i)
-      #  print('ID:', ids[int(i[1])])
-"""
+with open('f1_NED-1_fold-' + (args.fold) + '.pkl', 'wb') as f:
+    pickle.dump(f1, f)

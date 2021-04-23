@@ -98,7 +98,7 @@ class BIOES(Scheme):
 
 class Trainer(object):
 
-    def __init__(self, train_data, test_data, model, tokenizer, optim, loss_f, device):     
+    def __init__(self, train_data, test_data, model, tokenizer, optim, loss_f, device, save=True):     
         self.model = model
         self.tokenizer = tokenizer
         self.optim = optim
@@ -106,6 +106,7 @@ class Trainer(object):
         self.device = device     
         self.train_set = train_data
         self.test_set = test_data
+        self.save = save
 
     def train(self, epochs):
 
@@ -196,15 +197,16 @@ class Trainer(object):
             test_loss = self.test_loss()
             print('> Test Loss\n Total: %.3f, NER: %.3f, NED: %.3f, RE: %.3f' %
                   (test_loss[0], test_loss[1], test_loss[2], test_loss[3]), '\n')
-            
-        # save the model
-        print('> Save model to PATH (leave blank for not saving): ')
-        PATH = input()
-        if PATH != '':
-            torch.save(self.model.state_dict(), PATH)
-            print('> Model saved to ', PATH)
-        else:
-            print('> Model not saved.')
+
+        if self.save:
+            # save the model
+            print('> Save model to PATH (leave blank for not saving): ')
+            PATH = input()
+            if PATH != '':
+                torch.save(self.model.state_dict(), PATH)
+                print('> Model saved to ', PATH)
+            else:
+                print('> Model not saved.')
 
         self.model.eval()
         return self.loss_plots

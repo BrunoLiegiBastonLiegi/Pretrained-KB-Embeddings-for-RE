@@ -26,9 +26,12 @@ class ClassificationReport(object):
         self.embedding2id = { tuple(v.tolist()): k for k,v in ned_embeddings.items() }
                 
     def ner_report(self):
-        print('-------------------------- NER SCORES ------------------------------------')
-        ner_cr = classification_report(self.ner_gt, ner_pred, mode='strict', scheme=self.ner_scheme)
-        print(ner_cr)
+        #print('------------------------------ NER SCORES ----------------------------------------')
+        if self.ner_scheme == 'IOBES':
+            return classification_report(self.ner_gt, self.ner_pred, mode='strict', scheme=IOBES, output_dict=True)
+        else:
+            print('> NER Scheme not supported at the moment.')
+        
 
     def re_report(self):
         gt = []
@@ -56,8 +59,8 @@ class ClassificationReport(object):
                     #pred.append(-1)
         
                         
-        print(skm.confusion_matrix(np.array(gt), np.array(pred), labels=[0,1]))
-        return skm.classification_report(np.array(gt), np.array(pred), labels=[0,1], target_names=['NO_RELATION', 'ADVERSE_EFFECT_OF'])
+        #print(skm.confusion_matrix(np.array(gt), np.array(pred), labels=[0,1]))
+        return skm.classification_report(np.array(gt), np.array(pred), labels=[0,1], target_names=['NO_RELATION', 'ADVERSE_EFFECT_OF'], output_dict=True)
         #return skm.classification_report(np.array(gt), np.array(pred), labels=[-1,0,1], target_names=['WRONG_ENTITIES','NO_RELATION', 'ADVERSE_EFFECT_OF'])
 
     def ned_report(self):
@@ -95,7 +98,7 @@ class ClassificationReport(object):
         print('> Mean distance between predictions and groundtruth for NED:', mean / len(gt))
         labels = { v: k for k, v in enumerate(gt)}
         labels = list(labels.keys())
-        return skm.classification_report(gt, pred, labels=labels)
+        return skm.classification_report(gt, pred, labels=labels, output_dict=True)
 
         
 # Plot graph embedding

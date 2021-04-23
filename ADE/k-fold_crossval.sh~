@@ -1,0 +1,9 @@
+#!/bin/bash
+
+for i in {0..9}
+do
+    echo $i
+    #python ADE.py DRUG-AE_BIOES_10-fold.pkl\
+#	   --fold $i\
+#	   --load_model tmp.pth
+done
