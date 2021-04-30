@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 
 
 # Arguments parser
-parser = argparse.ArgumentParser(description='Train the model.')
+parser = argparse.ArgumentParser(description='Train the model for ADE.')
 parser.add_argument('input_data', help='Path to input data file.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
 parser.add_argument('--fold', metavar='FOLD', help='Number of the fold for k-fold crossvalidation')
+parser.add_argument('--NED_weight', metavar='NED', help='Weight for NED.')
 args = parser.parse_args()
 
 # Define the tagging scheme
@@ -23,7 +24,10 @@ with open(args.input_data, 'rb') as f:
 if args.fold != None:
     pkl = pkl['fold_' + str(args.fold)]
 else:
-    pkl = pkl['fold_0'] 
+    pkl = pkl['fold_0']
+
+wNED = 1 if args.NED_weight == None else args.NED_weight
+
 
 rel2index = {'NO_RELATION': 0, 'ADVERSE_EFFECT_OF': 1}#, 'HAS_ADVERSE_EFFECT': 2} # consider adding a third relation HAS_AE
                                                                                 # i.e. AE_OF^-1
@@ -94,8 +98,9 @@ for s, d in pkl.items():
 
 
 # set up the tokenizer and the pre-trained BERT
-bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
+#bert = "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract"
 #bert = "bert-base-uncased"
+bert = "dmis-lab/biobert-v1.1"
 tokenizer = AutoTokenizer.from_pretrained(bert)
 model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=50, KB=embeddings, re_dim=2)
 #model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=0, re_dim=2)
@@ -119,14 +124,15 @@ trainer = Trainer(train_data=data['train'],
                   optim=optimizer,
                   loss_f=criterion,
                   device=device,
-                  save=False
+                  save=False,
+                  wNED=wNED
 )
 
 # load pretrained model or train
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(24)
+    plots = trainer.train(7)
     #ones = np.ones(10)
     #ner_plot = np.convolve(plots['train']['NER'], ones, 'valid') / len(ones)
     #ned_plot = np.convolve(plots['train']['NED'], ones, 'valid') / len(ones)

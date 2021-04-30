@@ -98,7 +98,7 @@ class BIOES(Scheme):
 
 class Trainer(object):
 
-    def __init__(self, train_data, test_data, model, tokenizer, optim, loss_f, device, save=True):     
+    def __init__(self, train_data, test_data, model, tokenizer, optim, loss_f, device, save=True, wNED=1, batchsize=32):     
         self.model = model
         self.tokenizer = tokenizer
         self.optim = optim
@@ -107,6 +107,7 @@ class Trainer(object):
         self.train_set = train_data
         self.test_set = test_data
         self.save = save
+        self.wNED = wNED
 
     def train(self, epochs):
 
@@ -174,7 +175,8 @@ class Trainer(object):
                 if epoch == 0:
                     l_re = i / len(self.train_set)
                     l_ned = min(3*l_re, 1)
-                loss = ner_loss + l_re * re_loss + l_ned * 100*ned_loss
+                #loss = ner_loss + l_re * re_loss + self.wNED*(l_ned * 100*ned_loss) # wNED is used for discovering the benefit of NED
+                loss = ner_loss + l_re * re_loss + self.wNED*(l_re * 100*ned_loss) # wNED is used for discovering the benefit of NED
                 # backprop
                 loss.backward()
                 # optimize

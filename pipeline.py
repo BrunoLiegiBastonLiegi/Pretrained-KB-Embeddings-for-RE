@@ -30,31 +30,21 @@ class Pipeline(torch.nn.Module):
         #self.n_neighbors = 10
         #self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
         #self.nbrs.fit(torch.vstack(self.KB_embs))
-        self.ned_dim = ned_dim  # dimension of the KB graph embedding space
-        hdim = self.bert_dim + self.ner_dim
+        #self.ned_dim = ned_dim  # dimension of the KB graph embedding space
+        #hdim = self.bert_dim + self.ner_dim
         #self.dropout = torch.nn.Dropout(p=0.1)
-        self.relu = torch.nn.ReLU()
-        self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, hdim)
-        #self.ned_lin1 = torch.nn.Linear(hdim, hdim)
-        self.ned_lin2 = torch.nn.Linear(hdim, hdim)
-        self.ned_lin3 = torch.nn.Linear(hdim, hdim)
-        #self.ned_bil = torch.nn.Bilinear(self.ned_dim, self.ned_dim, self.ned_dim)
-        #self.ned_lin0 = torch.nn.Linear(2*self.ned_dim, 1)
-        #self.ned_lin4 = torch.nn.Linear(778, 778)
-        #self.ned_lin5 = torch.nn.Linear(778, 778)
-        #self.ned_lin6 = torch.nn.Linear(778, 778)
-        #self.ned_lin7 = torch.nn.Linear(778, 778)
-        #self.ned_lin8 = torch.nn.Linear(778, 778)
-        #self.ned_lin9 = torch.nn.Linear(778, 778)
-        #self.ned_lin10 = torch.nn.Linear(778, 778)
-        #self.ned_lin11 = torch.nn.Linear(778, 778)
-        #self.ned_lin12 = torch.nn.Linear(778, 778)
-        self.ned_lin = torch.nn.Linear(hdim, self.ned_dim)
+        #self.relu = torch.nn.ReLU()
+        #self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, hdim)
+        #self.ned_lin2 = torch.nn.Linear(hdim, hdim)
+        #self.ned_lin3 = torch.nn.Linear(hdim, hdim)
+        #self.ned_lin = torch.nn.Linear(hdim, self.ned_dim)
         
         # Head-Tail
         self.ht_dim = 32#128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
-        self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
-        self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
+        #self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
+        #self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
+        self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
+        self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
 
         # RE
         self.re_dim = re_dim  # dimension of RE classification space
@@ -80,17 +70,17 @@ class Pipeline(torch.nn.Module):
         x, inputs = self.Entity_filter(x, inputs, filt='merge')
         if len(x) == 0:
             return (ner, None, None)
-        ned = self.NED(x, ctx)
+        #ned = self.NED(x, ctx)
         #ned = self.NED(x)
         if len(x) < 2:
-            ned = (inputs, ned)
-            return (ner, ned, None)
-            #return (ner, None, None)
-        x = torch.cat((x, ned), 1)
-        ned = (inputs, ned)
+            #ned = (inputs, ned)
+            #return (ner, ned, None)
+            return (ner, None, None)
+        #x = torch.cat((x, ned), 1)
+        #ned = (inputs, ned)
         re = self.RE(x, inputs)
-        return ner, ned, re
-        #return ner, None, re
+        #return ner, ned, re
+        return ner, None, re
 
 
         
