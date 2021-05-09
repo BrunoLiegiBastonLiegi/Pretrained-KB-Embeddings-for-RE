@@ -304,11 +304,11 @@ class Trainer(object):
     def NED_loss(self, ned_out, groundtruth):
         loss = torch.tensor(0., device=self.device)
         mse = torch.nn.MSELoss(reduction='sum')
+        nll = torch.nn.NLLLoss()
         ned_dim = self.model.ned_dim
         gt = dict(zip(groundtruth[:,0].int().tolist(), groundtruth[:,1:]))
-        #print(gt)
-        ned = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1]))
-        #print(ned)
+        ned_2 = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1][1]))
+        ned_1 = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1][0]))
         """"
         gt = dict(zip(
             [ str(i.tolist()) for i in groundtruth[:, :-ned_dim] ],
@@ -326,16 +326,25 @@ class Trainer(object):
         # they are not the same, but the prediction was mostly correct
         # the easiest way would be to just stick with the previous approach of considering
         # the last token only
+        ned_2_scores = []
+        ned_2_targets = []
         for k, v in gt.items():
             try:
-                loss += torch.sqrt(mse(ned.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
+                if v in ned_2[k][:,1:]:
+                    ned_2_scores.append(ned_2[k][:,0])
+                    ned_2_targets.append(((ned_2[k][:,1:]-v).sum(-1)==0).nonzero().view(1))
+                loss += torch.sqrt(mse(ned_1.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
             except:
                 #loss += torch.sqrt(mse(fake_target, v))
                 pass
         if self.model.training:
-            for v in ned.values():
+            for v in ned_1.values():
                 loss += torch.sqrt(mse(v, fake_target))
 
+        if len(ned_2_scores) > 0 :
+            #print('>>>',nll(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets)))
+            loss += nll(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets))
+                
         if loss != 0: 
             return loss
         else:

@@ -25,26 +25,27 @@ class Pipeline(torch.nn.Module):
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
         
         # NED
-        #self.KB = KB
-        #self.KB_embs = list(KB.values())
-        #self.n_neighbors = 10
-        #self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
-        #self.nbrs.fit(torch.vstack(self.KB_embs))
-        #self.ned_dim = ned_dim  # dimension of the KB graph embedding space
-        #hdim = self.bert_dim + self.ner_dim
+        self.KB = KB
+        self.KB_embs = list(KB.values())
+        self.n_neighbors = 10
+        self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
+        self.nbrs.fit(torch.vstack(self.KB_embs))
+        self.ned_dim = ned_dim  # dimension of the KB graph embedding space
+        hdim = self.bert_dim + self.ner_dim 
         #self.dropout = torch.nn.Dropout(p=0.1)
-        #self.relu = torch.nn.ReLU()
-        #self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, hdim)
-        #self.ned_lin2 = torch.nn.Linear(hdim, hdim)
-        #self.ned_lin3 = torch.nn.Linear(hdim, hdim)
-        #self.ned_lin = torch.nn.Linear(hdim, self.ned_dim)
+        self.relu = torch.nn.ReLU()
+        self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, hdim)
+        self.ned_lin2 = torch.nn.Linear(hdim, hdim)
+        self.ned_lin3 = torch.nn.Linear(hdim, hdim)
+        self.ned_lin = torch.nn.Linear(hdim, self.ned_dim)
+        self.ned_lin0 = torch.nn.Linear(2*self.ned_dim, 1)
         
         # Head-Tail
         self.ht_dim = 32#128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
-        #self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
-        #self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
-        self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
-        self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
+        self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
+        self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
+        #self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
+        #self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim, self.ht_dim)
 
         # RE
         self.re_dim = re_dim  # dimension of RE classification space
@@ -70,17 +71,21 @@ class Pipeline(torch.nn.Module):
         x, inputs = self.Entity_filter(x, inputs, filt='merge')
         if len(x) == 0:
             return (ner, None, None)
-        #ned = self.NED(x, ctx)
+        ned = self.NED(x, ctx)
         #ned = self.NED(x)
         if len(x) < 2:
-            #ned = (inputs, ned)
-            #return (ner, ned, None)
-            return (ner, None, None)
+            ned = (inputs, ned)
+            return (ner, ned, None)
+            #return (ner, None, None)
+        x = torch.cat((
+            x,
+            torch.sum(ned[1][:,:,0].view(-1, self.n_neighbors, 1)*ned[1][:,:,1:], dim=1)
+            ), dim=1)
         #x = torch.cat((x, ned), 1)
-        #ned = (inputs, ned)
+        ned = (inputs, ned)
         re = self.RE(x, inputs)
-        #return ner, ned, re
-        return ner, None, re
+        return ner, ned, re
+        #return ner, None, re
 
 
         
@@ -163,33 +168,33 @@ class Pipeline(torch.nn.Module):
         x = self.relu(self.ned_lin3(x))
         x = self.ned_lin(x)
         ctx, x = x[0], x[1:]
-        #ned_1 = x  # predicted graph embeddings
-        """
+        ned_1 = x  # predicted graph embeddings
+        
         #print(ned_1)
         _, indices = self.nbrs.kneighbors(x.detach().cpu())
         x = torch.vstack([self.KB_embs[i] for i in indices.flatten()]).view(-1, self.n_neighbors, self.ned_dim)
         x = x.cuda()
         x.requires_grad = True
-        #print(x)
         candidates = x # selected candidates in the KB
         #print(x.shape)
         x = torch.vstack(list(itertools.starmap(lambda x,y: x*y, zip(x, ned_1))))  # candidates*original_prediction (ned_1) product
         #print(x.shape)
         x = torch.vstack(list(map(lambda t: torch.hstack((t, ctx.squeeze(0))), x)))  # concatenation of context ctx
-        #print(x.shape)
+        #print(x.shape)                                                        # might be better to do the element-wise product
         x = self.sm(self.ned_lin0(x).view(-1, self.n_neighbors, 1))
+        #print(x.shape)
         #print('LIN OUT\n',x)
-        cat = torch.distributions.Categorical(x.view(-1,1,x.shape[1])) # sample depending on the score
-        x = torch.nn.functional.one_hot(cat.sample(), num_classes=self.n_neighbors).view(-1,self.n_neighbors,1) 
+        #cat = torch.distributions.Categorical(x.view(-1,1,x.shape[1])) # sample depending on the score
+        #x = torch.nn.functional.one_hot(cat.sample(), num_classes=self.n_neighbors).view(-1,self.n_neighbors,1) 
         #print('ONE_HOT\n',x)
         #print(x.shape)
         #print(candidates.shape)
-        x = x*candidates                               
+        #x = x*candidates                               
         #print('FINAL CANDIDATE\n',x)
-        x = torch.sum(x, dim=1)                         # the sum is just to get rid of the (0,0,...,0) tensors obtained with the last product
+        #x = torch.sum(x, dim=1)                         # the sum is just to get rid of the (0,0,...,0) tensors obtained with the last product
         #print('SUM\n',x)
         #ned_2 = torch.vstack([ candidates[i][j] for i,j in enumerate(indices)]) # predicted true pre-trained embeddings
-        ned_2 = x
+        ned_2 = torch.hstack((x.view(-1,1), candidates.view(-1, self.ned_dim))).view(-1, self.n_neighbors, self.ned_dim + 1)
         #print(ned_2)
         #ctx = torch.vstack([x[0] for i in range(len(x)-1)])
         #x = x[1:]
@@ -204,8 +209,9 @@ class Pipeline(torch.nn.Module):
         #x = relu(self.ned_lin10(x))
         #x = relu(self.ned_lin11(x))
         #x = relu(self.ned_lin12(x))
-        """
-        return x
+        
+        #return x
+        return ned_1, ned_2
         
     def HeadTail(self, x, inputs):
         h = self.h_lin(x)
