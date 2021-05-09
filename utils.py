@@ -342,8 +342,8 @@ class Trainer(object):
                 loss += torch.sqrt(mse(v, fake_target))
 
         if len(ned_2_scores) > 0 :
-            #print('>>>',nll(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets)))
-            loss += nll(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets))
+            #print('>>>',self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets)))
+            loss += self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets))
                 
         if loss != 0: 
             return loss

@@ -79,7 +79,7 @@ class Pipeline(torch.nn.Module):
             #return (ner, None, None)
         x = torch.cat((
             x,
-            torch.sum(ned[1][:,:,0].view(-1, self.n_neighbors, 1)*ned[1][:,:,1:], dim=1)
+            torch.sum(self.sm(ned[1][:,:,0].view(-1, self.n_neighbors, 1))*ned[1][:,:,1:], dim=1)
             ), dim=1)
         #x = torch.cat((x, ned), 1)
         ned = (inputs, ned)
@@ -181,7 +181,8 @@ class Pipeline(torch.nn.Module):
         #print(x.shape)
         x = torch.vstack(list(map(lambda t: torch.hstack((t, ctx.squeeze(0))), x)))  # concatenation of context ctx
         #print(x.shape)                                                        # might be better to do the element-wise product
-        x = self.sm(self.ned_lin0(x).view(-1, self.n_neighbors, 1))
+        x = self.ned_lin0(x).view(-1, self.n_neighbors, 1)
+        #x = self.sm(self.ned_lin0(x).view(-1, self.n_neighbors, 1))
         #print(x.shape)
         #print('LIN OUT\n',x)
         #cat = torch.distributions.Categorical(x.view(-1,1,x.shape[1])) # sample depending on the score
