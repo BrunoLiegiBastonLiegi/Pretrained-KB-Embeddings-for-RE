@@ -58,28 +58,6 @@ for s, d in pkl.items():
             )))
             embeddings['-'.join(v['concept'])] = mean       
         embs = torch.vstack(embs)
-        """
-        # this is the more strict approach where we consider the full list of tokens to identify
-        # an entity and its graph embedding
-        embs = []
-        for v in i['entities'].values():
-            ents.append(torch.tensor(v['tokenized']))
-            # for multi-token entities we take the mean of the single embeddings
-            embs.append(torch.mean(v['embedding'], 0))
-        # pad the entities to the same lenght in order to store them in a single torch.tensor
-        # [125, 3679, 24]         [125, 3679, 24]
-        # [90]             ---->  [90,  -1,   -1]
-        # [567, 8971]             [567, 8971, -1]
-        max_len = len(max(ents, key=len))
-        ents = torch.stack([ torch.nn.functional.pad(i, pad=(0, max_len - i.numel()), mode='constant', value=-1) for i in ents ], dim=0)
-        embs = torch.stack(embs, dim=0)
-        # store padded entities and mean embeddings in the same tensor
-        # [125, 3679, 24, mean_emb1]
-        # [90,  -1,   -1, mean_emb2]
-        # [567, 8971, -1, mean_emb3]
-        # NOTE: the entities are automatically casted from int to float
-        embs = torch.hstack((ents,embs)).float()
-        """
         # relations 
         rels = torch.tensor([ (
             #v['tokenized'][0][-1],
@@ -124,7 +102,7 @@ trainer = Trainer(train_data=data['train'],
                   optim=optimizer,
                   loss_f=criterion,
                   device=device,
-                  save=False,
+                  save=True,
                   wNED=wNED
 )
 
@@ -169,7 +147,10 @@ for d in trainer.test_set:
     # NED
     ned_groundtruth.append( (d[2][:,0].tolist(), d[2][:,1:]) )
     if ned_outs != None:
-        ned_prediction.append( (torch.flatten(ned_outs[0]).tolist(), ned_outs[1].detach().cpu()) )
+        prob = sm1(ned_outs[1][1][:,:,0])
+        candidates = ned_outs[1][1][:,:,1:]
+        ned_prediction.append( (torch.flatten(ned_outs[0]).tolist(), torch.vstack([c[torch.argmax(w)] for w,c in zip(prob, candidates)]).detach().cpu()) )    
+        #ned_prediction.append( (torch.flatten(ned_outs[0]).tolist(), ned_outs[1].detach().cpu()) )
     else:
         ned_prediction.append(None)
 
@@ -216,5 +197,16 @@ cr = ClassificationReport(
 
 f1 = {'NER': cr.ner_report(), 'NED': cr.ned_report(), 'RE': cr.re_report()}
 
-with open('f1_NED-1_fold-' + (args.fold) + '.pkl', 'wb') as f:
-    pickle.dump(f1, f)
+if args.fold != None:
+    with open('f1_NED-1_fold-' + (args.fold) + '.pkl', 'wb') as f:
+        pickle.dump(f1, f)
+else:
+    print('NER')
+    print(f1['NER']['macro avg'])
+    print(f1['NER']['micro avg'])
+    print('NED')
+    print(f1['NED']['macro avg'])
+    print(f1['NED']['micro avg'])
+    print('RE')
+    print(f1['RE']['macro avg'])
+    print(f1['RE']['micro avg'])

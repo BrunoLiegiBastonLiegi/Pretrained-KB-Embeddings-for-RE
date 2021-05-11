@@ -108,6 +108,7 @@ class Trainer(object):
         self.test_set = test_data
         self.save = save
         self.wNED = wNED
+        self.mse = torch.nn.MSELoss(reduction='sum')
 
     def train(self, epochs):
 
@@ -259,19 +260,6 @@ class Trainer(object):
 
     def RE_loss(self, re_out, groundtruth):
         loss = 0.
-        """
-        fake_target = []
-        for i in range(len(re_out[0])):
-            tg = None
-            for j in groundtruth:
-                if re_out[0][i][0] == j[0] and re_out[0][i][1] == j[1]:
-                    tg = j[2] 
-            if tg != None:
-                fake_target.append(tg)
-            else:
-                fake_target.append(torch.tensor(0, device=self.device)) # 0 for NO_RELATION
-        return self.loss_f(re_out[1], torch.stack(fake_target, dim=0))
-        """
         pred = []
         target = []
         
@@ -289,73 +277,42 @@ class Trainer(object):
             for v in re.values():
                 pred.append(v)
                 target.append(torch.tensor(0, device=self.device))
-        """    
-        for i in range(len(re_out[0])):
-            for j in groundtruth:
-                if re_out[0][i][0] == j[0] and re_out[0][i][1] == j[1]:
-                    pred.append(re_out[1][i])
-                    target.append(j[2])
-        """            
-        # they should be equal, the one below probably more efficient
-        """
-        for j in groundtruth:
-            for i,p in zip(re_out[0], re_out[1]):
-                if j[0] == i[0] and j[1] == i[1]:
-                    pred.append(p)
-                    target.append(j[2])
-        """
+ 
         if len(pred) > 1:
             return self.loss_f(torch.vstack(pred), torch.hstack(target))
         else:
             return torch.tensor(1., device=self.device)
         
     def NED_loss(self, ned_out, groundtruth):
-        loss1 = torch.tensor(0., device=self.device)
-        loss2 = torch.tensor(0., device=self.device)
-        mse = torch.nn.MSELoss(reduction='sum')
-        nll = torch.nn.NLLLoss()
+        loss1, loss2 = torch.tensor(0., device=self.device), torch.tensor(0., device=self.device)
         ned_dim = self.model.ned_dim
         gt = dict(zip(groundtruth[:,0].int().tolist(), groundtruth[:,1:]))
         ned_2 = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1][1]))
         ned_1 = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1][0]))
-        """"
-        gt = dict(zip(
-            [ str(i.tolist()) for i in groundtruth[:, :-ned_dim] ],
-            groundtruth[:, -ned_dim:] ))
-        ned = dict(zip(
-            [ str(i.tolist()) for i in ned_out[:, :-ned_dim] ],
-            ned_out[:, -ned_dim:] ))
-        """
-        fake_target = torch.zeros(ned_dim, device=self.device)
-        #fake_target = torch.ones(ned_dim, device=self.device)
 
-        # maybe it would be better to take for good also entity predictions that contain all
-        # the groundtruth tokens + something else, for example:
-        # GT: [1127, 897]  PRED: [6725, 1127, 897]
-        # they are not the same, but the prediction was mostly correct
-        # the easiest way would be to just stick with the previous approach of considering
-        # the last token only
+        fake_target = torch.zeros(ned_dim, device=self.device)
+
         ned_2_scores = []
         ned_2_targets = []
         for k, v in gt.items():
             try:
                 candidates = ned_2[k][:,1:]
                 if v in candidates:
-                    #print(ned_2[k][:,0])
-                    #print(((ned_2[k][:,1:]-v).sum(-1)==0).nonzero().view(1))
                     ned_2_scores.append(ned_2[k][:,0])
-                    ned_2_targets.append(((ned_2[k][:,1:]-v).sum(-1)==0).nonzero().view(1))
-                loss1 += torch.sqrt(mse(ned_1.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
+                    ind = ((ned_2[k][:,1:]-v).sum(-1)==0).nonzero()
+                    if len(ind) == 1:
+                        ned_2_targets.append(ind.view(1))
+                    else:
+                        ned_2_targets.append(ind[0].view(1)) # it happened to have two equal neighbors, strange...
+                loss1 += torch.sqrt(self.mse(ned_1.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
             except:
                 #loss += torch.sqrt(mse(fake_target, v))
                 pass
         if self.model.training:
             for v in ned_1.values():
-                loss1 += torch.sqrt(mse(v, fake_target))
+                loss1 += torch.sqrt(self.mse(v, fake_target))
                 
         if len(ned_2_scores) > 0 :
-            assert len(ned_2_scores) == len(ned_2_targets), "len(scores):"+str(len(ned_2_scores))+" != len(targets):"+str(len(ned_2_targets))
-            #print('>>>',self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets)))
             loss2 = self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets))
         else:
             loss2 = torch.tensor(2.3, device=self.device)
