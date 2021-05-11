@@ -127,7 +127,8 @@ class Trainer(object):
 
             running_loss = 0.0
             ner_running_loss = 0.0
-            ned_running_loss = 0.0
+            ned_running_loss1 = 0.0
+            ned_running_loss2 = 0.0
             re_running_loss = 0.0
             # shuffle training set
             random.shuffle(self.train_set)
@@ -135,6 +136,7 @@ class Trainer(object):
             self.model.train()
 
             for i in range(len(self.train_set)):
+                #print(list(self.model.ned_lin0.parameters()))
 
                 if k < 4:
                     if i == one_3rd:
@@ -167,16 +169,18 @@ class Trainer(object):
                 # losses
                 ner_loss = self.loss_f(ner_output, ner_target)
                 self.loss_plots['train']['NER'].append(ner_loss)
-                ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(1., device=self.device)
+                ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(1., device=self.device), torch.tensor(1., device=self.device))
                 #ned_loss = torch.tensor(1., device=self.device)
-                self.loss_plots['train']['NED'].append(ned_loss)
+                self.loss_plots['train']['NED'].append(ned_loss1)
                 re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
                 self.loss_plots['train']['RE'].append(re_loss)
                 if epoch == 0:
-                    l_re = i / len(self.train_set)
-                    l_ned = min(3*l_re, 1)
+                    l_re = 0#i / len(self.train_set)
+                    l_ned = 0#min(3*l_re, 1)
+                else:
+                    l_re = 1
                 #loss = ner_loss + l_re * re_loss + self.wNED*(l_ned * 100*ned_loss) # wNED is used for discovering the benefit of NED
-                loss = ner_loss + l_re * re_loss + self.wNED*(l_re * 100*ned_loss) # wNED is used for discovering the benefit of NED
+                loss = ner_loss + l_re * re_loss + self.wNED*(l_re * (100*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
                 # backprop
                 loss.backward()
                 # optimize
@@ -184,21 +188,23 @@ class Trainer(object):
 
                 # print statistics
                 ner_running_loss += ner_loss.item()
-                ned_running_loss += ned_loss.item()
+                ned_running_loss1 += ned_loss1.item()
+                ned_running_loss2 += ned_loss2.item()
                 re_running_loss += re_loss.item()
                 running_loss += loss.item()
 
                 if i % 500 == 499:    # print every 500 sentences
-                    print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED: %.3f, RE: %.3f' %
-                          (epoch + 1, i + 1, running_loss / 500, ner_running_loss / 500, ned_running_loss / 500, re_running_loss / 500))
+                    print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
+                          (epoch + 1, i + 1, running_loss / 500, ner_running_loss / 500, ned_running_loss1 / 500, ned_running_loss2 / 500, re_running_loss / 500))
                     running_loss = 0.0
                     ner_running_loss = 0.
-                    ned_running_loss = 0.
+                    ned_running_loss1 = 0.
+                    ned_running_loss2 = 0.
                     re_running_loss = 0.
                     
             test_loss = self.test_loss()
-            print('> Test Loss\n Total: %.3f, NER: %.3f, NED: %.3f, RE: %.3f' %
-                  (test_loss[0], test_loss[1], test_loss[2], test_loss[3]), '\n')
+            print('> Test Loss\n Total: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
+                  (test_loss[0], test_loss[1], test_loss[2], test_loss[3], test_loss[4]), '\n')
 
         if self.save:
             # save the model
@@ -219,7 +225,8 @@ class Trainer(object):
         with torch.no_grad():
             loss = 0.
             test_ner_loss = torch.tensor(0., device=self.device)
-            test_ned_loss = torch.tensor(0., device=self.device)
+            test_ned_loss1 = torch.tensor(0., device=self.device)
+            test_ned_loss2 = torch.tensor(0., device=self.device)
             test_re_loss = torch.tensor(0., device=self.device)
             
             for i in self.test_set:
@@ -238,16 +245,17 @@ class Trainer(object):
                 ner_output, ned_output, re_output = self.model(inputs)
                 ner_loss = self.loss_f(ner_output, ner_target)
                 self.loss_plots['test']['NER'].append(ner_loss)
-                ned_loss = self.NED_loss(ned_output, ned_target) if ned_output != None else torch.tensor(1., device=self.device)
-                self.loss_plots['test']['NED'].append(ned_loss)
+                ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(1., device=self.device), torch.tensor(1., device=self.device)) 
+                self.loss_plots['test']['NED'].append(ned_loss1)
                 re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
                 self.loss_plots['test']['RE'].append(re_loss)
-                loss += ner_loss.item() + ned_loss.item() + re_loss.item()
+                loss += ner_loss.item() + ned_loss1.item() + ned_loss2.item() + re_loss.item()
                 test_ner_loss += ner_loss.item()
-                test_ned_loss += ned_loss.item()
+                test_ned_loss1 += ned_loss1.item()
+                test_ned_loss2 += ned_loss2.item()
                 test_re_loss += re_loss.item()
 
-            return (loss / len(self.test_set), test_ner_loss / len(self.test_set), test_ned_loss / len(self.test_set), test_re_loss / len(self.test_set))
+            return (loss / len(self.test_set), test_ner_loss / len(self.test_set), test_ned_loss1 / len(self.test_set), test_ned_loss2 / len(self.test_set), test_re_loss / len(self.test_set))
 
     def RE_loss(self, re_out, groundtruth):
         loss = 0.
@@ -302,7 +310,8 @@ class Trainer(object):
             return torch.tensor(1., device=self.device)
         
     def NED_loss(self, ned_out, groundtruth):
-        loss = torch.tensor(0., device=self.device)
+        loss1 = torch.tensor(0., device=self.device)
+        loss2 = torch.tensor(0., device=self.device)
         mse = torch.nn.MSELoss(reduction='sum')
         nll = torch.nn.NLLLoss()
         ned_dim = self.model.ned_dim
@@ -330,23 +339,29 @@ class Trainer(object):
         ned_2_targets = []
         for k, v in gt.items():
             try:
-                if v in ned_2[k][:,1:]:
+                candidates = ned_2[k][:,1:]
+                if v in candidates:
+                    #print(ned_2[k][:,0])
+                    #print(((ned_2[k][:,1:]-v).sum(-1)==0).nonzero().view(1))
                     ned_2_scores.append(ned_2[k][:,0])
                     ned_2_targets.append(((ned_2[k][:,1:]-v).sum(-1)==0).nonzero().view(1))
-                loss += torch.sqrt(mse(ned_1.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
+                loss1 += torch.sqrt(mse(ned_1.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
             except:
                 #loss += torch.sqrt(mse(fake_target, v))
                 pass
         if self.model.training:
             for v in ned_1.values():
-                loss += torch.sqrt(mse(v, fake_target))
-
-        if len(ned_2_scores) > 0 :
-            #print('>>>',self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets)))
-            loss += self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets))
+                loss1 += torch.sqrt(mse(v, fake_target))
                 
-        if loss != 0: 
-            return loss
+        if len(ned_2_scores) > 0 :
+            assert len(ned_2_scores) == len(ned_2_targets), "len(scores):"+str(len(ned_2_scores))+" != len(targets):"+str(len(ned_2_targets))
+            #print('>>>',self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets)))
+            loss2 = self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets))
         else:
-            return torch.tensor(1., device=self.device)
+            loss2 = torch.tensor(2.3, device=self.device)
+                
+        if loss1 != 0: 
+            return loss1, loss2
+        else:
+            return torch.tensor(1., device=self.device), torch.tensor(1., device=self.device)
             
