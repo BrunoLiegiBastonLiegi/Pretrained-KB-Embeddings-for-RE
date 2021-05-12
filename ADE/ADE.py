@@ -145,11 +145,19 @@ for d in trainer.test_set:
     ner_prediction.append([ bioes.to_tag(i) for i in sm1(ner_outs) ])
 
     # NED
-    ned_groundtruth.append( (d[2][:,0].tolist(), d[2][:,1:]) )
+    ned_groundtruth.append( dict(zip(
+        d[2][:,0].int().tolist(),
+        d[2][:,1:]))
+    )
     if ned_outs != None:
         prob = sm1(ned_outs[1][1][:,:,0])
         candidates = ned_outs[1][1][:,:,1:]
-        ned_prediction.append( (torch.flatten(ned_outs[0]).tolist(), torch.vstack([c[torch.argmax(w)] for w,c in zip(prob, candidates)]).detach().cpu()) )    
+        ned_prediction.append(dict(zip(
+            ned_outs[0].view(-1,).tolist(),
+            torch.vstack([c[torch.argmax(w)] for w,c in zip(prob, candidates)])
+        )))
+        #ned_prediction.append( (torch.flatten(ned_outs[0]).tolist(), torch.vstack([c[torch.argmax(w)] for w,c in zip(prob, candidates)]).detach().cpu()) )
+        #ned_prediction.append( (torch.flatten(ned_outs[0]).tolist(), torch.vstack([c[0] for w,c in zip(prob, candidates)]).detach().cpu()) )
         #ned_prediction.append( (torch.flatten(ned_outs[0]).tolist(), ned_outs[1].detach().cpu()) )
     else:
         ned_prediction.append(None)
@@ -206,7 +214,7 @@ else:
     print(f1['NER']['micro avg'])
     print('NED')
     print(f1['NED']['macro avg'])
-    print(f1['NED']['micro avg'])
+    print(f1['NED']['weighted avg'])
     print('RE')
     print(f1['RE']['macro avg'])
     print(f1['RE']['micro avg'])

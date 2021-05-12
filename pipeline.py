@@ -38,9 +38,9 @@ class Pipeline(torch.nn.Module):
         self.ned_lin2 = torch.nn.Linear(hdim, hdim)
         self.ned_lin3 = torch.nn.Linear(hdim, hdim)
         self.ned_lin = torch.nn.Linear(hdim, self.ned_dim)
-        self.ned_lin0 = torch.nn.Linear(2*self.ned_dim, 1)
-        self.ned_lin01 = torch.nn.Linear(2*self.ned_dim, 2*self.ned_dim)
-        self.ned_lin02 = torch.nn.Linear(2*self.ned_dim, 2*self.ned_dim)
+        self.ned_lin0 = torch.nn.Linear(self.ned_dim, 1)
+        self.ned_lin01 = torch.nn.Linear(self.ned_dim, self.ned_dim)
+        self.ned_lin02 = torch.nn.Linear(self.ned_dim, self.ned_dim)
         
         # Head-Tail
         self.ht_dim = 32#128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
@@ -180,8 +180,9 @@ class Pipeline(torch.nn.Module):
         #print(x.shape)
         x = torch.vstack(list(itertools.starmap(lambda x,y: (x-y)*1000, zip(candidates, x))))  # candidates*original_prediction (ned_1) product
         #print(x.shape)
-        x = torch.vstack(list(map(lambda t: torch.hstack((t, ctx.squeeze(0))), x)))  # concatenation of context ctx
+        #x = torch.vstack(list(map(lambda t: torch.hstack((t, ctx.squeeze(0))), x)))  # concatenation of context ctx
         #print(x.shape)                                                        # might be better to do the element-wise product
+        x = torch.vstack(list(map(lambda t: t*ctx.squeeze(0)*1000, x)))
         x = self.relu(self.ned_lin01(x))
         x = self.relu(self.ned_lin02(x))
         x = self.ned_lin0(x).view(-1, self.n_neighbors, 1)

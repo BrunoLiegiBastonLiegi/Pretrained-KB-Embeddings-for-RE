@@ -176,10 +176,8 @@ class Trainer(object):
                 re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
                 self.loss_plots['train']['RE'].append(re_loss)
                 if epoch == 0:
-                    l_re = 0#i / len(self.train_set)
-                    l_ned = 0#min(3*l_re, 1)
-                else:
-                    l_re = 1
+                    l_re = i / len(self.train_set)
+                    l_ned = min(3*l_re, 1)
                 #loss = ner_loss + l_re * re_loss + self.wNED*(l_ned * 100*ned_loss) # wNED is used for discovering the benefit of NED
                 loss = ner_loss + l_re * re_loss + self.wNED*(l_re * (100*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
                 # backprop

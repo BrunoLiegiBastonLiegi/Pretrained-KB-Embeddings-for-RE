@@ -62,7 +62,20 @@ class ClassificationReport(object):
         #print(skm.confusion_matrix(np.array(gt), np.array(pred), labels=[0,1]))
         return skm.classification_report(np.array(gt), np.array(pred), labels=[0,1], target_names=['NO_RELATION', 'ADVERSE_EFFECT_OF'], output_dict=True)
         #return skm.classification_report(np.array(gt), np.array(pred), labels=[-1,0,1], target_names=['WRONG_ENTITIES','NO_RELATION', 'ADVERSE_EFFECT_OF'])
-
+        
+    def ned_report(self):
+        target = []
+        pred = []
+        for gt, p in zip(self.ned_gt, self.ned_pred):
+            for k,v in gt.items():
+                try:
+                    tmp = p[k]
+                    pred.append(self.embedding2id[tuple(tmp.tolist())])
+                except:
+                    pred.append('***ERR***')
+                target.append(self.embedding2id[tuple(v.tolist())])
+        return skm.classification_report(target, pred, output_dict=True)
+"""
     def ned_report(self):
         gt = []
         pred = []
@@ -99,6 +112,7 @@ class ClassificationReport(object):
         labels = { v: k for k, v in enumerate(gt)}
         labels = list(labels.keys())
         return skm.classification_report(gt, pred, labels=labels, output_dict=True)
+"""
 
         
 # Plot graph embedding
