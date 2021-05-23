@@ -1,7 +1,7 @@
 import random, torch, pickle
 import numpy as np
 from abc import ABC, abstractmethod
-
+from torch.utils.data import DataLoader
 
 
 # ------------------------ NER tagging schemes ----------------------------------------
@@ -98,31 +98,26 @@ class BIOES(Scheme):
 
 class Trainer(object):
 
-    def __init__(self, train_data, test_data, model, tokenizer, optim, loss_f, device, save=True, wNED=1, batchsize=32):     
+    def __init__(self, train_data, test_data, model, optim, device, save=True, wNED=1, batchsize=32):     
         self.model = model
-        self.tokenizer = tokenizer
         self.optim = optim
-        self.loss_f = loss_f
         self.device = device     
         self.train_set = train_data
         self.test_set = test_data
         self.save = save
         self.wNED = wNED
+        self.crossentropy = torch.nn.CrossEntropyLoss()
         self.mse = torch.nn.MSELoss(reduction='sum')
+        self.batchsize = batchsize
 
     def train(self, epochs):
 
         # BERT layers unfreezing
         k = 0  # counter for bert layers unfreezing
-        one_3rd = int(len(self.train_set) / 3) # after 1/3 of the data we unfreeze a layer
-        # Losses weights
-        l_re = 0. # RE loss weight, gradually increased to 1
-        l_ned = 0.
-        # Losses plots
-        self.loss_plots = {
-            'train': {'NER':[], 'NED':[], 'RE':[]},
-            'test': {'NER':[], 'NED':[], 'RE':[]}
-        }
+        one_3rd = int(len(self.train_set) / (3*self.batchsize)) # after 1/3 of the data we unfreeze a layer
+        print_step = int(len(self.train_set) / (6*self.batchsize))
+        # Loss weights
+        l = 0. # RE loss weight, gradually increased to 1
         
         for epoch in range(epochs):
 
@@ -131,55 +126,40 @@ class Trainer(object):
             ned_running_loss1 = 0.0
             ned_running_loss2 = 0.0
             re_running_loss = 0.0
-            # shuffle training set
-            random.shuffle(self.train_set)
             # set model in train mode
             self.model.train()
-
-            for i in range(len(self.train_set)):
-                #print(list(self.model.ned_lin0.parameters()))
+            train_loader = DataLoader(self.train_set,
+                                      batch_size=self.batchsize,
+                                      shuffle=True,
+                                      collate_fn=self.train_set.collate_fn)
+            
+            for i, batch in enumerate(train_loader):
 
                 if k < 4:
-                    if i == one_3rd:
-                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
-                        k += 1
-                    elif i == 2*one_3rd:
-                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
-                        k += 1
-                    elif i == len(self.train_set):
-                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
-                        k += 1
-
-                inputs = self.tokenizer(self.train_set[i][0], return_tensors="pt")
-                ner_target = self.train_set[i][1]
-                ned_target = self.train_set[i][2]
-                re_target = self.train_set[i][3]
-
-                # move inputs and labels to device
-                if self.device != torch.device("cpu"):
-                    inputs = inputs.to(self.device)
-                    ner_target = ner_target.to(self.device)
-                    ned_target = ned_target.to(self.device)
-                    re_target = re_target.to(self.device)
+                    if epoch == 0:
+                        if i >= one_3rd and k == 0:
+                            self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
+                            k += 1
+                        elif i >= 2*one_3rd and k == 1:
+                            self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
+                            k += 1
+                    elif epoch == 1:
+                        if k == 2:
+                            self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
+                            k += 1
+                        if i >= one_3rd and k == 3:
+                            self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
+                            k += 1
 
                 # zero the parameter gradients
                 self.optim.zero_grad()
+                ner_loss, ned_loss1, ned_loss2, re_loss = self.step(batch)
 
-                # forward 
-                ner_output, ned_output, re_output= self.model(inputs)
-                # losses
-                ner_loss = self.loss_f(ner_output, ner_target)
-                self.loss_plots['train']['NER'].append(ner_loss)
-                ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(1., device=self.device), torch.tensor(1., device=self.device))
-                #ned_loss = torch.tensor(1., device=self.device)
-                self.loss_plots['train']['NED'].append(ned_loss1)
-                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
-                self.loss_plots['train']['RE'].append(re_loss)
                 if epoch == 0:
-                    l_re = i / len(self.train_set)
-                    l_ned = min(3*l_re, 1)
-                #loss = ner_loss + l_re * re_loss + self.wNED*(l_ned * 100*ned_loss) # wNED is used for discovering the benefit of NED
-                loss = ner_loss + l_re * re_loss + self.wNED*(l_re * (100*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
+                    l = i*self.batchsize / len(self.train_set)
+                else:
+                    l = 1
+                loss = ner_loss + l * re_loss + self.wNED*(l * (100*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
                 # backprop
                 loss.backward()
                 # optimize
@@ -192,18 +172,18 @@ class Trainer(object):
                 re_running_loss += re_loss.item()
                 running_loss += loss.item()
 
-                if i % 500 == 499:    # print every 500 sentences
+                if i % print_step == print_step -1:    # print every print_step sentences
                     print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
-                          (epoch + 1, i + 1, running_loss / 500, ner_running_loss / 500, ned_running_loss1 / 500, ned_running_loss2 / 500, re_running_loss / 500))
+                          (epoch + 1, i*self.batchsize + 1, running_loss / print_step, ner_running_loss / print_step, ned_running_loss1 / print_step, ned_running_loss2 / print_step, re_running_loss / print_step))
                     running_loss = 0.0
                     ner_running_loss = 0.
                     ned_running_loss1 = 0.
                     ned_running_loss2 = 0.
                     re_running_loss = 0.
                     
-            test_loss = self.test_loss()
-            print('> Test Loss\n Total: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
-                  (test_loss[0], test_loss[1], test_loss[2], test_loss[3], test_loss[4]), '\n')
+            #test_loss = self.test_loss()
+            #print('> Test Loss\n Total: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
+             #     (test_loss[0], test_loss[1], test_loss[2], test_loss[3], test_loss[4]), '\n')
 
         if self.save:
             # save the model
@@ -216,8 +196,31 @@ class Trainer(object):
                 print('> Model not saved.')
 
         self.model.eval()
-        return self.loss_plots
 
+    def step(self, batch):
+        inputs = batch['sent']
+        ner_target = batch['ner']
+        ned_target = batch['ned']
+        re_target = batch['re']
+
+        # move inputs and labels to device
+        if self.device != torch.device("cpu"):
+            inputs = inputs.to(self.device)
+            ner_target = ner_target.to(self.device)
+            ned_target = [ t.to(self.device) for t in ned_target ]
+            re_target = [ t.to(self.device) for t in re_target ]
+
+        # forward 
+        ner_out, ned_output, re_output= self.model(inputs)
+        # losses
+        ner_loss = self.crossentropy(
+            torch.transpose(ner_out, 1, 2),
+            ner_target
+        )
+        ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(2.3, device=self.device), torch.tensor(2.3, device=self.device))
+        re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(2.3, device=self.device)
+        return ner_loss, ned_loss1, ned_loss2, re_loss
+        
     def test_loss(self):
         # set model in eval mode
         self.model.eval()
@@ -228,27 +231,9 @@ class Trainer(object):
             test_ned_loss2 = torch.tensor(0., device=self.device)
             test_re_loss = torch.tensor(0., device=self.device)
             
-            for i in self.test_set:
-                inputs = self.tokenizer(i[0], return_tensors="pt")
-                ner_target = i[1]
-                ned_target = i[2]
-                re_target = i[3]
-
-                # move inputs and labels to device
-                if self.device != torch.device("cpu"):
-                    inputs = inputs.to(self.device)
-                    ner_target = ner_target.to(self.device)
-                    ned_target = ned_target.to(self.device)
-                    re_target = re_target.to(self.device)
-
-                ner_output, ned_output, re_output = self.model(inputs)
-                ner_loss = self.loss_f(ner_output, ner_target)
-                self.loss_plots['test']['NER'].append(ner_loss)
-                ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(1., device=self.device), torch.tensor(1., device=self.device)) 
-                self.loss_plots['test']['NED'].append(ned_loss1)
-                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
-                self.loss_plots['test']['RE'].append(re_loss)
-                loss += ner_loss.item() + ned_loss1.item() + ned_loss2.item() + re_loss.item()
+            for batch in self.test_set:
+                ner_loss, ned_loss1, ned_loss2, re_loss = self.step(batch)
+                loss = ner_loss + re_loss + (100*ned_loss1 + ned_loss2) 
                 test_ner_loss += ner_loss.item()
                 test_ned_loss1 += ned_loss1.item()
                 test_ned_loss2 += ned_loss2.item()
@@ -258,67 +243,66 @@ class Trainer(object):
 
     def RE_loss(self, re_out, groundtruth):
         loss = 0.
-        pred = []
-        target = []
-        
-        gt = dict(zip(map(tuple, groundtruth[:,:2].tolist()), groundtruth[:,2]))
-        re = dict(zip(map(tuple, re_out[0].tolist()), re_out[1]))
-
-        for k,v in gt.items():
-            try:
-                p = re.pop(k)
-                target.append(v)
-                pred.append(p)
-            except:
-                pass
-        if self.model.training:
-            for v in re.values():
-                pred.append(v)
-                target.append(torch.tensor(0, device=self.device))
- 
-        if len(pred) > 1:
-            return self.loss_f(torch.vstack(pred), torch.hstack(target))
+        for i in range(len(groundtruth)):
+            g = dict(zip(
+                map( tuple, groundtruth[i][:,:2].tolist() ),
+                groundtruth[i][:,2]
+            ))
+            r = dict(zip(
+                map( tuple, re_out[0][i].tolist() ),
+                re_out[1][i]
+            ))
+            re_pred, re_target = [], []
+            for k in g.keys() & r.keys():
+                re_pred.append(r.pop(k))
+                re_target.append(g[k])
+            if self.model.training:
+                for v in r.values():
+                    re_pred.append(v)
+                    re_target.append(torch.tensor(0, dtype=torch.int, device=self.device)) # 0 for no relation
+            loss += self.crossentropy(torch.vstack(re_pred), torch.hstack(re_target).long())
+        if loss != 0:
+            return loss / len(groundtruth)
         else:
-            return torch.tensor(1., device=self.device)
+            return torch.tensor(2.3, device=self.device)
         
     def NED_loss(self, ned_out, groundtruth):
         loss1, loss2 = torch.tensor(0., device=self.device), torch.tensor(0., device=self.device)
-        ned_dim = self.model.ned_dim
-        gt = dict(zip(groundtruth[:,0].int().tolist(), groundtruth[:,1:]))
-        ned_2 = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1][1]))
-        ned_1 = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1][0]))
+        dim = self.model.ned_dim
+        for i in range(len(groundtruth)):
+            g = dict(zip(
+                groundtruth[i][:,0].int().tolist(),
+                groundtruth[i][:,1:]
+            ))
+            n1 = dict(zip(
+                torch.flatten(ned_out[0][i]).tolist(),
+                ned_out[1][i]
+            ))
+            n2 = dict(zip(
+                torch.flatten(ned_out[0][i]).tolist(),
+                ned_out[2][i]
+            ))
+            n2_scores, n2_targets = [], []
+            for k in g.keys() & n1.keys():
+                loss1 += torch.sqrt(self.mse(n1.pop(k), g[k]))
+                tmp = n2.pop(k)
+                candidates = tmp[:,1:]
+                if g[k] in candidates:
+                    ind = ((candidates-g[k]).sum(-1)==0).nonzero()
+                    n2_targets.append(torch.flatten(ind)[0])
+                    #n2_targets.append(ind.view(1))
+                    n2_scores.append(tmp[:,0])
+            if len(n2_scores) > 0 :
+                loss2 += self.crossentropy(torch.vstack(n2_scores), torch.hstack(n2_targets)) 
+            else:
+                loss2 += torch.tensor(2.3, device=self.device)
+            if self.model.training:
+                loss1 += sum(map(self.mse, n1.values(), torch.zeros(len(n1), dim, device=self.device)))
 
-        fake_target = torch.zeros(ned_dim, device=self.device)
-
-        ned_2_scores = []
-        ned_2_targets = []
-        for k, v in gt.items():
-            try:
-                candidates = ned_2[k][:,1:]
-                if v in candidates:
-                    ned_2_scores.append(ned_2[k][:,0])
-                    ind = ((ned_2[k][:,1:]-v).sum(-1)==0).nonzero()
-                    if len(ind) == 1:
-                        ned_2_targets.append(ind.view(1))
-                    else:
-                        ned_2_targets.append(ind[0].view(1)) # it happened to have two equal neighbors, strange...
-                loss1 += torch.sqrt(self.mse(ned_1.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
-            except:
-                #loss += torch.sqrt(mse(fake_target, v))
-                pass
-        if self.model.training:
-            for v in ned_1.values():
-                loss1 += torch.sqrt(self.mse(v, fake_target))
-                
-        if len(ned_2_scores) > 0 :
-            loss2 = self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets))
-        else:
-            loss2 = torch.tensor(2.3, device=self.device)
-                
         if loss1 != 0: 
-            return loss1, loss2
+            return loss1 / len(groundtruth), loss2 / len(groundtruth)
         else:
-            return torch.tensor(1., device=self.device), torch.tensor(1., device=self.device)
+            return torch.tensor(2.3, device=self.device), torch.tensor(1., device=self.device)
             
 
 

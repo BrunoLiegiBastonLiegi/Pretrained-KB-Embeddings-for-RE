@@ -1,4 +1,4 @@
-from utils import BIOES, IEData
+from utils import BIOES, IEData, Trainer
 import pickle, torch
 from transformers import AutoTokenizer, AutoModel
 from torch.utils.data import DataLoader
@@ -48,16 +48,17 @@ for k,v in kb.items():
 batchsize=32
 dataloader = DataLoader(data, batch_size=batchsize, shuffle=True, collate_fn=data.collate_fn)
 model = Pipeline(bert, ner_dim=bioes.space_dim, ner_scheme=bioes, ned_dim=50, KB=kb, re_dim=2).cuda()
-#batch = next(iter(dataloader))
-for i in range(1000):
-    for j,b in enumerate(dataloader):
-        print(j*batchsize,end='\r')
-        #print(tokenizer.decode(b['sent'][0]))
-        #print(b['sent'][0].shape,b['sent'][0])
-        #print(b['ner'][0].shape,b['ner'][0])
-        #print(b['re'][0])
-        inputs = b['sent'].cuda()
-        model(inputs)
+
+trainer = Trainer(
+    data,
+    data,
+    model,
+    torch.optim.AdamW(model.parameters(), lr=0.00002),
+    torch.device("cuda:0")
+)
+
+trainer.train(5)
+
 #print(batch)
 #print(model(batch['sent']).last_hidden_state)
 #print(batch)

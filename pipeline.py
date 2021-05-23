@@ -78,13 +78,13 @@ class Pipeline(torch.nn.Module):
             return (ner, None, None)
         ned = self.NED(x, ctx)
         if x.shape[1] < 2:
-            ned = (inputs, ned)
+            ned = (inputs, ned[0], ned[1])
             return (ner, ned, None)
         x = torch.cat((
             x,
             (self.sm(ned[1][:,:,:,0].view(x.shape[0], -1, self.n_neighbors, 1))*ned[1][:,:,:,1:]).sum(2)
             ), dim=-1)
-        ned = (inputs, ned)
+        ned = (inputs, ned[0], ned[1])
         re = self.RE(x, inputs)
         return ner, ned, re
         #return ner, None, re
@@ -152,7 +152,7 @@ class Pipeline(torch.nn.Module):
             if item != []:
                 p.append(torch.vstack((
                     item,
-                    pad*torch.ones(max_len - len(item), dim).cuda()
+                    pad*torch.ones(max_len - len(item), dim, dtype=torch.int).cuda()
                 )).unsqueeze(0))
             else:
                 p.append(pad*torch.ones(max_len, dim, dtype=torch.int).unsqueeze(0).cuda())
