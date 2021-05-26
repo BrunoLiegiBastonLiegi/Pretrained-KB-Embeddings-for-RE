@@ -115,7 +115,6 @@ class Trainer(object):
         # BERT layers unfreezing
         k = 0  # counter for bert layers unfreezing
         one_3rd = int(len(self.train_set) / (3*self.batchsize)) # after 1/3 of the data we unfreeze a layer
-        print_step = int(len(self.train_set) / (6*self.batchsize))
         # Loss weights
         l = 0. # RE loss weight, gradually increased to 1
         
@@ -132,6 +131,7 @@ class Trainer(object):
                                       batch_size=self.batchsize,
                                       shuffle=True,
                                       collate_fn=self.train_set.collate_fn)
+            print_step = int(len(train_loader) / 6)
             
             for i, batch in enumerate(train_loader):
 
@@ -156,7 +156,7 @@ class Trainer(object):
                 ner_loss, ned_loss1, ned_loss2, re_loss = self.step(batch)
 
                 if epoch == 0:
-                    l = i*self.batchsize / len(self.train_set)
+                    l = i / len(train_loader)
                 else:
                     l = 1
                 loss = ner_loss + l * re_loss + self.wNED*(l * (100*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
@@ -172,7 +172,7 @@ class Trainer(object):
                 re_running_loss += re_loss.item()
                 running_loss += loss.item()
 
-                if i % print_step == print_step -1:    # print every print_step sentences
+                if i % print_step == print_step - 1:    # print every print_step sentences
                     print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
                           (epoch + 1, i*self.batchsize + 1, running_loss / print_step, ner_running_loss / print_step, ned_running_loss1 / print_step, ned_running_loss2 / print_step, re_running_loss / print_step))
                     running_loss = 0.0
@@ -181,9 +181,9 @@ class Trainer(object):
                     ned_running_loss2 = 0.
                     re_running_loss = 0.
                     
-            #test_loss = self.test_loss()
-            #print('> Test Loss\n Total: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
-             #     (test_loss[0], test_loss[1], test_loss[2], test_loss[3], test_loss[4]), '\n')
+            test_loss = self.test_loss()
+            print('> Test Loss\n Total: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
+                  (test_loss[0], test_loss[1], test_loss[2], test_loss[3], test_loss[4]), '\n')
 
         if self.save:
             # save the model
@@ -211,8 +211,12 @@ class Trainer(object):
             re_target = [ t.to(self.device) for t in re_target ]
 
         # forward 
-        ner_out, ned_output, re_output= self.model(inputs)
+        ner_out, ned_output, re_output = self.model(inputs)
         # losses
+        print(ner_out.shape)
+        print(torch.transpose(ner_out, 1, 2).shape)
+        print(ner_target.shape)
+        a
         ner_loss = self.crossentropy(
             torch.transpose(ner_out, 1, 2),
             ner_target
@@ -222,6 +226,10 @@ class Trainer(object):
         return ner_loss, ned_loss1, ned_loss2, re_loss
         
     def test_loss(self):
+        test_loader = DataLoader(self.test_set,
+                                 batch_size=self.batchsize,
+                                 shuffle=True,
+                                 collate_fn=self.test_set.collate_fn)
         # set model in eval mode
         self.model.eval()
         with torch.no_grad():
@@ -231,15 +239,17 @@ class Trainer(object):
             test_ned_loss2 = torch.tensor(0., device=self.device)
             test_re_loss = torch.tensor(0., device=self.device)
             
-            for batch in self.test_set:
+            for batch in test_loader:
                 ner_loss, ned_loss1, ned_loss2, re_loss = self.step(batch)
-                loss = ner_loss + re_loss + (100*ned_loss1 + ned_loss2) 
+                loss += ner_loss + re_loss + (100*ned_loss1 + ned_loss2) 
                 test_ner_loss += ner_loss.item()
                 test_ned_loss1 += ned_loss1.item()
                 test_ned_loss2 += ned_loss2.item()
                 test_re_loss += re_loss.item()
+        # return to train mode
+        self.model.train()
 
-            return (loss / len(self.test_set), test_ner_loss / len(self.test_set), test_ned_loss1 / len(self.test_set), test_ned_loss2 / len(self.test_set), test_re_loss / len(self.test_set))
+        return (loss / len(test_loader), test_ner_loss / len(test_loader), test_ned_loss1 / len(test_loader), test_ned_loss2 / len(test_loader), test_re_loss / len(test_loader))
 
     def RE_loss(self, re_out, groundtruth):
         loss = 0.
@@ -260,7 +270,9 @@ class Trainer(object):
                 for v in r.values():
                     re_pred.append(v)
                     re_target.append(torch.tensor(0, dtype=torch.int, device=self.device)) # 0 for no relation
-            loss += self.crossentropy(torch.vstack(re_pred), torch.hstack(re_target).long())
+            if len(re_pred) > 0:
+                loss += self.crossentropy(torch.vstack(re_pred), torch.hstack(re_target).long())
+                
         if loss != 0:
             return loss / len(groundtruth)
         else:

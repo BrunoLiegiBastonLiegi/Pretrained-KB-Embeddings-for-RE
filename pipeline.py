@@ -3,15 +3,15 @@ import random, torch, math, itertools
 from transformers import AutoTokenizer, AutoModel
 from itertools import product
 from sklearn.neighbors import NearestNeighbors
-
+#from multiprocessing import Pool, cpu_count
 
 class Pipeline(torch.nn.Module):
 
     def __init__(self, bert, ner_dim, ner_scheme, ned_dim, KB, re_dim):
         super().__init__()
 
-        #self.sm = torch.nn.Softmax(dim=1)
         self.sm = torch.nn.Softmax(dim=2)
+        #self.dropout = torch.nn.Dropout(p=0.1)
         
         # BERT
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
@@ -23,6 +23,7 @@ class Pipeline(torch.nn.Module):
         # NER # think about adding transition matrix for improvement
         self.scheme = ner_scheme
         self.ner_dim = ner_dim  # dimension of NER tagging scheme
+        self.ner_lin0 = torch.nn.Linear(self.bert_dim, self.bert_dim)
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
         
         # NED
@@ -33,7 +34,6 @@ class Pipeline(torch.nn.Module):
         self.nbrs.fit(torch.vstack(self.KB_embs))
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
         hdim = self.bert_dim + self.ner_dim 
-        #self.dropout = torch.nn.Dropout(p=0.1)
         self.relu = torch.nn.ReLU()
         self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, hdim)
         self.ned_lin2 = torch.nn.Linear(hdim, hdim)
@@ -57,23 +57,20 @@ class Pipeline(torch.nn.Module):
         
 
     def forward(self, x):
-        #inputs = torch.tensor(range(1, len(x['input_ids'][0][1:-1]) + 1))
         inputs = torch.vstack([torch.tensor(range(1, len(x[0][1:-1]) + 1)) for i in range(x.shape[0])])
         if torch.cuda.is_available():
             inputs = inputs.cuda()
         x = self.BERT(x)
         ner = self.NER(x)
         x = torch.cat((x, self.sm(ner)), dim=-1)
-        #x = torch.cat((x, self.sm(ner)), 1)
         # detach the context
-        ctx = x[:,0]
+        ctx = x[:,0].unsqueeze(1)
         x = x[:,1:]
         ner = ner[:,1:]
         # remove non-entity tokens and merge multi-token entities
         x, inputs = list(zip(*map(self.Entity_filter, x, inputs)))
         # pad to max number of entities in batch sample
         x, inputs = self.PAD(x), self.PAD(inputs, pad=-1)
-        #x, inputs = self.Entity_filter(x, inputs)
         if x.shape[1] == 0:
             return (ner, None, None)
         ned = self.NED(x, ctx)
@@ -102,6 +99,7 @@ class Pipeline(torch.nn.Module):
                                                                    # [1:-1] : we want to get rid of [CLS] and [SEP] tokens
 
     def NER(self, x):
+        x = self.relu(self.ner_lin0(x))
         return self.ner_lin(x)
 
     # I don't particularly like this implementation of the filter
@@ -109,34 +107,35 @@ class Pipeline(torch.nn.Module):
     def Entity_filter(self, x, inputs):
         # awesome one-liner to get the indices of all the non predicted-O tokens
         #list(map(lambda y: list(filter(lambda x: x[1]!=self.scheme.to_tensor('O', index=True), enumerate(y))), torch.argmax(x[:,:,-self.ner_dim:])))
-        encodings = []
+        entities = []
         relative_input = []
         i = 0
-        while i < x.size()[0]:
+        while i < x.shape[0]:
             tag = self.scheme.to_tag(x[i][-self.ner_dim:])[0]
             if tag == 'B':
                 tensor_mean = [ x[i] ]
                 while tag != 'E':
                     i += 1
-                    if i >= x.size()[0]:
+                    if i >= x.shape[0]:
                         break
                     tag = self.scheme.to_tag(x[i][-self.ner_dim:])[0]
                     tensor_mean.append(x[i])
                 tensor_mean = torch.stack(tensor_mean, dim=0)
-                encodings.append(torch.mean(tensor_mean, 0))
-                if i < x.size()[0]:
+                entities.append(torch.mean(tensor_mean, 0))
+                if i < x.shape[0]:
                     relative_input.append(inputs[i].view(1))
                 else:
                     relative_input.append(inputs[i-1].view(1)) # problem if B is the last token
+                i += 1
             elif tag == 'S':
-                encodings.append(x[i])
+                entities.append(x[i])
                 relative_input.append(inputs[i].view(1))
                 i += 1
             else:
                 i += 1
                         
-        if len(encodings) !=0:
-            return (torch.stack(encodings, dim=0), torch.stack(relative_input, dim=0))
+        if len(entities) !=0:
+            return (torch.stack(entities, dim=0), torch.stack(relative_input, dim=0))
         else:
             return ([], [])
 
@@ -159,12 +158,14 @@ class Pipeline(torch.nn.Module):
         return torch.vstack(p)
 
     def NED(self, x, ctx):
-        x = torch.cat((ctx.unsqueeze(1), x), dim=1)
+        x = torch.cat((ctx, x), dim=1)
         x = self.relu(self.ned_lin1(x))
         x = self.relu(self.ned_lin2(x))
         x = self.relu(self.ned_lin3(x))
         x = self.ned_lin(x)
-        ctx, x = x[:,0], x[:,1:]
+        ctx, x = x[:,0].unsqueeze(1), x[:,1:]
+        #print(ctx.shape)
+        #print(x.shape)
         ned_1 = x  # predicted graph embeddings
         
         _, indices = zip(*map(self.nbrs.kneighbors, ned_1.detach().cpu()))
@@ -174,10 +175,11 @@ class Pipeline(torch.nn.Module):
             ).view(1, -1, self.n_neighbors, self.ned_dim),
             indices
         )))
+        #print(candidates.shape)
         candidates = candidates.cuda()
         candidates.requires_grad = True
         x = 1000*(candidates - x.unsqueeze(2))
-        ctx = 1000000*(ctx.unsqueeze(1).unsqueeze(2) * candidates)
+        ctx = 1000000*(ctx.unsqueeze(2) * candidates)
         x = self.relu(self.ned_dist_lin1(x))
         x = self.ned_dist_lin2(x)
         ctx = self.relu(self.ned_ctx_lin1(ctx))
