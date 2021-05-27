@@ -11,7 +11,7 @@ class Pipeline(torch.nn.Module):
         super().__init__()
 
         self.sm = torch.nn.Softmax(dim=2)
-        #self.dropout = torch.nn.Dropout(p=0.1)
+        self.dropout = torch.nn.Dropout(p=0.1)
         
         # BERT
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
@@ -45,8 +45,10 @@ class Pipeline(torch.nn.Module):
         self.ned_ctx_lin2 = torch.nn.Linear(self.ned_dim, 1)
         
         # Head-Tail
-        self.ht_dim = 32#128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
+        self.ht_dim = 128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
+        self.h_lin0 = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.bert_dim + self.ner_dim + self.ned_dim)
         self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
+        self.t_lin0 = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.bert_dim + self.ner_dim + self.ned_dim)
         self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
 
         # RE
@@ -84,7 +86,6 @@ class Pipeline(torch.nn.Module):
         ned = (inputs, ned[0], ned[1])
         re = self.RE(x, inputs)
         return ner, ned, re
-        #return ner, None, re
 
     def BERT(self, x):
         return self.pretrained_model(x).last_hidden_state[:,:-1]
@@ -99,7 +100,7 @@ class Pipeline(torch.nn.Module):
                                                                    # [1:-1] : we want to get rid of [CLS] and [SEP] tokens
 
     def NER(self, x):
-        x = self.relu(self.ner_lin0(x))
+        x = self.dropout(self.relu(self.ner_lin0(x)))
         return self.ner_lin(x)
 
     # I don't particularly like this implementation of the filter
@@ -159,13 +160,12 @@ class Pipeline(torch.nn.Module):
 
     def NED(self, x, ctx):
         x = torch.cat((ctx, x), dim=1)
-        x = self.relu(self.ned_lin1(x))
-        x = self.relu(self.ned_lin2(x))
-        x = self.relu(self.ned_lin3(x))
+        x = self.dropout(self.relu(self.ned_lin1(x)))
+        x = self.dropout(self.relu(self.ned_lin2(x)))
+        x = self.dropout(self.relu(self.ned_lin3(x)))
         x = self.ned_lin(x)
+    
         ctx, x = x[:,0].unsqueeze(1), x[:,1:]
-        #print(ctx.shape)
-        #print(x.shape)
         ned_1 = x  # predicted graph embeddings
         
         _, indices = zip(*map(self.nbrs.kneighbors, ned_1.detach().cpu()))
@@ -175,23 +175,22 @@ class Pipeline(torch.nn.Module):
             ).view(1, -1, self.n_neighbors, self.ned_dim),
             indices
         )))
-        #print(candidates.shape)
         candidates = candidates.cuda()
         candidates.requires_grad = True
-        x = 1000*(candidates - x.unsqueeze(2))
-        ctx = 1000000*(ctx.unsqueeze(2) * candidates)
-        x = self.relu(self.ned_dist_lin1(x))
+        x = 1*(candidates - x.unsqueeze(2))
+        ctx = 1*(ctx.unsqueeze(2) * candidates)
+        x = self.dropout(self.relu(self.ned_dist_lin1(x)))
         x = self.ned_dist_lin2(x)
-        ctx = self.relu(self.ned_ctx_lin1(ctx))
+        ctx = self.dropout(self.relu(self.ned_ctx_lin1(ctx)))
         ctx = self.ned_ctx_lin2(ctx)
         x = x + ctx
         ned_2 = torch.cat((x,candidates), dim=-1) # scores in first position candidates after score
-        
+
         return ned_1, ned_2
         
     def HeadTail(self, x, inputs):
-        h = self.h_lin(x)
-        t = self.t_lin(x)
+        h, t = self.dropout(self.relu(self.h_lin0(x))), self.dropout(self.relu(self.t_lin0(x)))
+        h, t = self.h_lin(x), self.t_lin(x)
         # Building candidate pairs
         # Combining all possible heads
         # with every possible tail
@@ -218,8 +217,6 @@ class Pipeline(torch.nn.Module):
     def RE(self, x, inputs):
         x, y, inputs = self.HeadTail(x, inputs)
         bi = self.Biaffine(x,y)
-        #return { k : v for k, v in zip(relative_inputs,  bi) }
-        #return list(zip(bi, relative_inputs))
         return inputs, bi
     
     def unfreeze_bert_layer(self, i):

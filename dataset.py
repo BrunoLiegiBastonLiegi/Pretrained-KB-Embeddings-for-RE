@@ -40,7 +40,7 @@ class IEData(torch.utils.data.Dataset):
             'ned': torch.vstack([
                 torch.hstack((
                     torch.tensor(e['span'][1]),
-                    torch.mean(e['embedding'], dim=0) # need mean for multi-concept entities
+                    100*torch.mean(e['embedding'], dim=0) # need mean for multi-concept entities
                 ))
                 for e in ner.values()
             ]),

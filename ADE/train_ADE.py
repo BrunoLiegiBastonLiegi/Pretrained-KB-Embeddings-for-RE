@@ -40,7 +40,7 @@ for s, d in pkl.items():
     }
     for i in d:
         for v in i['entities'].values():
-            kb['-'.join(v['concept'])] = torch.mean(v['embedding'], dim=0)
+            kb['-'.join(v['concept'])] = 100*torch.mean(v['embedding'], dim=0)
         data[s]['sent'].append(i['sentence']['sentence'])
         data[s]['ents'].append(i['entities'])
         data[s]['rels'].append(i['relations'])
@@ -96,7 +96,7 @@ trainer = Trainer(train_data=train_data,
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(6)
+    plots = trainer.train(24)
 
     
 
@@ -134,15 +134,23 @@ for i in range(len(test_data)):
         else:
             ned_prediction.append(None)
         # RE
-        re_groundtruth.append(test_data[i]['re'])
+        re_groundtruth.append(dict(zip(
+            zip(
+                test_data[i]['re'][:,0].tolist(),
+                test_data[i]['re'][:,1].tolist()
+            ),
+            test_data[i]['re'][:,2].tolist()
+        )))
         if re_out != None:
-            re_prediction.append(torch.hstack((
-                re_out[0].squeeze(0),
-                torch.argmax(sm1(re_out[1].squeeze(0)), dim=1).view(-1,1)
+            re_prediction.append(dict(zip(
+                zip(
+                    re_out[0].squeeze(0)[:,0].tolist(),
+                    re_out[0].squeeze(0)[:,1].tolist(),                    
+                ),
+                torch.argmax(sm1(re_out[1].squeeze(0)), dim=1).view(-1).tolist()
             )))
         else:
             re_prediction.append(None)
-        
                 
 from evaluation import ClassificationReport, KG
 
@@ -153,18 +161,18 @@ cr = ClassificationReport(
     ned_groundtruth=ned_groundtruth,
     re_predictions=re_prediction,
     re_groundtruth=re_groundtruth,
-    re_classes=rel2index,
+    re_classes=dict(zip(rel2index.values(),rel2index.keys())),
     ner_scheme='IOBES',
     ned_embeddings=kb
 )
 
 f1 = {'NER': cr.ner_report(), 'NED': cr.ned_report(), 'RE': cr.re_report()}
 print('NER')
-print(f1['NER'])
-#print(f1['NER']['micro avg'])
+print(f1['NER']['macro avg'])
+print(f1['NER']['micro avg'])
 print('NED')
 print(f1['NED']['macro avg'])
-print(f1['NED']['weighted avg'])
+print(f1['NED']['micro avg'])
 print('RE')
 print(f1['RE']['macro avg'])
 print(f1['RE']['micro avg'])

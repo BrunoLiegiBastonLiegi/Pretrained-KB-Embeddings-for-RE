@@ -69,7 +69,7 @@ class Trainer(object):
 
                 if epoch == 1:
                     l = i / len(train_loader) 
-                loss = ner_loss + l * re_loss + self.wNED*(l * (100*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
+                loss = ner_loss + l * re_loss + self.wNED*(l * (1*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
                 # backprop
                 loss.backward()
                 # optimize
@@ -126,7 +126,7 @@ class Trainer(object):
             torch.transpose(ner_out, 1, 2),
             ner_target
         )
-        ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(0.1, device=self.device), torch.tensor(2.3, device=self.device))
+        ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(1, device=self.device), torch.tensor(2.3, device=self.device))
         re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(2.3, device=self.device)
         return ner_loss, ned_loss1, ned_loss2, re_loss
         
@@ -146,7 +146,7 @@ class Trainer(object):
             
             for batch in test_loader:
                 ner_loss, ned_loss1, ned_loss2, re_loss = self.step(batch)
-                loss += ner_loss + re_loss + (100*ned_loss1 + ned_loss2) 
+                loss += ner_loss + re_loss + (1*ned_loss1 + ned_loss2) 
                 test_ner_loss += ner_loss.item()
                 test_ned_loss1 += ned_loss1.item()
                 test_ned_loss2 += ned_loss2.item()
@@ -195,7 +195,6 @@ class Trainer(object):
                 torch.flatten(ned_out[0][i]).tolist(),
                 ned_out[1][i]
             ))
-            #print(list(n1.keys() & g.keys()))
             n2 = dict(zip(
                 torch.flatten(ned_out[0][i]).tolist(),
                 ned_out[2][i]

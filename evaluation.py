@@ -26,46 +26,26 @@ class ClassificationReport(object):
         self.embedding2id = { tuple(v.tolist()): k for k,v in ned_embeddings.items() }
                 
     def ner_report(self):
-        #print('------------------------------ NER SCORES ----------------------------------------')
         if self.ner_scheme == 'IOBES':
             return classification_report(self.ner_gt, self.ner_pred, mode='strict', scheme=IOBES, output_dict=True)
         else:
             print('> NER Scheme not supported at the moment.')
-        
 
     def re_report(self):
-        gt = []
-        pred = []
-        for i in range(len(self.re_gt)):
-            if self.re_pred[i] != None:
-                d = dict(zip(
-                    zip(self.re_gt[i][:,0].tolist(), self.re_gt[i][:,1].tolist()),
-                    self.re_gt[i][:,2]
-                ))
-                for j in self.re_pred[i]:
-                    try:
-                        gt.append(d.pop(tuple(j[:2].tolist())).item())
-                        pred.append(j[2].item())
-                    except:
-                        pass
-                for v in d.values():
-                    gt.append(v.item())
-                    pred.append(not j[2])
+        target, pred= [], []
+        for gt, p in zip(self.re_gt, self.re_pred):
+            for k,v in gt.items():
+                target.append(self.re_classes[gt[k]])
+                try:
+                    pred.append(self.re_classes[p[k]])
+                except:
                     #pred.append(-1)
-            else:
-                for j in self.re_gt[i]:
-                    gt.append(j[2].item())
-                    pred.append(not j[2])
-                    #pred.append(-1)
-        
-                        
-        #print(skm.confusion_matrix(np.array(gt), np.array(pred), labels=[0,1]))
-        return skm.classification_report(np.array(gt), np.array(pred), labels=[0,1], target_names=['NO_RELATION', 'ADVERSE_EFFECT_OF'], output_dict=True)
-        #return skm.classification_report(np.array(gt), np.array(pred), labels=[-1,0,1], target_names=['WRONG_ENTITIES','NO_RELATION', 'ADVERSE_EFFECT_OF'])
-        
+                    pred.append('***ERR***')
+        print(skm.classification_report(target, pred, labels=list(self.re_classes.values())))
+        return skm.classification_report(target, pred, labels=list(self.re_classes.values()), output_dict=True)
+
     def ned_report(self):
-        target = []
-        pred = []
+        target, pred = [], []
         for gt, p in zip(self.ned_gt, self.ned_pred):
             for k,v in gt.items():
                 try:
@@ -74,45 +54,7 @@ class ClassificationReport(object):
                 except:
                     pred.append('***ERR***')
                 target.append(self.embedding2id[tuple(v.tolist())])
-        return skm.classification_report(target, pred, output_dict=True)
-"""
-    def ned_report(self):
-        gt = []
-        pred = []
-        mean = 0.
-        for i in range(len(self.ned_gt)):
-            for j in range(len(self.ned_gt[i][0])):
-                try:
-                    ind = self.ned_pred[i][0].index(self.ned_gt[i][0][j])
-                    pred.append(self.ned_pred[i][1][ind])
-                    gt.append(self.ned_gt[i][1][j])
-                    mean += distance.euclidean(self.ned_pred[i][1][ind], self.ned_gt[i][1][j])
-                except:
-                    pred.append('***ERR***')
-                    gt.append(self.ned_gt[i][1][j])
-        self.ned_gt = gt
-        self.ned_pred = pred
-        nbrs = NearestNeighbors(n_neighbors=1, algorithm='auto')
-        nbrs.fit(torch.vstack(list(self.ned_embeddings.values())))
-        concepts = list(self.ned_embeddings.keys())
-        embs =  list(self.ned_embeddings.values())
-        for i in range(len(gt)):
-            #for l, e in enumerate(embs):
-             #   if torch.sum(gt[i]!=e) == 0:
-              #      j = l
-            gt[i] = self.embedding2id[tuple(gt[i].tolist())]
-            #gt[i] = concepts[j]
-            if pred[i] != '***ERR***':
-                _, k = nbrs.kneighbors(pred[i].view(1,-1))
-                pred[i] = concepts[k[0][0]]
-            else:
-                pred[i] = random.choice(concepts)
-
-        print('> Mean distance between predictions and groundtruth for NED:', mean / len(gt))
-        labels = { v: k for k, v in enumerate(gt)}
-        labels = list(labels.keys())
-        return skm.classification_report(gt, pred, labels=labels, output_dict=True)
-"""
+        return skm.classification_report(target, pred, labels=target, output_dict=True)
 
         
 # Plot graph embedding
