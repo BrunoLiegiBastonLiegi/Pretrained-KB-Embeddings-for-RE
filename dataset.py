@@ -1,4 +1,5 @@
 import pickle, torch
+from transformers.tokenization_utils_base import BatchEncoding
 
 
 class IEData(torch.utils.data.Dataset):
@@ -40,7 +41,7 @@ class IEData(torch.utils.data.Dataset):
             'ned': torch.vstack([
                 torch.hstack((
                     torch.tensor(e['span'][1]),
-                    100*torch.mean(e['embedding'], dim=0) # need mean for multi-concept entities
+                    torch.mean(e['embedding'], dim=0) # need mean for multi-concept entities
                 ))
                 for e in ner.values()
             ]),
@@ -84,21 +85,31 @@ class IEData(torch.utils.data.Dataset):
         tmp = {'sent':[], 'ner':[], 'ned':[], 're':[]} # we need to add padding in order to vstack the sents.
         max_len = 0
         for item in batch:
-            max_len = max(max_len, item['sent'][:,:-1].shape[1]) # -1 for discarding [SEP]
-            tmp['sent'].append(item['sent'][:,:-1])
+            #max_len = max(max_len, item['sent'][:,:-1].shape[1]) # -1 for discarding [SEP]
+            max_len = max(max_len, item['sent'].shape[1])
+            #tmp['sent'].append(item['sent'][:,:-1])
+            tmp['sent'].append(item['sent'])
             tmp['ner'].append(item['ner'])
             tmp['ned'].append(item['ned'])
             tmp['re'].append(item['re'])
-        tmp['sent'] = torch.vstack(list(map(
+
+        sent = {'input_ids': [], 'attention_mask': []}
+        sent['input_ids'] = torch.vstack(list(map(
             lambda x: torch.hstack((x, self.pad*torch.ones(1, max_len - x.shape[1]).int())),
             tmp['sent']
         )))
+        sent['attention_mask'] = torch.vstack(list(map(
+            lambda x: torch.hstack((torch.ones(1, x.shape[1]), torch.zeros(1, max_len - x.shape[1]))).int(),
+            tmp['sent']
+        )))
+        tmp['sent'] = BatchEncoding(sent)
         # add the [SEP] at the end
-        tmp['sent'] = torch.hstack((tmp['sent'], self.sep*torch.ones(tmp['sent'].shape[0],1).int()))
+        #tmp['sent'] = torch.hstack((tmp['sent'], self.sep*torch.ones(tmp['sent'].shape[0],1).int()))
         O = self.scheme.to_tensor('O', index=True)
         # -1 because max_len counts also the [CLS]
         tmp['ner'] = torch.vstack(list(map(
-            lambda x: torch.hstack((x, O*torch.ones(1, max_len - 1 - x.shape[1]).int())),
+            #lambda x: torch.hstack((x, O*torch.ones(1, max_len - 1 - x.shape[1]).int())),
+            lambda x: torch.hstack((x, O*torch.ones(1, max_len - 2 - x.shape[1]).int())),
             tmp['ner']
         )))
         return tmp

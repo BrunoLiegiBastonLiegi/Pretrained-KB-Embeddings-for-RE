@@ -6,6 +6,7 @@ from dataset import IEData
 from pipeline import Pipeline
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
+from evaluation import ClassificationReport, KG, mean_distance
 
 
 # Arguments parser
@@ -40,10 +41,13 @@ for s, d in pkl.items():
     }
     for i in d:
         for v in i['entities'].values():
-            kb['-'.join(v['concept'])] = 100*torch.mean(v['embedding'], dim=0)
+            kb['-'.join(v['concept'])] = torch.mean(v['embedding'], dim=0)
         data[s]['sent'].append(i['sentence']['sentence'])
         data[s]['ents'].append(i['entities'])
         data[s]['rels'].append(i['relations'])
+
+#print('Mean graph embedding distance:')
+#print(mean_distance(list(kb.values())))
 
 bert = "dmis-lab/biobert-v1.1"
 tokenizer = AutoTokenizer.from_pretrained(bert)
@@ -79,7 +83,7 @@ if device == torch.device("cuda:0"):
 
 # define the optimizer
 #optimizer = torch.optim.SGD(model.parameters(), lr=0.00001, momentum=0.9)
-optimizer = torch.optim.AdamW(model.parameters(), lr=0.00002)
+optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 
 # set up the trainer
 trainer = Trainer(train_data=train_data,
@@ -109,50 +113,55 @@ ner_groundtruth, ner_prediction = [], []
 ned_groundtruth, ned_prediction = [], []
 re_groundtruth, re_prediction = [], []
 
-for i in range(len(test_data)):
+model.eval()
+test_loader = DataLoader(test_data,
+                         batch_size=32,
+                         collate_fn=test_data.collate_fn)
+
+for batch in test_loader:
     with torch.no_grad():
-        inputs = test_data[i]['sent']
+        inputs = batch['sent']
         if device != torch.device("cpu"):
             inputs = inputs.to(device)
+        
+            ner_out, ned_out, re_out = model(inputs)
+            for i in range(len(inputs['input_ids'])):
+                # NER
+                ner_groundtruth.append([ bioes.index2tag[int(j)] for j in batch['ner'][i] ])
+                ner_prediction.append([ bioes.to_tag(j) for j in sm1(ner_out[i]) ])
+                # NED
+                ned_groundtruth.append( dict(zip(
+                    batch['ned'][i][:,0].int().tolist(),
+                    batch['ned'][i][:,1:]))
+                )
+                if ned_out != None:
+                    prob = sm1(ned_out[2][i][:,:,0])
+                    candidates = ned_out[2][i][:,:,1:]
+                    ned_prediction.append(dict(zip(
+                        ned_out[0][i].view(-1,).tolist(),
+                        torch.vstack([ c[torch.argmax(w)] for w,c in zip(prob, candidates) ])
+                    )))
+                else:
+                    ned_prediction.append(None)
+                # RE
+                re_groundtruth.append(dict(zip(
+                    zip(
+                        batch['re'][i][:,0].tolist(),
+                        batch['re'][i][:,1].tolist()
+                    ),
+                    batch['re'][i][:,2].tolist()
+                )))
+                if re_out != None:
+                    re_prediction.append(dict(zip(
+                        zip(
+                            re_out[0][i][:,0].tolist(),
+                            re_out[0][i][:,1].tolist(),                    
+                        ),
+                        torch.argmax(sm1(re_out[1][i]), dim=1).view(-1).tolist()
+                    )))
+                else:
+                    re_prediction.append(None)
 
-        ner_out, ned_out, re_out = model(inputs)
-        # NER
-        ner_groundtruth.append([ bioes.index2tag[int(j)] for j in test_data[i]['ner'].view(-1) ])
-        ner_prediction.append([ bioes.to_tag(j) for j in sm1(ner_out.squeeze(0)) ])
-        # NED
-        ned_groundtruth.append( dict(zip(
-            test_data[i]['ned'][:,0].int().tolist(),
-            test_data[i]['ned'][:,1:]))
-            )
-        if ned_out != None:
-            prob = sm1(ned_out[2].squeeze(0)[:,:,0])
-            candidates = ned_out[2].squeeze(0)[:,:,1:]
-            ned_prediction.append(dict(zip(
-                ned_out[0].squeeze(0).view(-1,).tolist(),
-                torch.vstack([c[torch.argmax(w)] for w,c in zip(prob, candidates)])
-            )))
-        else:
-            ned_prediction.append(None)
-        # RE
-        re_groundtruth.append(dict(zip(
-            zip(
-                test_data[i]['re'][:,0].tolist(),
-                test_data[i]['re'][:,1].tolist()
-            ),
-            test_data[i]['re'][:,2].tolist()
-        )))
-        if re_out != None:
-            re_prediction.append(dict(zip(
-                zip(
-                    re_out[0].squeeze(0)[:,0].tolist(),
-                    re_out[0].squeeze(0)[:,1].tolist(),                    
-                ),
-                torch.argmax(sm1(re_out[1].squeeze(0)), dim=1).view(-1).tolist()
-            )))
-        else:
-            re_prediction.append(None)
-                
-from evaluation import ClassificationReport, KG
 
 cr = ClassificationReport(
     ner_predictions=ner_prediction,

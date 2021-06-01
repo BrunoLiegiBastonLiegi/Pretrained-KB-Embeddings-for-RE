@@ -41,7 +41,6 @@ class ClassificationReport(object):
                 except:
                     #pred.append(-1)
                     pred.append('***ERR***')
-        print(skm.classification_report(target, pred, labels=list(self.re_classes.values())))
         return skm.classification_report(target, pred, labels=list(self.re_classes.values()), output_dict=True)
 
     def ned_report(self):

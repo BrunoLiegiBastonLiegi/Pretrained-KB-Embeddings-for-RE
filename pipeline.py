@@ -33,7 +33,10 @@ class Pipeline(torch.nn.Module):
         self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
         self.nbrs.fit(torch.vstack(self.KB_embs))
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
-        hdim = self.bert_dim + self.ner_dim 
+        hdim = self.bert_dim + self.ner_dim
+        # nhead must be a divisor of hdim, pay attention!!!
+        ned_transformer_layer = torch.nn.TransformerEncoderLayer(d_model=hdim, nhead=3)
+        self.ned_transformer = torch.nn.TransformerEncoder(ned_transformer_layer, num_layers=6)
         self.relu = torch.nn.ReLU()
         self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, hdim)
         self.ned_lin2 = torch.nn.Linear(hdim, hdim)
@@ -59,7 +62,7 @@ class Pipeline(torch.nn.Module):
         
 
     def forward(self, x):
-        inputs = torch.vstack([torch.tensor(range(1, len(x[0][1:-1]) + 1)) for i in range(x.shape[0])])
+        inputs = torch.vstack([torch.tensor(range(1, len(x['input_ids'][0][1:-1]) + 1)) for i in range(x['input_ids'].shape[0])])
         if torch.cuda.is_available():
             inputs = inputs.cuda()
         x = self.BERT(x)
@@ -88,17 +91,8 @@ class Pipeline(torch.nn.Module):
         return ner, ned, re
 
     def BERT(self, x):
-        return self.pretrained_model(x).last_hidden_state[:,:-1]
-        #return self.pretrained_model(**x).last_hidden_state[0][:-1]
-        #return self.pretrained_model(**inputs).last_hidden_state[0][1:-1]     # [0] explaination:
-                                                                   # The output of model(**x) is of shape (a,b,c) with a = batchsize,
-                                                                   # which in our case equals 1 since we pass a single sentence,
-                                                                   # b = max_lenght of the sentences in the batch and c = encoding_dim.
-                                                                   # In case we want to use batchsize > 1 we need to change also the
-                                                                   # other modules of the pipeline, for example using convolutional
-                                                                   # layers in place of linear ones.
-                                                                   # [1:-1] : we want to get rid of [CLS] and [SEP] tokens
-
+        return self.pretrained_model(**x).last_hidden_state[:,:-1]     
+                                                                   
     def NER(self, x):
         x = self.dropout(self.relu(self.ner_lin0(x)))
         return self.ner_lin(x)
@@ -157,12 +151,15 @@ class Pipeline(torch.nn.Module):
             else:
                 p.append(pad*torch.ones(max_len, dim, dtype=torch.int).unsqueeze(0).cuda())
         return torch.vstack(p)
-
+    
     def NED(self, x, ctx):
         x = torch.cat((ctx, x), dim=1)
+        """
         x = self.dropout(self.relu(self.ned_lin1(x)))
         x = self.dropout(self.relu(self.ned_lin2(x)))
         x = self.dropout(self.relu(self.ned_lin3(x)))
+        """
+        x = self.ned_transformer(x)
         x = self.ned_lin(x)
     
         ctx, x = x[:,0].unsqueeze(1), x[:,1:]

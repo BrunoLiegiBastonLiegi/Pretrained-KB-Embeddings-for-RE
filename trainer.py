@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 class Trainer(object):
 
-    def __init__(self, train_data, test_data, model, optim, device, save=True, wNED=1, batchsize=32):     
+    def __init__(self, train_data, test_data, model, optim, device, save=True, wNED=1, batchsize=32):
         self.model = model
         self.optim = optim
         self.device = device     
