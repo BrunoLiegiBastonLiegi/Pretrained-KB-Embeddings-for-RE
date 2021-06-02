@@ -100,8 +100,11 @@ trainer = Trainer(train_data=train_data,
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(24)
-
+    plots = trainer.train(2)
+    yn = input('Save loss plots? (y/n)\n')
+    if yn == 'y':
+        with open('loss_plots.pkl', 'wb') as f:
+            pickle.dump(plots, f)
     
 
 # ------------------------- Evaluation 
