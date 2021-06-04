@@ -1,4 +1,4 @@
-import random, torch, math, itertools
+import random, torch, math, itertools, time
 
 from transformers import AutoTokenizer, AutoModel
 from itertools import product
@@ -73,7 +73,8 @@ class Pipeline(torch.nn.Module):
         x = x[:,1:]
         ner = ner[:,1:]
         # remove non-entity tokens and merge multi-token entities
-        x, inputs = list(zip(*map(self.Entity_filter, x, inputs)))
+        #x, inputs = list(zip(*map(self.Entity_filter_slow, x, inputs)))
+        x, inputs = self.Entity_filter(x)
         # pad to max number of entities in batch sample
         x, inputs = self.PAD(x), self.PAD(inputs, pad=-1)
         if x.shape[1] == 0:
@@ -97,9 +98,55 @@ class Pipeline(torch.nn.Module):
         x = self.dropout(self.relu(self.ner_lin0(x)))
         return self.ner_lin(x)
 
+    def Entity_filter(self, x):
+        amax = torch.argmax(x[:,:,-self.ner_dim:], dim=-1)
+        inputs, entities = torch.zeros(1, 2).int().cuda(), torch.zeros(1, x.shape[-1]).int().cuda()
+        for t in self.scheme.e_types: # there is the problem of overlapping entities of different types
+            indB = (amax == self.scheme.to_tensor('B-' + t, index=True).cuda()).nonzero()
+            indE = (amax == self.scheme.to_tensor('E-' + t, index=True).cuda()).nonzero()
+            inputs = torch.vstack([
+                inputs,
+                (amax == self.scheme.to_tensor('S-' + t, index=True).cuda()).nonzero()
+            ]) # Store S-entities
+            entities = torch.vstack([
+                entities,
+                x[amax == self.scheme.to_tensor('S-' + t, index=True).cuda()]
+            ])# and relative inputs
+            end = [-1, -1] # initial end value for entering the loop
+            for i in indB: # there is the problem of overlaping S and B-E entities
+                start = i
+                if start[0] != end[0]:
+                    end = [-1, -1]
+                if start[1] > end[1]: # check that the Bs don't overlap
+                    ind = (indE[:,0] == i[0]).nonzero()
+                    tmp = indE[ind].squeeze(1)
+                    if len(tmp) > 0:
+                        tmp = (tmp[:,1] > i[1]).nonzero()
+                        if len(tmp) > 0:
+                            end = indE[ind[tmp[0]]].view(2)
+                        else:
+                            end = torch.hstack(( i[0], torch.tensor(x.shape[1]).cuda() ))
+                    else:
+                        end = torch.hstack(( i[0], torch.tensor(x.shape[1]).cuda() ))
+                    entities = torch.vstack([
+                        entities,
+                        torch.mean(x[start[0].item(), start[1].item():end[1].item()], dim=0)
+                    ])
+                    inputs = torch.vstack([inputs, end])
+                    
+        inputs, entities = inputs[1:], entities[1:] # get rid of the first torch.zeros initalization
+        l_ents = []
+        l_inp = []
+        for i in range(x.shape[0]):
+            inds = (inputs[:,0] == i).nonzero()
+            l_inp.append(inputs[inds].squeeze(1)[:,1].view(-1,1)+1)
+            l_ents.append(entities[inds].squeeze(1))
+        return l_ents, l_inp
+            
+                
     # I don't particularly like this implementation of the filter
     # I'd like to find the time to change it
-    def Entity_filter(self, x, inputs):
+    def Entity_filter_slow(self, x, inputs):
         # awesome one-liner to get the indices of all the non predicted-O tokens
         #list(map(lambda y: list(filter(lambda x: x[1]!=self.scheme.to_tensor('O', index=True), enumerate(y))), torch.argmax(x[:,:,-self.ner_dim:])))
         entities = []

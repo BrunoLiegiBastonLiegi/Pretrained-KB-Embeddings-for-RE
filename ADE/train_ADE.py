@@ -1,4 +1,4 @@
-import torch, sys, random, argparse, pickle
+import torch, sys, random, argparse, pickle, time
 sys.path.append('../')
 from trainer import Trainer
 from ner_schemes import BIOES
@@ -83,7 +83,7 @@ if device == torch.device("cuda:0"):
 
 # define the optimizer
 #optimizer = torch.optim.SGD(model.parameters(), lr=0.00001, momentum=0.9)
-optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
+optimizer = torch.optim.AdamW(model.parameters(), lr=8e-5)
 
 # set up the trainer
 trainer = Trainer(train_data=train_data,
@@ -100,8 +100,11 @@ trainer = Trainer(train_data=train_data,
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(2)
-    yn = input('Save loss plots? (y/n)\n')
+    t1 = time.time()
+    plots = trainer.train(6)
+    t2 = time.time()
+    print('Elapsed: {}'.format(t2-t1))
+    yn = input('Save loss plots? (y/n)')
     if yn == 'y':
         with open('loss_plots.pkl', 'wb') as f:
             pickle.dump(plots, f)

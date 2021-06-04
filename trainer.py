@@ -229,7 +229,11 @@ class Trainer(object):
                 candidates = p_tmp[:,1:]
                 if gt_tmp in candidates:
                     ind = ((candidates-gt_tmp).sum(-1)==0).nonzero()
-                    n2_targets.append(torch.flatten(ind)[0])
+                    try:
+                        n2_targets.append(torch.flatten(ind)[0])
+                    except:
+                        print(ind)
+                        n2_targets.append(0)
                     #n2_targets.append(ind.view(1))
                     n2_scores.append(p_tmp[:,0])
             loss1 += 3*len(g) # 3 is the mean distance in the graph embedding space
