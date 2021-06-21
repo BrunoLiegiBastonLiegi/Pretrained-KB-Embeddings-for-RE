@@ -232,7 +232,7 @@ class Trainer(object):
                     try:
                         n2_targets.append(torch.flatten(ind)[0])
                     except:
-                        print(ind) # I need to clarify why sometimes the index is not found
+                        #print(ind) # I need to clarify why sometimes the index is not found
                         n2_targets.append(torch.tensor(0, device=self.device, dtype=torch.long))
                     #n2_targets.append(ind.view(1))
                     n2_scores.append(p_tmp[:,0])
