@@ -33,9 +33,11 @@ class Pipeline(torch.nn.Module):
         self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
         self.nbrs.fit(torch.vstack(self.KB_embs))
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
-        hdim = self.bert_dim + self.ner_dim
+        nhead = 8
+        hdim = int((self.bert_dim + self.ner_dim)/nhead)*nhead
+        self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, hdim)
         # nhead must be a divisor of hdim, pay attention!!!
-        ned_transformer_layer = torch.nn.TransformerEncoderLayer(d_model=hdim, nhead=3)
+        ned_transformer_layer = torch.nn.TransformerEncoderLayer(d_model=hdim, nhead=8)
         self.ned_transformer = torch.nn.TransformerEncoder(ned_transformer_layer, num_layers=6)
         self.relu = torch.nn.ReLU()
         #self.ned_lin1 = torch.nn.Linear(self.bert_dim + self.ner_dim, hdim)
@@ -139,8 +141,8 @@ class Pipeline(torch.nn.Module):
         l_inp = []
         for i in range(x.shape[0]):
             inds = (inputs[:,0] == i).nonzero()
-            l_inp.append(inputs[inds].squeeze(1)[:,1].view(-1,1)+1)
-            l_ents.append(entities[inds].squeeze(1))
+            l_inp.append(inputs[inds].squeeze(1)[:,1].view(-1,1) + 1) # the +1 is needed for inputs matching
+            l_ents.append(entities[inds].squeeze(1))                  # the labels
         return l_ents, l_inp
             
                 
@@ -206,6 +208,7 @@ class Pipeline(torch.nn.Module):
         x = self.dropout(self.relu(self.ned_lin2(x)))
         x = self.dropout(self.relu(self.ned_lin3(x)))
         """
+        x = self.dropout(self.relu(self.ned_lin1(x)))
         x = self.ned_transformer(x)
         x = self.ned_lin(x)
     

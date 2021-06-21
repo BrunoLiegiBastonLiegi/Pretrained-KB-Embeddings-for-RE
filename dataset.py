@@ -10,12 +10,12 @@ class IEData(torch.utils.data.Dataset):
         self.rel2index = rel2index
         self.samples = []
         self.pad = self.tokenizer('[PAD]', add_special_tokens=False)['input_ids'][0]
-        self.sep = self.tokenizer('[SEP]', add_special_tokens=False)['input_ids'][0]
         if tokenizer != None and ned_labels == None:
             print('> Preprocessing labels.')
             assert ner_scheme != None, 'Missing NER scheme for preprocessing.'
-            for s, ner, re in zip(sentences, ner_labels, re_labels):
+            for i, s, ner, re in zip(range(len(sentences)), sentences, ner_labels, re_labels):
                 self.samples.append(self.generate_labels(s, ner, re))
+                print('{} / {} ({}%)'.format(i, len(sentences), int(i/len(sentences)*100)), end='\r')
         else:
             assert ned_labels != None, 'Missing NED labels.'
             for s, ner, ned, re in zip(sentences, ner_labels, ned_labels, re_labels):
@@ -25,25 +25,31 @@ class IEData(torch.utils.data.Dataset):
                     'ned': ned,
                     're': re
                 })
-        print('> Done.')
+        print('\n> Done.')
         if save_to != None:
             print('> Saving to \'{}\'.'.format(save_to))
             with open(save_to, 'wb') as f:
                 pickle.dump(self.samples, f)
-
+    """
     def generate_labels(self, s, ner, re):
-        tks = self.tokenizer([s] + list(ner.keys()), add_special_tokens=False)['input_ids']
-        for e, t in zip(ner.values(), tks[1:]):
-            e['span'] = self.find_span(tks[0], t)
+        names = [i['name'] for i in ner.values()]
+        tks = self.tokenizer([s] + names), add_special_tokens=False)['input_ids']
+        #tks = self.tokenizer([s] + list(ner.keys()), add_special_tokens=False)['input_ids']
+        #for e, t in zip(ner.values(), tks[1:]):
+            #e['span'] = self.find_span(tks[0], t)
+        for t in tks[1:]
+            spans = self.find_span(tks[0], t)
         lab = {
             'sent': self.tokenizer(s, return_tensors='pt')['input_ids'],
             'ner': self.tag_sentence(tks[0], ner.values()),
             'ned': torch.vstack([
                 torch.hstack((
-                    torch.tensor(e['span'][1]),
+                    #torch.tensor(e['span'][1]),
+                    torch.tensor(spans[i][1])
                     torch.mean(e['embedding'], dim=0) # need mean for multi-concept entities
                 ))
-                for e in ner.values()
+                #for e in ner.values()
+                for i, e in enumerate(ner.values())
             ]),
             're': torch.vstack([
                 torch.tensor([
@@ -54,18 +60,55 @@ class IEData(torch.utils.data.Dataset):
                 for k, r in re.items()
             ])
             }
-        return lab 
+        return lab
+    """
+    def generate_labels(self, s, ner, re):
+        s_tk = self.tokenizer(s, return_tensors='pt', add_special_tokens=False)['input_ids']
+        names, span2span, spans, types = {}, {}, [], []
+        for k, e in ner.items():
+            try:
+                names[' '.join(e['name'])] += 1
+            except:
+                names[' '.join(e['name'])] = 0
+            tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids'][0]
+            span = self.find_span(s_tk.flatten().tolist(), tk, names[' '.join(e['name'])]) 
+            span2span[k] = span
+            spans.append(span)
+            types.append(e['type'])
+        lab = {
+            'sent': self.tokenizer(s, return_tensors='pt')['input_ids'],
+            'ner': self.tag_sentence(s_tk.flatten().tolist(), types, spans),
+            'ned': torch.vstack([
+                torch.hstack((
+                    torch.tensor(spans[i][1]),
+                    torch.mean(e['embedding'], dim=0) # need mean for multi-concept entities
+                ))
+                for i, e in enumerate(ner.values())
+            ]),
+            're': torch.vstack([
+                torch.tensor([
+                    span2span[k[0]][1],
+                    span2span[k[1]][1],
+                    self.rel2index[r]
+                ])
+                for k, r in re.items()
+            ])
+            }
+        return lab
+            
 
-    def find_span(self, sent, ent):
+    def find_span(self, sent, ent, n=0):
         """
         Find the span of the entity in the tokenization scheme provided by the tokenizer.
         We consider only the case of the same entity occuring just once for each sentence.
         """
+        match = []
         for i in range(len(sent)):
             if sent[i] == ent[0] and sent[i:i+len(ent)] == ent: 
-                match = (i, i+len(ent))
-        return match
-
+                #match = (i, i+len(ent))
+                match.append((i, i+len(ent)))
+        return match[n]
+    """
     def tag_sentence(self, sent, ents):
         tags = torch.tensor([self.scheme.to_tensor('O', index=True) for i in range(len(sent))])
         for e in ents:
@@ -76,7 +119,16 @@ class IEData(torch.utils.data.Dataset):
             else:
                 tags[span[0]:span[1]] = self.scheme.to_tensor(*(['B-' + t] + [('I-' + t) for j in range((span[1]-span[0])-2)] + ['E-' + t]), index=True)
         return tags.view(1,-1)
-
+    """
+    def tag_sentence(self, sent, types, spans):
+        tags = torch.tensor([self.scheme.to_tensor('O', index=True) for i in range(len(sent))])
+        for t,s in zip(types, spans):
+            if s[1]-s[0] == 1:
+                tags[s[0]] = self.scheme.to_tensor('S-' + t, index=True)
+            else:
+                tags[s[0]:s[1]] = self.scheme.to_tensor(*(['B-' + t] + [('I-' + t) for j in range((s[1]-s[0])-2)] + ['E-' + t]), index=True)
+        return tags.view(1,-1)
+                
     def collate_fn(self, batch):
         """
         Function to vertically stack the batches needed by the torch.Dataloader class
@@ -107,6 +159,9 @@ class IEData(torch.utils.data.Dataset):
         #tmp['sent'] = torch.hstack((tmp['sent'], self.sep*torch.ones(tmp['sent'].shape[0],1).int()))
         O = self.scheme.to_tensor('O', index=True)
         # -1 because max_len counts also the [CLS]
+        #print(max_len)
+        #for i in tmp['ner']:
+         #   print(i.shape[1] ,max_len -2 -i.shape[1])
         tmp['ner'] = torch.vstack(list(map(
             #lambda x: torch.hstack((x, O*torch.ones(1, max_len - 1 - x.shape[1]).int())),
             lambda x: torch.hstack((x, O*torch.ones(1, max_len - 2 - x.shape[1]).int())),

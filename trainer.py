@@ -232,8 +232,8 @@ class Trainer(object):
                     try:
                         n2_targets.append(torch.flatten(ind)[0])
                     except:
-                        print(ind)
-                        n2_targets.append(0)
+                        print(ind) # I need to clarify why sometimes the index is not found
+                        n2_targets.append(torch.tensor(0, device=self.device, dtype=torch.long))
                     #n2_targets.append(ind.view(1))
                     n2_scores.append(p_tmp[:,0])
             loss1 += 3*len(g) # 3 is the mean distance in the graph embedding space
