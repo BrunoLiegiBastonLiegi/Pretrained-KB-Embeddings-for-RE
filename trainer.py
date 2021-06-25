@@ -1,39 +1,22 @@
-import torch, random
+import torch
 from torch.utils.data import DataLoader
 
 
 
 class Trainer(object):
 
-    def __init__(self, train_data, test_data, model, optim, device, rel2index, save=True, wNED=1, batchsize=32):
+    def __init__(self, train_data, test_data, model, optim, device, save=True, wNED=1, batchsize=32):
         self.model = model
         self.optim = optim
         self.device = device     
         self.train_set = train_data
         self.test_set = test_data
-        self.rel2index = rel2index
         self.save = save
         self.wNED = wNED
         self.crossentropy = torch.nn.CrossEntropyLoss()
         self.mse = torch.nn.MSELoss(reduction='sum')
         self.batchsize = batchsize
-        self.random_ned_err = self.mean_emb_dist()
-        print(self.random_ned_err)
 
-    def mean_emb_dist(self):
-        samples = random.choices(self.train_set, k=100)
-        samples = torch.vstack([ s['ned'][:,1:] for s in samples ]).to(self.device)
-        mean = 0
-        for i, s in enumerate(samples):
-            for t in samples:
-                if (s-t).sum(-1) != 0:
-                    mean += self.mse(s,t)
-                print('> Building estimate of random graph-embedding error. ({}%)'.format(int(i/len(samples)*100)), end='\r')
-        print('\n> Done.')
-        #minlen = min(len(sample1), len(sample2))
-        return torch.sqrt(mean) / (samples.shape[0]-1)**2
-        #return torch.sqrt(self.mse(sample1[:minlen], sample2[:minlen]))/minlen
-        
     def train(self, epochs):
 
         # set model in train mode
@@ -66,13 +49,6 @@ class Trainer(object):
         l = 0. # RE loss weight, gradually increased to 1
         
         for epoch in range(epochs):
-
-            #if epoch == 1: # increase batch size when NER begins to make sense
-             #   self.batchsize *= 3
-              #  train_loader = DataLoader(self.train_set,
-               #                       batch_size=self.batchsize,
-                #                      shuffle=True,
-                 #                     collate_fn=self.train_set.collate_fn)
 
             running_loss = 0.0
             ner_running_loss = 0.0
@@ -172,7 +148,7 @@ class Trainer(object):
             torch.transpose(ner_out, 1, 2),
             ner_target
         )
-        ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (self.random_ned_err, self.random_ned_err)
+        ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(3, device=self.device), torch.tensor(2.3, device=self.device))
         re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(2.3, device=self.device)
         return ner_loss, ned_loss1, ned_loss2, re_loss
         
@@ -223,8 +199,7 @@ class Trainer(object):
                 for k,v in r.items():
                     if -1 not in k:
                         re_pred.append(v)
-                        #re_target.append(torch.tensor(0, dtype=torch.int, device=self.device)) # 0 for no relation
-                        re_target.append(torch.tensor(self.rel2index['NO_RELATION'], dtype=torch.int, device=self.device))
+                        re_target.append(torch.tensor(0, dtype=torch.int, device=self.device)) # 0 for no relation
             if len(re_pred) > 0:
                 loss += self.crossentropy(torch.vstack(re_pred), torch.hstack(re_target).long())
                 
@@ -252,20 +227,16 @@ class Trainer(object):
                 loss1 += torch.sqrt(self.mse(n1.pop(k), gt_tmp))
                 p_tmp = n2.pop(k)
                 candidates = p_tmp[:,1:]
-                #print(gt_tmp in candidates)
-                #if gt_tmp in candidates: # apparently in is problematic
-                ind = ((candidates-gt_tmp).sum(-1)==0)
-                if ind.any():
-                    ind = ind.nonzero()
+                if gt_tmp in candidates:
+                    ind = ((candidates-gt_tmp).sum(-1)==0).nonzero()
                     try:
                         n2_targets.append(torch.flatten(ind)[0])
                     except:
-                        #print(ind) # I need to clarify why sometimes the index is not found
-                        print((candidates-gt_tmp).sum(-1))
+                        print(ind) # I need to clarify why sometimes the index is not found
                         n2_targets.append(torch.tensor(0, device=self.device, dtype=torch.long))
                     #n2_targets.append(ind.view(1))
                     n2_scores.append(p_tmp[:,0])
-            loss1 += self.random_ned_err*len(g) 
+            loss1 += 3*len(g) # 3 is the mean distance in the graph embedding space
             if len(n2_scores) > 0 :
                 loss2 += self.crossentropy(torch.vstack(n2_scores), torch.hstack(n2_targets)) 
             else:

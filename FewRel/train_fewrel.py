@@ -6,8 +6,6 @@ from dataset import IEData
 from pipeline import Pipeline
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
-from evaluation import ClassificationReport, KG, mean_distance
-
 
 # Arguments parser
 parser = argparse.ArgumentParser(description='Train the model for ADE.')
@@ -39,7 +37,6 @@ for s, d in pkl.items():
         discard = False
         for e in v['entities'].values():
             #print(v)
-            e['name'] = ' '.join(e['name'])
             try:
                 emb_flag = e['embedding'].any() != None
             except:
@@ -61,29 +58,27 @@ for s, d in pkl.items():
             data[s]['rels'].append(v['relations'])
 print('> Discarded {} sentences, due to incomplete annotations.'.format(len(discarded_sents)))
 
-
 # Define the tagging scheme
 bioes = BIOES(list(e_types.keys()))
 # Define the relation scheme
 rel2index = dict(zip(r_types.keys(), range(len(r_types))))
 # Define the pretrained model
-#bert = 'bert-base-uncased'
-bert = 'bert-base-cased'
+bert = 'bert-base-uncased'
 tokenizer = AutoTokenizer.from_pretrained(bert)
 
 train_data = IEData(
-    sentences=data['train']['sent'][:5000],
-    ner_labels=data['train']['ents'][:5000],
-    re_labels=data['train']['rels'][:5000],
+    sentences=data['train']['sent'],
+    ner_labels=data['train']['ents'],
+    re_labels=data['train']['rels'],
     tokenizer=tokenizer,
     ner_scheme=bioes,
     rel2index=rel2index
 )
 
 test_data = IEData(
-    sentences=data['test']['sent'][:1000],
-    ner_labels=data['test']['ents'][:1000],
-    re_labels=data['test']['rels'][:1000],
+    sentences=data['test']['sent'],
+    ner_labels=data['test']['ents'],
+    re_labels=data['test']['rels'],
     tokenizer=tokenizer,
     ner_scheme=bioes,
     rel2index=rel2index
@@ -115,106 +110,9 @@ trainer = Trainer(train_data=train_data,
                   model=model,
                   optim=optimizer,
                   device=device,
-                  rel2index=rel2index,
                   save=True,
                   wNED=wNED,
                   batchsize=32
 )
 
-# load pretrained model or train
-if args.load_model != None:
-    model.load_state_dict(torch.load(args.load_model))
-else:
-    plots = trainer.train(12)
-
-
-# ------------------------- Evaluation 
-    
-sm1 = torch.nn.Softmax(dim=1)
-sm0 = torch.nn.Softmax(dim=0)
-
-ner_groundtruth, ner_prediction = [], []
-ned_groundtruth, ned_prediction = [], []
-re_groundtruth, re_prediction = [], []
-
-model.eval()
-test_loader = DataLoader(test_data,
-                         batch_size=256,
-                         collate_fn=test_data.collate_fn)
-
-for i, batch in enumerate(test_loader):
-    print('Evaluating on the test set. ({} / {})'.format(i, len(test_loader)), end='\r')
-    with torch.no_grad():
-        inputs = batch['sent']
-        if device != torch.device("cpu"):
-            inputs = inputs.to(device)
-        
-            ner_out, ned_out, re_out = model(inputs)
-            for i in range(len(inputs['input_ids'])):
-                # NER
-                ner_groundtruth.append([ bioes.index2tag[int(j)] for j in batch['ner'][i] ])
-                ner_prediction.append([ bioes.to_tag(j) for j in sm1(ner_out[i]) ])
-                # NED
-                ned_groundtruth.append( dict(zip(
-                    batch['ned'][i][:,0].int().tolist(),
-                    batch['ned'][i][:,1:]))
-                )
-                #print('>>>>> NED\n', ned_out)
-                if ned_out != None:
-                    prob = sm1(ned_out[2][i][:,:,0])
-                    candidates = ned_out[2][i][:,:,1:]
-                    ned_prediction.append(dict(zip(
-                        ned_out[0][i].view(-1,).tolist(),
-                        torch.vstack([ c[torch.argmax(w)] for w,c in zip(prob, candidates) ])
-                    )))
-                else:
-                    ned_prediction.append(None)
-                # RE
-                #print('>>>>> RE\n', re_out)
-                re_groundtruth.append(dict(zip(
-                    zip(
-                        batch['re'][i][:,0].tolist(),
-                        batch['re'][i][:,1].tolist()
-                    ),
-                    batch['re'][i][:,2].tolist()
-                )))
-                if re_out != None:
-                    re_prediction.append(dict(zip(
-                        zip(
-                            re_out[0][i][:,0].tolist(),
-                            re_out[0][i][:,1].tolist(),                    
-                        ),
-                        torch.argmax(sm1(re_out[1][i]), dim=1).view(-1).tolist()
-                    )))
-                else:
-                    re_prediction.append(None)
-
-
-#print('NER:\n',ner_groundtruth[0], ner_prediction[0])
-#print('NED:\n',ned_groundtruth[0], ned_prediction[0])
-#print('RE:\n',re_groundtruth[0], re_prediction[0])
-
-
-
-cr = ClassificationReport(
-    ner_predictions=ner_prediction,
-    ner_groundtruth=ner_groundtruth,
-    ned_predictions=ned_prediction,
-    ned_groundtruth=ned_groundtruth,
-    re_predictions=re_prediction,
-    re_groundtruth=re_groundtruth,
-    re_classes=dict(zip(rel2index.values(),rel2index.keys())),
-    ner_scheme='IOBES',
-    ned_embeddings=kb
-)
-
-f1 = {'NER': cr.ner_report(), 'NED': cr.ned_report(), 'RE': cr.re_report()}
-print('NER')
-print(f1['NER']['macro avg'])
-print(f1['NER']['micro avg'])
-print('NED')
-print(f1['NED']['macro avg'])
-print(f1['NED']['micro avg'])
-print('RE')
-print(f1['RE']['macro avg'])
-print(f1['RE']['micro avg'])
+plots = trainer.train(6)

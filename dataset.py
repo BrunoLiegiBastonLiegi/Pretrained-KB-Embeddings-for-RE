@@ -1,4 +1,4 @@
-import pickle, torch, time
+import pickle, torch
 from transformers.tokenization_utils_base import BatchEncoding
 
 
@@ -67,11 +67,11 @@ class IEData(torch.utils.data.Dataset):
         names, span2span, spans, types = {}, {}, [], []
         for k, e in ner.items():
             try:
-                names[e['name']] += 1
+                names[' '.join(e['name'])] += 1
             except:
-                names[e['name']] = 0
-            tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids']
-            span = self.find_span(s_tk.flatten().tolist(), tk, names[e['name']]) 
+                names[' '.join(e['name'])] = 0
+            tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids'][0]
+            span = self.find_span(s_tk.flatten().tolist(), tk, names[' '.join(e['name'])]) 
             span2span[k] = span
             spans.append(span)
             types.append(e['type'])
@@ -133,7 +133,6 @@ class IEData(torch.utils.data.Dataset):
         """
         Function to vertically stack the batches needed by the torch.Dataloader class
         """
-        tik = time.time()
         # alternatively I could use the huggingface tokenizer with option pad=True
         tmp = {'sent':[], 'ner':[], 'ned':[], 're':[]} # we need to add padding in order to vstack the sents.
         max_len = 0
@@ -168,8 +167,6 @@ class IEData(torch.utils.data.Dataset):
             lambda x: torch.hstack((x, O*torch.ones(1, max_len - 2 - x.shape[1]).int())),
             tmp['ner']
         )))
-        tok = time.time()
-        #print('COLLATE:',tok-tik)
         return tmp
             
     def __getitem__(self, idx):

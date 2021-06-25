@@ -1,11 +1,9 @@
-import random, torch, math, itertools, time, faiss
+import random, torch, math, itertools, time
 
 from transformers import AutoTokenizer, AutoModel
-from itertools import product, repeat
-#from sklearn.neighbors import NearestNeighbors
-from torch.nn.utils.rnn import pad_sequence
+from itertools import product
+from sklearn.neighbors import NearestNeighbors
 #from multiprocessing import Pool, cpu_count
-from torch.multiprocessing import Pool, set_start_method
 
 class Pipeline(torch.nn.Module):
 
@@ -14,7 +12,6 @@ class Pipeline(torch.nn.Module):
 
         self.sm = torch.nn.Softmax(dim=2)
         self.dropout = torch.nn.Dropout(p=0.1)
-        set_start_method('spawn')
         
         # BERT
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
@@ -31,12 +28,10 @@ class Pipeline(torch.nn.Module):
         
         # NED
         self.KB = KB
-        self.KB_embs = torch.vstack(list(KB.values()))
+        self.KB_embs = list(KB.values())
         self.n_neighbors = 10
-        self.NN = faiss.IndexFlatL2(ned_dim)
-        self.NN.add(self.KB_embs.numpy())
-        #self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
-        #self.nbrs.fit(torch.vstack(self.KB_embs))
+        self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
+        self.nbrs.fit(torch.vstack(self.KB_embs))
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
         nhead = 8
         hdim = int((self.bert_dim + self.ner_dim)/nhead)*nhead
@@ -72,14 +67,8 @@ class Pipeline(torch.nn.Module):
         inputs = torch.vstack([torch.tensor(range(1, len(x['input_ids'][0][1:-1]) + 1)) for i in range(x['input_ids'].shape[0])])
         if torch.cuda.is_available():
             inputs = inputs.cuda()
-        tik = time.time()
         x = self.BERT(x)
-        tok = time.time()
-        #print('> BERT:', tok-tik)
-        tik = time.time()
         ner = self.NER(x)
-        tok = time.time()
-        #print('> NER:', tok-tik)
         x = torch.cat((x, self.sm(ner)), dim=-1)
         # detach the context
         ctx = x[:,0].unsqueeze(1)
@@ -87,22 +76,12 @@ class Pipeline(torch.nn.Module):
         ner = ner[:,1:]
         # remove non-entity tokens and merge multi-token entities
         #x, inputs = list(zip(*map(self.Entity_filter_slow, x, inputs)))
-        tik = time.time()
         x, inputs = self.Entity_filter(x)
-        tok = time.time()
-        #print('> FILTER:', tok-tik)
-        tik = time.time()
         # pad to max number of entities in batch sample
-        #x, inputs = self.PAD(x), self.PAD(inputs, pad=-1)
-        x, inputs = self.PAD(x, inputs)
-        tok = time.time()
-        #print('> PAD:', tok-tik)
+        x, inputs = self.PAD(x), self.PAD(inputs, pad=-1)
         if x.shape[1] == 0:
             return (ner, None, None)
-        tik = time.time()
         ned = self.NED(x, ctx)
-        tok = time.time()
-        #print('> NED:', tok-tik)
         if x.shape[1] < 2:
             ned = (inputs, ned[0], ned[1])
             return (ner, ned, None)
@@ -111,10 +90,7 @@ class Pipeline(torch.nn.Module):
             (self.sm(ned[1][:,:,:,0].view(x.shape[0], -1, self.n_neighbors, 1))*ned[1][:,:,:,1:]).sum(2)
             ), dim=-1)
         ned = (inputs, ned[0], ned[1])
-        tik = time.time()
         re = self.RE(x, inputs)
-        tok = time.time()
-        #print('> RE:', tok-tik)
         return ner, ned, re
 
     def BERT(self, x):
@@ -207,14 +183,7 @@ class Pipeline(torch.nn.Module):
         else:
             return ([], [])
 
-    def PAD(self, x, inputs):
-        return (
-            pad_sequence(x, batch_first=True, padding_value=0.),
-            pad_sequence(inputs, batch_first=True, padding_value=-1)
-        )
-        
-
-    def PAD_slow(self, l, pad=0):
+    def PAD(self, l, pad=0):
         max_len = 0
         dim = 0
         for item in l:
@@ -233,36 +202,26 @@ class Pipeline(torch.nn.Module):
         return torch.vstack(p)
     
     def NED(self, x, ctx):
-        tik = time.time()
         x = torch.cat((ctx, x), dim=1)
+        """
+        x = self.dropout(self.relu(self.ned_lin1(x)))
+        x = self.dropout(self.relu(self.ned_lin2(x)))
+        x = self.dropout(self.relu(self.ned_lin3(x)))
+        """
         x = self.dropout(self.relu(self.ned_lin1(x)))
         x = self.ned_transformer(x)
         x = self.ned_lin(x)
     
         ctx, x = x[:,0].unsqueeze(1), x[:,1:]
         ned_1 = x  # predicted graph embeddings
-        tok = time.time()
-        #print('>> PROJ to GRAPH EMB:', tok-tik)
-
-        tik = time.time()
-        #_, indices = zip(*map(self.nbrs.kneighbors, ned_1.detach().cpu()))
-        _, indices = zip(*map(self.NN.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
-        #with Pool(5) as p:
-         #   _, indices = zip(*p.map(self.NN.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
-        #candidates = torch.vstack(list(map( # use torch.index_select instead
-        #    lambda ind: torch.vstack(
-        #        [self.KB_embs[i] for i in ind.flatten()]
-        #    ).view(1, -1, self.n_neighbors, self.ned_dim),
-        #    indices
-        #)))
-        candidates = torch.index_select(
-            self.KB_embs,
-            0,
-            torch.tensor(indices).flatten()
-        ).view(x.shape[0], -1, self.n_neighbors, self.ned_dim)
-        tok = time.time()
-        #print('>> NEAREST NEIGHBORS:', tok-tik)
-        tik = time.time()
+        
+        _, indices = zip(*map(self.nbrs.kneighbors, ned_1.detach().cpu()))
+        candidates = torch.vstack(list(map(
+            lambda ind: torch.vstack(
+                [self.KB_embs[i] for i in ind.flatten()]
+            ).view(1, -1, self.n_neighbors, self.ned_dim),
+            indices
+        )))
         candidates = candidates.cuda()
         candidates.requires_grad = True
         x = (candidates - x.unsqueeze(2))
@@ -273,8 +232,6 @@ class Pipeline(torch.nn.Module):
         ctx = self.ned_ctx_lin2(ctx)
         x = x + ctx
         ned_2 = torch.cat((x,candidates), dim=-1) # scores in first position candidates after score
-        tok = time.time()
-        #print('>> CANDIDATES SCORES:', tok-tik)
 
         return ned_1, ned_2
         
@@ -310,9 +267,7 @@ class Pipeline(torch.nn.Module):
         return inputs, bi
     
     def unfreeze_bert_layer(self, i):
-        print('> Unfreezing BERT layer ', 11-i)
-        for param in self.pretrained_model.base_model.encoder.layer[11-i].parameters(): # not a safe implementation
-                param.requires_grad = True                                              # better to get the total number of layers
-                                                                                        # directly from the pretrained model used
+        for param in self.pretrained_model.base_model.encoder.layer[11-i].parameters():
+                param.requires_grad = True
 
 
