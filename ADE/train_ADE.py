@@ -41,8 +41,8 @@ for s, d in pkl.items():
     }
     for i in d:
         for v in i['entities'].values():
-            kb['-'.join(v['concept'])] = torch.mean(v['embedding'], dim=0)
-        data[s]['sent'].append(i['sentence']['sentence'])
+            kb[v['id']] = torch.mean(v['embedding'], dim=0)
+        data[s]['sent'].append(i['sentence'][0])
         data[s]['ents'].append(i['entities'])
         data[s]['rels'].append(i['relations'])
 
@@ -90,6 +90,7 @@ trainer = Trainer(train_data=train_data,
                   test_data=test_data,
                   model=model,
                   optim=optimizer,
+                  rel2index=rel2index
                   device=device,
                   save=True,
                   wNED=wNED,

@@ -67,11 +67,11 @@ class IEData(torch.utils.data.Dataset):
         names, span2span, spans, types = {}, {}, [], []
         for k, e in ner.items():
             try:
-                names[' '.join(e['name'])] += 1
+                names[e['name']] += 1
             except:
-                names[' '.join(e['name'])] = 0
-            tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids'][0]
-            span = self.find_span(s_tk.flatten().tolist(), tk, names[' '.join(e['name'])]) 
+                names[e['name']] = 0
+            tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids']
+            span = self.find_span(s_tk.flatten().tolist(), tk, names[e['name']]) 
             span2span[k] = span
             spans.append(span)
             types.append(e['type'])
