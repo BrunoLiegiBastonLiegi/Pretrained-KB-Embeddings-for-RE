@@ -2,8 +2,10 @@ import random, torch, math, itertools, time, faiss
 
 from transformers import AutoTokenizer, AutoModel
 from itertools import product, repeat
-from sklearn.neighbors import NearestNeighbors
+#from sklearn.neighbors import NearestNeighbors
+from torch.nn.utils.rnn import pad_sequence
 #from multiprocessing import Pool, cpu_count
+from torch.multiprocessing import Pool, set_start_method
 
 class Pipeline(torch.nn.Module):
 
@@ -12,6 +14,7 @@ class Pipeline(torch.nn.Module):
 
         self.sm = torch.nn.Softmax(dim=2)
         self.dropout = torch.nn.Dropout(p=0.1)
+        set_start_method('spawn')
         
         # BERT
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
@@ -90,7 +93,8 @@ class Pipeline(torch.nn.Module):
         #print('> FILTER:', tok-tik)
         tik = time.time()
         # pad to max number of entities in batch sample
-        x, inputs = self.PAD(x), self.PAD(inputs, pad=-1)
+        #x, inputs = self.PAD(x), self.PAD(inputs, pad=-1)
+        x, inputs = self.PAD(x, inputs)
         tok = time.time()
         #print('> PAD:', tok-tik)
         if x.shape[1] == 0:
@@ -203,7 +207,14 @@ class Pipeline(torch.nn.Module):
         else:
             return ([], [])
 
-    def PAD(self, l, pad=0):
+    def PAD(self, x, inputs):
+        return (
+            pad_sequence(x, batch_first=True, padding_value=0.),
+            pad_sequence(inputs, batch_first=True, padding_value=-1)
+        )
+        
+
+    def PAD_slow(self, l, pad=0):
         max_len = 0
         dim = 0
         for item in l:
@@ -236,6 +247,8 @@ class Pipeline(torch.nn.Module):
         tik = time.time()
         #_, indices = zip(*map(self.nbrs.kneighbors, ned_1.detach().cpu()))
         _, indices = zip(*map(self.NN.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
+        #with Pool(5) as p:
+         #   _, indices = zip(*p.map(self.NN.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
         #candidates = torch.vstack(list(map( # use torch.index_select instead
         #    lambda ind: torch.vstack(
         #        [self.KB_embs[i] for i in ind.flatten()]

@@ -23,7 +23,12 @@ class ClassificationReport(object):
         self.re_classes = re_classes
         self.ner_scheme = ner_scheme
         self.ned_embeddings = ned_embeddings
-        self.embedding2id = { tuple(v.tolist()): k for k,v in ned_embeddings.items() }
+        self.embedding2id = { tuple(v.flatten().tolist()): k for k,v in ned_embeddings.items() }
+        #self.embedding2id = {}
+        #for k, v in ned_embeddings.items():
+         #   print(k)
+          #  print(tuple(v.flatten().tolist()))
+           # self.embedding2id[tuple(v.tolist())] = k
                 
     def ner_report(self):
         if self.ner_scheme == 'IOBES':

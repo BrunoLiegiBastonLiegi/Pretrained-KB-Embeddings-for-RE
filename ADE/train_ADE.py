@@ -41,8 +41,8 @@ for s, d in pkl.items():
     }
     for i in d:
         for v in i['entities'].values():
-            kb['-'.join(v['concept'])] = torch.mean(v['embedding'], dim=0)
-        data[s]['sent'].append(i['sentence']['sentence'])
+            kb[v['id']] = torch.mean(v['embedding'], dim=0)
+        data[s]['sent'].append(i['sentence'][0])
         data[s]['ents'].append(i['entities'])
         data[s]['rels'].append(i['relations'])
 
@@ -91,6 +91,7 @@ trainer = Trainer(train_data=train_data,
                   model=model,
                   optim=optimizer,
                   device=device,
+                  rel2index=rel2index,
                   save=True,
                   wNED=wNED,
                   batchsize=32
@@ -101,7 +102,7 @@ if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
     t1 = time.time()
-    plots = trainer.train(6)
+    plots = trainer.train(80)
     t2 = time.time()
     print('Elapsed: {}'.format(t2-t1))
     yn = input('Save loss plots? (y/n)')
