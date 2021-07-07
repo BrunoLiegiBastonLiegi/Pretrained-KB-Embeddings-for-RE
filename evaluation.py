@@ -27,6 +27,7 @@ class ClassificationReport(object):
                 
     def ner_report(self):
         if self.ner_scheme == 'IOBES':
+            print(classification_report(self.ner_gt, self.ner_pred, mode='strict', scheme=IOBES))
             return classification_report(self.ner_gt, self.ner_pred, mode='strict', scheme=IOBES, output_dict=True)
         else:
             print('> NER Scheme not supported at the moment.')
@@ -41,6 +42,7 @@ class ClassificationReport(object):
                 except:
                     #pred.append(-1)
                     pred.append('***ERR***')
+        print(skm.classification_report(target, pred, labels=list(self.re_classes.values())))
         return skm.classification_report(target, pred, labels=list(self.re_classes.values()), output_dict=True)
 
     def ned_report(self):
@@ -53,6 +55,7 @@ class ClassificationReport(object):
                 except:
                     pred.append('***ERR***')
                 target.append(self.embedding2id[tuple(v.tolist())])
+        print(skm.classification_report(target, pred, labels=target))
         return skm.classification_report(target, pred, labels=target, output_dict=True)
 
         

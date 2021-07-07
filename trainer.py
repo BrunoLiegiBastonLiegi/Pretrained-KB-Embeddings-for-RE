@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 class Trainer(object):
 
-    def __init__(self, train_data, test_data, model, optim, rel2index, device, save=True, wNED=1, batchsize=32):
+    def __init__(self, train_data, test_data, model, optim, rel2index, device, save=True, wNED=1, batchsize=32, tokenizer=None):
         self.model = model
         self.optim = optim
         self.rel2index = rel2index
@@ -18,7 +18,8 @@ class Trainer(object):
         self.mse = torch.nn.MSELoss(reduction='sum')
         self.batchsize = batchsize
         self.random_ned_err = self.mean_emb_dist()
-
+        self.tokenizer=tokenizer
+        
     def mean_emb_dist(self):
         samples = random.choices(self.train_set, k=100)
         samples = torch.vstack([ s['ned'][:,1:] for s in samples ]).to(self.device)
@@ -125,7 +126,7 @@ class Trainer(object):
                     re_running_loss = 0.
                     
             test_loss = self.test_loss()
-            for v, j in zip(plots['test'].values(), test_loss):
+            for v, j in zip(plots['test'].values(), test_loss[1:]):
                     v.append(j.item())
             print('> Test Loss\n Total: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
                   (test_loss[0], test_loss[1], test_loss[2], test_loss[3], test_loss[4]), '\n')
@@ -144,7 +145,9 @@ class Trainer(object):
 
     def step(self, batch):
         inputs = batch['sent']
+        #print(self.tokenizer.decode(inputs['input_ids'][0]))
         ner_target = batch['ner']
+        #print(ner_target[0])
         ned_target = batch['ned']
         re_target = batch['re']
 

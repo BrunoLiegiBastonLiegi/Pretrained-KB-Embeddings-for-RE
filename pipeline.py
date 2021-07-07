@@ -1,4 +1,4 @@
-import random, torch, math, itertools, time, faiss
+import random, torch, math, itertools, time
 
 from transformers import AutoTokenizer, AutoModel
 from itertools import product, repeat
@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 class Pipeline(torch.nn.Module):
 
-    def __init__(self, bert, ner_dim, ner_scheme, ned_dim, KB, re_dim):
+    def __init__(self, bert, ner_dim, ner_scheme, ned_dim, KB_index, re_dim):
         super().__init__()
 
         self.sm = torch.nn.Softmax(dim=2)
@@ -16,7 +16,7 @@ class Pipeline(torch.nn.Module):
         # BERT
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
         self.pretrained_model = AutoModel.from_pretrained(bert)
-        self.bert_dim = 768  # BERT encoding dimension
+        self.bert_dim = self.pretrained_model.pooler.dense.out_features#768  # BERT encoding dimension
         for param in self.pretrained_model.base_model.parameters():  
                 param.requires_grad = False                              # freezing the BERT encoder
     
@@ -27,10 +27,10 @@ class Pipeline(torch.nn.Module):
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
         
         # NED
-        self.KB = KB
-        self.KB_embs = torch.vstack(list(KB.values()))
-        self.NN = faiss.IndexFlatL2(ned_dim)
-        self.NN.add(self.KB_embs.numpy())
+        self.KB = KB_index
+        #self.KB_embs = torch.vstack(list(KB.values()))
+        #self.NN = faiss.IndexFlatL2(ned_dim)
+        #self.NN.add(self.KB_embs.numpy())
         self.n_neighbors = 10
         #self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
         #self.nbrs.fit(torch.vstack(self.KB_embs))
@@ -57,7 +57,7 @@ class Pipeline(torch.nn.Module):
         self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
         self.t_lin0 = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.bert_dim + self.ner_dim + self.ned_dim)
         self.t_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
-
+        
         # RE
         self.re_dim = re_dim  # dimension of RE classification space
         self.re_bil = torch.nn.Bilinear(self.ht_dim, self.ht_dim, self.re_dim)
@@ -215,23 +215,17 @@ class Pipeline(torch.nn.Module):
         x = self.dropout(self.relu(self.ned_lin1(x)))
         x = self.ned_transformer(x)
         x = self.ned_lin(x)
-    
         ctx, x = x[:,0].unsqueeze(1), x[:,1:]
         ned_1 = x  # predicted graph embeddings
         
-        #_, indices = zip(*map(self.nbrs.kneighbors, ned_1.detach().cpu()))
-        _, indices = zip(*map(self.NN.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
-        #candidates = torch.vstack(list(map(
-        #    lambda ind: torch.vstack(
-        #        [self.KB_embs[i] for i in ind.flatten()]
-        #    ).view(1, -1, self.n_neighbors, self.ned_dim),
-        #    indices
-        #)))
-        candidates = torch.index_select(
-            self.KB_embs,
-            0,
-            torch.tensor(indices).flatten()
-        ).view(x.shape[0], -1, self.n_neighbors, self.ned_dim)
+        #_, indices = zip(*map(self.NN.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
+        _, indices = zip(*map(self.KB.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
+        candidates = torch.vstack(map(self.KB.get_object, indices)).view(x.shape[0], -1, self.n_neighbors, self.ned_dim)
+        #candidates = torch.index_select(
+        #    self.KB_embs,
+        #    0,
+        #    torch.tensor(indices).flatten()
+        #).view(x.shape[0], -1, self.n_neighbors, self.ned_dim)
         candidates = candidates.cuda()
         candidates.requires_grad = True
         x = (candidates - x.unsqueeze(2))
@@ -277,8 +271,8 @@ class Pipeline(torch.nn.Module):
         return inputs, bi
     
     def unfreeze_bert_layer(self, i):
-        print('> Unfreezing BERT layer ', 11-i)
-        for param in self.pretrained_model.base_model.encoder.layer[11-i].parameters():
+        print('> Unfreezing BERT layer ', len(self.pretrained_model.encoder.layer)-1-i)
+        for param in self.pretrained_model.encoder.layer[len(self.pretrained_model.encoder.layer)-1-i].parameters():
                 param.requires_grad = True
 
 

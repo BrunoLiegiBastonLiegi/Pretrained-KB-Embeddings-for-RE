@@ -58,6 +58,7 @@ train_data = IEData(
     sentences=data['train']['sent'],
     ner_labels=data['train']['ents'],
     re_labels=data['train']['rels'],
+    preprocess=True,
     tokenizer=tokenizer,
     ner_scheme=bioes,
     rel2index=rel2index#,
@@ -68,6 +69,7 @@ test_data = IEData(
     sentences=data['test']['sent'],
     ner_labels=data['test']['ents'],
     re_labels=data['test']['rels'],
+    preprocess=True,
     tokenizer=tokenizer,
     ner_scheme=bioes,
     rel2index=rel2index#,
@@ -90,7 +92,7 @@ trainer = Trainer(train_data=train_data,
                   test_data=test_data,
                   model=model,
                   optim=optimizer,
-                  rel2index=rel2index
+                  rel2index=rel2index,
                   device=device,
                   save=True,
                   wNED=wNED,
@@ -102,7 +104,7 @@ if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
     t1 = time.time()
-    plots = trainer.train(6)
+    plots = trainer.train(80)
     t2 = time.time()
     print('Elapsed: {}'.format(t2-t1))
     yn = input('Save loss plots? (y/n)')
@@ -183,12 +185,4 @@ cr = ClassificationReport(
 )
 
 f1 = {'NER': cr.ner_report(), 'NED': cr.ned_report(), 'RE': cr.re_report()}
-print('NER')
-print(f1['NER']['macro avg'])
-print(f1['NER']['micro avg'])
-print('NED')
-print(f1['NED']['macro avg'])
-print(f1['NED']['micro avg'])
-print('RE')
-print(f1['RE']['macro avg'])
-print(f1['RE']['micro avg'])
+

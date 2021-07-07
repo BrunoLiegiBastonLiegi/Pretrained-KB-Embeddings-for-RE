@@ -1,4 +1,4 @@
-import torch, sys, random, argparse, pickle, time
+import torch, sys, random, argparse, pickle, time, ngtpy
 sys.path.append('../')
 from trainer import Trainer
 from ner_schemes import BIOES
@@ -13,12 +13,16 @@ from evaluation import ClassificationReport, KG, mean_distance
 parser = argparse.ArgumentParser(description='Train the model for ADE.')
 parser.add_argument('train_data', help='Path to train data file.')
 parser.add_argument('test_data', help='Path to test data file.')
+parser.add_argument('--KB_index', help='Path to KB index.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
 parser.add_argument('--NED_weight', metavar='NED', help='Weight for NED.')
 args = parser.parse_args()
 
 # Disambiguation weight
 wNED = 1 if args.NED_weight == None else args.NED_weight
+
+# KB index
+KB_idx = ngtpy.Index(args.KB_index, read_only = True, zero_based_numbering = False) # open the index
 
 pkl = {}
 # Load the data
@@ -67,32 +71,40 @@ bioes = BIOES(list(e_types.keys()))
 rel2index = dict(zip(r_types.keys(), range(len(r_types))))
 # Define the pretrained model
 #bert = 'bert-base-uncased'
-bert = 'bert-base-cased'
+#bert = 'bert-base-cased'
+bert = 'bert-large-cased'
+#bert = 'EleutherAI/gpt-neo-2.7B'
+#bert = "facebook/bart-large-mnli"
+#bert = "typeform/distilbert-base-uncased-mnli"
 tokenizer = AutoTokenizer.from_pretrained(bert)
 
 train_data = IEData(
-    sentences=data['train']['sent'][:5000],
-    ner_labels=data['train']['ents'][:5000],
-    re_labels=data['train']['rels'][:5000],
+    sentences=data['train']['sent'],
+    ner_labels=data['train']['ents'],
+    re_labels=data['train']['rels'],
+    preprocess=True,
     tokenizer=tokenizer,
     ner_scheme=bioes,
-    rel2index=rel2index
+    rel2index=rel2index,
+    save_to=args.train_data.replace('.pkl', '_'+bert + '.pkl')
 )
 
 test_data = IEData(
-    sentences=data['test']['sent'][:1000],
-    ner_labels=data['test']['ents'][:1000],
-    re_labels=data['test']['rels'][:1000],
+    sentences=data['test']['sent'],
+    ner_labels=data['test']['ents'],
+    re_labels=data['test']['rels'],
+    preprocess=True,
     tokenizer=tokenizer,
     ner_scheme=bioes,
-    rel2index=rel2index
+    rel2index=rel2index,
+    save_to=args.test_data.replace('.pkl', bert + '.pkl')
 )
 
 model = Pipeline(bert,
                  ner_dim=bioes.space_dim,
                  ner_scheme=bioes,
                  ned_dim=list(kb.values())[0].shape[-1],
-                 KB=kb,
+                 KB_index=KB_idx,
                  re_dim=len(r_types))
 
 
@@ -106,7 +118,7 @@ if device == torch.device("cuda:0"):
 
 # define the optimizer
 #optimizer = torch.optim.SGD(model.parameters(), lr=0.00001, momentum=0.9)
-optimizer = torch.optim.AdamW(model.parameters(), lr=8e-5)
+optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
 
 # set up the trainer
 trainer = Trainer(train_data=train_data,
@@ -117,14 +129,19 @@ trainer = Trainer(train_data=train_data,
                   rel2index=rel2index,
                   save=True,
                   wNED=wNED,
-                  batchsize=32
+                  batchsize=32,
+                  tokenizer=tokenizer
 )
 
 # load pretrained model or train
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(1)
+    plots = trainer.train(6)
+    yn = input('Save loss plots? (y/n)')
+    if yn == 'y':
+        with open('loss_plots.pkl', 'wb') as f:
+            pickle.dump(plots, f)
 
 
 # ------------------------- Evaluation 

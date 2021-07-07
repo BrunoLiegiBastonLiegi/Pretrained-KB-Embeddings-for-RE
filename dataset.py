@@ -4,13 +4,13 @@ from transformers.tokenization_utils_base import BatchEncoding
 
 class IEData(torch.utils.data.Dataset):
 
-    def __init__(self, sentences, ner_labels, re_labels, ned_labels=None, tokenizer=None, ner_scheme=None, rel2index=None, save_to=None):
+    def __init__(self, sentences, ner_labels, re_labels, preprocess=False, ned_labels=None, tokenizer=None, ner_scheme=None, rel2index=None, save_to=None):
         self.tokenizer = tokenizer
         self.scheme = ner_scheme
         self.rel2index = rel2index
         self.samples = []
         self.pad = self.tokenizer('[PAD]', add_special_tokens=False)['input_ids'][0]
-        if tokenizer != None and ned_labels == None:
+        if preprocess:
             print('> Preprocessing labels.')
             assert ner_scheme != None, 'Missing NER scheme for preprocessing.'
             for i, s, ner, re in zip(range(len(sentences)), sentences, ner_labels, re_labels):
@@ -30,38 +30,7 @@ class IEData(torch.utils.data.Dataset):
             print('> Saving to \'{}\'.'.format(save_to))
             with open(save_to, 'wb') as f:
                 pickle.dump(self.samples, f)
-    """
-    def generate_labels(self, s, ner, re):
-        names = [i['name'] for i in ner.values()]
-        tks = self.tokenizer([s] + names), add_special_tokens=False)['input_ids']
-        #tks = self.tokenizer([s] + list(ner.keys()), add_special_tokens=False)['input_ids']
-        #for e, t in zip(ner.values(), tks[1:]):
-            #e['span'] = self.find_span(tks[0], t)
-        for t in tks[1:]
-            spans = self.find_span(tks[0], t)
-        lab = {
-            'sent': self.tokenizer(s, return_tensors='pt')['input_ids'],
-            'ner': self.tag_sentence(tks[0], ner.values()),
-            'ned': torch.vstack([
-                torch.hstack((
-                    #torch.tensor(e['span'][1]),
-                    torch.tensor(spans[i][1])
-                    torch.mean(e['embedding'], dim=0) # need mean for multi-concept entities
-                ))
-                #for e in ner.values()
-                for i, e in enumerate(ner.values())
-            ]),
-            're': torch.vstack([
-                torch.tensor([
-                    ner[k[0]]['span'][1],
-                    ner[k[1]]['span'][1],
-                    self.rel2index[r['type']]
-                ])
-                for k, r in re.items()
-            ])
-            }
-        return lab
-    """
+
     def generate_labels(self, s, ner, re):
         s_tk = self.tokenizer(s, return_tensors='pt', add_special_tokens=False)['input_ids']
         names, span2span, spans, types = {}, {}, [], []
@@ -71,6 +40,8 @@ class IEData(torch.utils.data.Dataset):
             except:
                 names[e['name']] = 0
             tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids']
+            print(s_tk)
+            print(tk)
             span = self.find_span(s_tk.flatten().tolist(), tk, names[e['name']]) 
             span2span[k] = span
             spans.append(span)
@@ -103,23 +74,16 @@ class IEData(torch.utils.data.Dataset):
         We consider only the case of the same entity occuring just once for each sentence.
         """
         match = []
+        #print(sent)
+        #print(self.tokenizer.decode(sent))
+        #print(ent)
+        #print(self.tokenizer.decode(ent))
         for i in range(len(sent)):
             if sent[i] == ent[0] and sent[i:i+len(ent)] == ent: 
                 #match = (i, i+len(ent))
                 match.append((i, i+len(ent)))
         return match[n]
-    """
-    def tag_sentence(self, sent, ents):
-        tags = torch.tensor([self.scheme.to_tensor('O', index=True) for i in range(len(sent))])
-        for e in ents:
-            t = e['type']
-            span = e['span']
-            if span[1]-span[0] == 1:
-                tags[span[0]] = self.scheme.to_tensor('S-' + t, index=True)
-            else:
-                tags[span[0]:span[1]] = self.scheme.to_tensor(*(['B-' + t] + [('I-' + t) for j in range((span[1]-span[0])-2)] + ['E-' + t]), index=True)
-        return tags.view(1,-1)
-    """
+
     def tag_sentence(self, sent, types, spans):
         tags = torch.tensor([self.scheme.to_tensor('O', index=True) for i in range(len(sent))])
         for t,s in zip(types, spans):
