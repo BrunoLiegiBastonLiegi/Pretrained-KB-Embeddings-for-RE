@@ -1,4 +1,4 @@
-import torch, random
+import torch, random, time
 from torch.utils.data import DataLoader
 
 
@@ -70,13 +70,17 @@ class Trainer(object):
             ned_running_loss1 = 0.0
             ned_running_loss2 = 0.0
             re_running_loss = 0.0
+            avg_iter_time = 0.
+            step_t1 = None
             # set model in train mode
             self.model.train()
             
             print_step = int(len(train_loader) / 6)
             
             for i, batch in enumerate(train_loader):
-
+                if step_t1 == None:
+                    step_t1 = time.time()
+                it_t1 = time.time()
                 if k < 4:
                     if epoch == 0:
                         if i >= one_3rd and k == 0:
@@ -95,17 +99,23 @@ class Trainer(object):
 
                 # zero the parameter gradients
                 self.optim.zero_grad()
+                #t1 = time.time()
                 # forward
                 ner_loss, ned_loss1, ned_loss2, re_loss = self.step(batch)
+                #t2 = time.time()
+                #print('> Forward:', t2-t1)
                 # save train losses
                 for v, j in zip(plots['train'].values(), [ner_loss, ned_loss1, ned_loss2, re_loss]):
                     v.append(j.item())
                 # unfreeze NED and RE training
                 if epoch == 1:
-                    l = i / len(train_loader) 
+                    l = i / len(train_loader)
                 loss = ner_loss + l * re_loss + self.wNED*(l * (1*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
+                #t1 = time.time()
                 # backprop
                 loss.backward()
+                #t2 = time.time()
+                #print('> BackProp:', t2-t1)
                 # optimize
                 self.optim.step()
 
@@ -115,15 +125,20 @@ class Trainer(object):
                 ned_running_loss2 += ned_loss2.item()
                 re_running_loss += re_loss.item()
                 running_loss += loss.item()
+                it_t2 = time.time()
+                avg_iter_time += it_t2 - it_t1
 
                 if i % print_step == print_step - 1:    # print every print_step sentences
-                    print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
-                          (epoch + 1, i*self.batchsize + 1, running_loss / print_step, ner_running_loss / print_step, ned_running_loss1 / print_step, ned_running_loss2 / print_step, re_running_loss / print_step))
+                    step_t2 = time.time()
+                    print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f \t Total time: %.2f (%.2f it/s)' %
+                          (epoch + 1, i*self.batchsize + 1, running_loss / print_step, ner_running_loss / print_step, ned_running_loss1 / print_step, ned_running_loss2 / print_step, re_running_loss / print_step, step_t2-step_t1, 1/(avg_iter_time / print_step)))
                     running_loss = 0.
                     ner_running_loss = 0.
                     ned_running_loss1 = 0.
                     ned_running_loss2 = 0.
                     re_running_loss = 0.
+                    avg_iter_time = 0.
+                    step_t1 = None
                     
             test_loss = self.test_loss()
             for v, j in zip(plots['test'].values(), test_loss[1:]):
@@ -216,7 +231,10 @@ class Trainer(object):
                 for k,v in r.items():
                     if -1 not in k:
                         re_pred.append(v)
-                        re_target.append(torch.tensor(self.rel2index['NO_RELATION'], dtype=torch.int, device=self.device))
+                        try:
+                            re_target.append(torch.tensor(self.rel2index['NO_RELATION'], dtype=torch.int, device=self.device))
+                        except:
+                            re_target.append(torch.tensor(self.rel2index['no_relation'], dtype=torch.int, device=self.device))
             if len(re_pred) > 0:
                 loss += self.crossentropy(torch.vstack(re_pred), torch.hstack(re_target).long())
                 

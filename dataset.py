@@ -1,6 +1,8 @@
-import pickle, torch
+import pickle, torch, time
+from tqdm import tqdm
 from transformers.tokenization_utils_base import BatchEncoding
-
+from torch.multiprocessing import Pool, cpu_count, set_start_method, set_sharing_strategy
+set_sharing_strategy('file_system')
 
 class IEData(torch.utils.data.Dataset):
 
@@ -13,9 +15,9 @@ class IEData(torch.utils.data.Dataset):
         if preprocess:
             print('> Preprocessing labels.')
             assert ner_scheme != None, 'Missing NER scheme for preprocessing.'
-            for i, s, ner, re in zip(range(len(sentences)), sentences, ner_labels, re_labels):
-                self.samples.append(self.generate_labels(s, ner, re))
-                print('{} / {} ({}%)'.format(i, len(sentences), int(i/len(sentences)*100)), end='\r')
+            #with Pool(1) as p:
+            #    self.samples = list(tqdm(p.starmap(self.generate_labels, zip(sentences, ner_labels, re_labels)), total=len(sentences)))
+            self.samples = list(tqdm(map(self.generate_labels, sentences, ner_labels, re_labels), total=len(sentences)))
         else:
             assert ned_labels != None, 'Missing NED labels.'
             for s, ner, ned, re in zip(sentences, ner_labels, ned_labels, re_labels):
@@ -25,7 +27,7 @@ class IEData(torch.utils.data.Dataset):
                     'ned': ned,
                     're': re
                 })
-        print('\n> Done.')
+        print('> Done.')
         if save_to != None:
             print('> Saving to \'{}\'.'.format(save_to))
             with open(save_to, 'wb') as f:
@@ -40,8 +42,8 @@ class IEData(torch.utils.data.Dataset):
             except:
                 names[e['name']] = 0
             tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids']
-            print(s_tk)
-            print(tk)
+            #print(s_tk)
+            #print(tk)
             span = self.find_span(s_tk.flatten().tolist(), tk, names[e['name']]) 
             span2span[k] = span
             spans.append(span)
@@ -94,6 +96,7 @@ class IEData(torch.utils.data.Dataset):
         return tags.view(1,-1)
                 
     def collate_fn(self, batch):
+        #t1 = time.time()
         """
         Function to vertically stack the batches needed by the torch.Dataloader class
         """
@@ -131,6 +134,8 @@ class IEData(torch.utils.data.Dataset):
             lambda x: torch.hstack((x, O*torch.ones(1, max_len - 2 - x.shape[1]).int())),
             tmp['ner']
         )))
+        #t2 = time.time()
+        #print('> Collate fn:', t2-t1)
         return tmp
             
     def __getitem__(self, idx):

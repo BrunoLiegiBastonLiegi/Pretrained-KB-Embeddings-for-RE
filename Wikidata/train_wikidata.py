@@ -7,6 +7,9 @@ from pipeline import Pipeline
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
 from evaluation import ClassificationReport, KG, mean_distance
+import torch.distributed as dist
+import torch.multiprocessing as mp
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 
 # Arguments parser
@@ -81,6 +84,7 @@ train_data = IEData(
     ner_labels=data['train']['ents'],
     re_labels=data['train']['rels'],
     tokenizer=tokenizer,
+    preprocess=True,
     ner_scheme=bioes,
     rel2index=rel2index
 )
@@ -89,6 +93,7 @@ test_data = IEData(
     sentences=data['test']['sent'],
     ner_labels=data['test']['ents'],
     re_labels=data['test']['rels'],
+    preprocess=True,
     tokenizer=tokenizer,
     ner_scheme=bioes,
     rel2index=rel2index
@@ -130,7 +135,7 @@ trainer = Trainer(train_data=train_data,
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(80)
+    plots = trainer.train(12)
     yn = input('Save loss plots? (y/n)')
     if yn == 'y':
         with open('loss_plots.pkl', 'wb') as f:

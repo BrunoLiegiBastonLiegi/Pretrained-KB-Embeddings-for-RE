@@ -13,7 +13,6 @@ from evaluation import ClassificationReport, KG, mean_distance
 parser = argparse.ArgumentParser(description='Train the model for ADE.')
 parser.add_argument('train_data', help='Path to train data file.')
 parser.add_argument('test_data', help='Path to test data file.')
-parser.add_argument('--KB_index', help='Path to KB index.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
 parser.add_argument('--NED_weight', metavar='NED', help='Weight for NED.')
 args = parser.parse_args()
@@ -21,8 +20,7 @@ args = parser.parse_args()
 # Disambiguation weight
 wNED = 1 if args.NED_weight == None else args.NED_weight
 
-# KB index
-KB_idx = ngtpy.Index(args.KB_index, read_only = True, zero_based_numbering = False) # open the index
+kb, data, e_types, r_types = {}, {}, {}, {}
 
 pkl = {}
 # Load the data
@@ -32,7 +30,6 @@ with open(args.test_data, 'rb') as f:
     pkl['test'] = pickle.load(f)
 
 discarded_sents = []
-kb, data, e_types, r_types = {}, {}, {}, {}
 for s, d in pkl.items():
     data[s] = {
         'sent': [],
@@ -85,10 +82,9 @@ train_data = IEData(
     preprocess=True,
     tokenizer=tokenizer,
     ner_scheme=bioes,
-    rel2index=rel2index,
-    save_to=args.train_data.replace('.pkl', '_'+bert + '.pkl')
+    rel2index=rel2index
 )
-
+    
 test_data = IEData(
     sentences=data['test']['sent'],
     ner_labels=data['test']['ents'],
@@ -96,15 +92,14 @@ test_data = IEData(
     preprocess=True,
     tokenizer=tokenizer,
     ner_scheme=bioes,
-    rel2index=rel2index,
-    save_to=args.test_data.replace('.pkl', bert + '.pkl')
+    rel2index=rel2index
 )
 
 model = Pipeline(bert,
                  ner_dim=bioes.space_dim,
                  ner_scheme=bioes,
                  ned_dim=list(kb.values())[0].shape[-1],
-                 KB_index=KB_idx,
+                 KB=kb,
                  re_dim=len(r_types))
 
 

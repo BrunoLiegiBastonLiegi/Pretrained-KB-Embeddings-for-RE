@@ -31,7 +31,7 @@ if args.fold != None:
 else:
     pkl = pkl['fold_0']
 
-kb = {}
+kb= {}
 data = {}
 for s, d in pkl.items():
     data[s] = {

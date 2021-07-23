@@ -1,18 +1,22 @@
-import random, torch, math, itertools, time
+import random, torch, math, itertools, time, faiss
 
 from transformers import AutoTokenizer, AutoModel
-from itertools import product, repeat
+from itertools import product, repeat, chain
 #from sklearn.neighbors import NearestNeighbors
 from torch.nn.utils.rnn import pad_sequence
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+from torch.multiprocessing import Pool, set_start_method, set_sharing_strategy
+set_sharing_strategy('file_system')
 
 class Pipeline(torch.nn.Module):
 
-    def __init__(self, bert, ner_dim, ner_scheme, ned_dim, KB_index, re_dim):
+    def __init__(self, bert, ner_dim, ner_scheme, ned_dim, KB, re_dim):
         super().__init__()
 
         self.sm = torch.nn.Softmax(dim=2)
         self.dropout = torch.nn.Dropout(p=0.1)
-        
+
         # BERT
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
         self.pretrained_model = AutoModel.from_pretrained(bert)
@@ -22,15 +26,25 @@ class Pipeline(torch.nn.Module):
     
         # NER # think about adding transition matrix for improvement
         self.scheme = ner_scheme
+        # B, E and S indices for each entity type
+        self.B = [ self.scheme.to_tensor('B-' + t, index=True).cuda() for t in self.scheme.e_types]
+        self.E = [ self.scheme.to_tensor('E-' + t, index=True).cuda() for t in self.scheme.e_types]
+        self.S = [ self.scheme.to_tensor('S-' + t, index=True).cuda() for t in self.scheme.e_types]
         self.ner_dim = ner_dim  # dimension of NER tagging scheme
         self.ner_lin0 = torch.nn.Linear(self.bert_dim, self.bert_dim)
         self.ner_lin = torch.nn.Linear(self.bert_dim, self.ner_dim)
         
         # NED
-        self.KB = KB_index
-        #self.KB_embs = torch.vstack(list(KB.values()))
+        self.KB = KB
+        self.KB_embs = torch.vstack(list(KB.values()))
         #self.NN = faiss.IndexFlatL2(ned_dim)
-        #self.NN.add(self.KB_embs.numpy())
+        quantizer = faiss.IndexFlatL2(ned_dim)  # the other index
+        self.NN = faiss.IndexIVFFlat(quantizer, ned_dim, 100)
+        assert not self.NN.is_trained
+        self.NN.train(self.KB_embs.numpy())
+        assert self.NN.is_trained
+        self.NN.add(self.KB_embs.numpy())
+        self.NN.nprobe = 1
         self.n_neighbors = 10
         #self.nbrs = NearestNeighbors(n_neighbors=self.n_neighbors, algorithm='auto')
         #self.nbrs.fit(torch.vstack(self.KB_embs))
@@ -69,22 +83,39 @@ class Pipeline(torch.nn.Module):
         inputs = torch.vstack([torch.tensor(range(1, len(x['input_ids'][0][1:-1]) + 1)) for i in range(x['input_ids'].shape[0])])
         if torch.cuda.is_available():
             inputs = inputs.cuda()
+        t1 = time.time()
         x = self.BERT(x)
+        t2 = time.time()
+        #print('> BERT:', t2-t1)
+        t1 = time.time()
         ner = self.NER(x)
+        t2 = time.time()
+        #print('> NER:', t2-t1)
         x = torch.cat((x, self.sm(ner)), dim=-1)
         # detach the context
         ctx = x[:,0].unsqueeze(1)
         x = x[:,1:]
         ner = ner[:,1:]
         # remove non-entity tokens and merge multi-token entities
-        #x, inputs = list(zip(*map(self.Entity_filter_slow, x, inputs)))
+        t1 = time.time()
+        #with Pool(6) as p:
+            #x, inputs = list(zip(*p.starmap(self.Entity_filter_slow, zip(x,inputs))))
+            #x, inputs = list(zip(*p.map(self.filter_worker, x)))
         x, inputs = self.Entity_filter(x)
+        t2 = time.time()
+        #print('> Filter:', t2-t1)
         # pad to max number of entities in batch sample
         #x, inputs = self.PAD(x), self.PAD(inputs, pad=-1)
+        t1 = time.time()
         x, inputs = self.PAD(x, inputs)
+        t2 = time.time()
+        #print('> PAD:', t2-t1)
         if x.shape[1] == 0:
             return (ner, None, None)
+        t1 = time.time()
         ned = self.NED(x, ctx)
+        t2 = time.time()
+        #print('> NED:', t2-t1)
         if x.shape[1] < 2:
             ned = (inputs, ned[0], ned[1])
             return (ner, ned, None)
@@ -93,7 +124,10 @@ class Pipeline(torch.nn.Module):
             (self.sm(ned[1][:,:,:,0].view(x.shape[0], -1, self.n_neighbors, 1))*ned[1][:,:,:,1:]).sum(2)
             ), dim=-1)
         ned = (inputs, ned[0], ned[1])
+        t1 = time.time()
         re = self.RE(x, inputs)
+        t2 = time.time()
+        #print('> RE:', t2-t1)
         return ner, ned, re
 
     def BERT(self, x):
@@ -102,6 +136,76 @@ class Pipeline(torch.nn.Module):
     def NER(self, x):
         x = self.dropout(self.relu(self.ner_lin0(x)))
         return self.ner_lin(x)
+    
+    def filter_worker(self, x):
+        amax = torch.argmax(x[:,-self.ner_dim:], dim=-1)
+        ind = []
+        for e,b,s in zip(self.B, self.E, self.S):
+            B, E, S = (amax == b).nonzero(), (amax == e).nonzero(), (amax == s).nonzero()
+            ind += zip(repeat('B', len(B)), B)
+            ind += zip(repeat('E', len(E)), E)
+            ind += zip(repeat('S', len(S)), S)
+        ind = sorted(ind, key=lambda x: x[1])
+        i = 0
+        entities, positions = [], []
+        print('entering loop')
+        while i < len(ind):
+            if ind[i][0] == 'B':
+                start = ind[i][0]
+                while ind[i][0] != 'E' and i < len(ind):
+                    i += 1
+                entities.append(torch.mean(
+                    x[start:ind[i][1]+1],
+                dim=0))
+                positions.append(ind[i][1]+1)
+            elif ind[i][0] == 'S':
+                entities.append(x[ind[i][1]])
+                positions.append(ind[i][1]+1)
+                i += 1
+            elif ind[i][0] == 'E':
+                i += 1
+        print('out of loop')
+        return torch.vstack(entities), torch.vstack(positions)
+                    
+
+    def Entity_filter_fast(self, x):
+        amax = torch.argmax(x[:,:,-self.ner_dim:], dim=-1)
+        #indB = torch.vstack([(amax == i).nonzero() for i in self.B])
+        #indE = torch.vstack([(amax == i).nonzero() for i in self.E])
+        #indS = torch.vstack([(amax == i).nonzero() for i in self.S])
+        indB, indE, indS = [], [], []
+        for e,b,s in zip(self.B, self.E, self.S):
+            indB.append((amax == b).nonzero())
+            indE.append((amax == e).nonzero())
+            indS.append((amax == s).nonzero())
+        indB, indE, indS = torch.vstack(indB), torch.vstack(indE), torch.vstack(indS)
+        #l = min(indB.shape[0], indE.shape[0])
+        indB = sorted(indB, key=lambda x: min(x[0],x[1]))#[:l]
+        indE = sorted(indE, key=lambda x: min(x[0],x[1]))#[:l]
+        entities = dict(zip(range(x.shape[0]), repeat([], x.shape[0])))
+        positions = dict(zip(range(x.shape[0]), repeat([], x.shape[0])))#dict(entities)
+        j = 0
+        for b in indB:
+            while j < len(indE):
+                if indE[j][0] == b[0]:
+                    if indE[j][1] > b[1]:
+                        entities[b[0].item()].append(torch.mean(
+                            x[b[0], b[1]:indE[j][1]+1, :],
+                        dim=0))
+                        positions[b[0].item()].append(indE[j][1]+1)
+                        j += 1
+                        break
+                    else:
+                        j += 1
+                else:
+                    break
+        for s in indS:
+            entities[s[0].item()].append(x[s[0], s[1], :])
+            positions[s[0].item()].append(s[1]+1)
+        for k,e,i in zip(entities.keys(), entities.values(), positions.values()):
+            entities[k], positions[k] = torch.vstack(e), torch.vstack(i)
+        return list(entities.values()), list(positions.values())
+
 
     def Entity_filter(self, x):
         amax = torch.argmax(x[:,:,-self.ner_dim:], dim=-1)
@@ -219,13 +323,25 @@ class Pipeline(torch.nn.Module):
         ned_1 = x  # predicted graph embeddings
         
         #_, indices = zip(*map(self.NN.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
-        _, indices = zip(*map(self.KB.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
-        candidates = torch.vstack(map(self.KB.get_object, indices)).view(x.shape[0], -1, self.n_neighbors, self.ned_dim)
-        #candidates = torch.index_select(
-        #    self.KB_embs,
-        #    0,
-        #    torch.tensor(indices).flatten()
-        #).view(x.shape[0], -1, self.n_neighbors, self.ned_dim)
+        _, indices = self.NN.search(
+            ned_1.reshape(-1,self.ned_dim).detach().cpu().numpy(),
+            self.n_neighbors
+        )
+        #_, indices = zip(*map(self.KB.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
+        #indices, _ = zip(*chain(*map(
+        #    self.KB.search,
+        #    ned_1.reshape(-1, self.ned_dim).detach().cpu(),
+        #    repeat(self.n_neighbors, ned_1.shape[0]*ned_1.shape[1])
+        #)))
+        #print(list(map(self.KB.get_object, indices)))
+        #candidates = torch.tensor(list(map(self.KB.get_object, indices))).view(x.shape[0], -1, self.n_neighbors, self.ned_dim)
+        indices = torch.tensor(indices)
+        indices[indices==-1] = 0# random.randint(0, len(self.KB_embs)-1)
+        candidates = torch.index_select(
+            self.KB_embs,
+            0,
+            indices.flatten()
+        ).view(x.shape[0], -1, self.n_neighbors, self.ned_dim)
         candidates = candidates.cuda()
         candidates.requires_grad = True
         x = (candidates - x.unsqueeze(2))

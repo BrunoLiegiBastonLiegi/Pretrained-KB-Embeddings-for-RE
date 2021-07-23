@@ -34,29 +34,38 @@ class ClassificationReport(object):
 
     def re_report(self):
         target, pred= [], []
+        classes = {}
         for gt, p in zip(self.re_gt, self.re_pred):
             for k,v in gt.items():
                 target.append(self.re_classes[gt[k]])
+                classes[self.re_classes[gt[k]]] = 0
                 try:
                     pred.append(self.re_classes[p[k]])
+                    #target.append(self.re_classes[gt[k]])
+                    #classes[self.re_classes[gt[k]]] = 0
                 except:
-                    #pred.append(-1)
                     pred.append('***ERR***')
-        print(skm.classification_report(target, pred, labels=list(self.re_classes.values())))
-        return skm.classification_report(target, pred, labels=list(self.re_classes.values()), output_dict=True)
+                    #pass
+        print(skm.classification_report(target, pred, labels=list(classes.keys())))
+        return skm.classification_report(target, pred, labels=list(classes.keys()), output_dict=True)
 
     def ned_report(self):
         target, pred = [], []
+        classes = {}
         for gt, p in zip(self.ned_gt, self.ned_pred):
             for k,v in gt.items():
                 try:
                     tmp = p[k]
                     pred.append(self.embedding2id[tuple(tmp.tolist())])
+                    #target.append(self.embedding2id[tuple(v.tolist())])
+                    #classes[self.embedding2id[tuple(v.tolist())]] = 0
                 except:
                     pred.append('***ERR***')
+                    #pass
                 target.append(self.embedding2id[tuple(v.tolist())])
-        print(skm.classification_report(target, pred, labels=target))
-        return skm.classification_report(target, pred, labels=target, output_dict=True)
+                classes[self.embedding2id[tuple(v.tolist())]] = 0
+        print(skm.classification_report(target, pred, labels=list(classes.keys())))
+        return skm.classification_report(target, pred, labels=list(classes.keys()), output_dict=True)
 
         
 # Plot graph embedding
