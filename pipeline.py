@@ -323,10 +323,11 @@ class Pipeline(torch.nn.Module):
         ned_1 = x  # predicted graph embeddings
         
         #_, indices = zip(*map(self.NN.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
-        _, indices = self.NN.search(
-            ned_1.reshape(-1,self.ned_dim).detach().cpu().numpy(),
-            self.n_neighbors
-        )
+        with torch.cuda.amp.autocast(enabled=False):
+            _, indices = self.NN.search(
+                ned_1.float().reshape(-1,self.ned_dim).detach().cpu().numpy(),
+                self.n_neighbors
+            )
         #_, indices = zip(*map(self.KB.search, ned_1.detach().cpu().numpy(), repeat(self.n_neighbors, ned_1.shape[0])))
         #indices, _ = zip(*chain(*map(
         #    self.KB.search,

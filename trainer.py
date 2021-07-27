@@ -34,8 +34,10 @@ class Trainer(object):
 
     def train(self, epochs):
 
-        # set model in train mode
+        # Set model in train mode
         self.model.train()
+        # Gradient scaler for automatic mixed precision
+        scaler = torch.cuda.amp.GradScaler()
 
         train_loader = DataLoader(self.train_set,
                                       batch_size=self.batchsize,
@@ -100,24 +102,29 @@ class Trainer(object):
                 # zero the parameter gradients
                 self.optim.zero_grad()
                 #t1 = time.time()
-                # forward
-                ner_loss, ned_loss1, ned_loss2, re_loss = self.step(batch)
-                #t2 = time.time()
-                #print('> Forward:', t2-t1)
+                with torch.cuda.amp.autocast():
+                    # forward
+                    ner_loss, ned_loss1, ned_loss2, re_loss = self.step(batch)
+                    #t2 = time.time()
+                    #print('> Forward:', t2-t1)
+                    # unfreeze NED and RE training
+                    if epoch == 1:
+                        l = i / len(train_loader)
+                    loss = ner_loss + l * re_loss + self.wNED*(l * (1*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
+                #t1 = time.time()
                 # save train losses
                 for v, j in zip(plots['train'].values(), [ner_loss, ned_loss1, ned_loss2, re_loss]):
                     v.append(j.item())
-                # unfreeze NED and RE training
-                if epoch == 1:
-                    l = i / len(train_loader)
-                loss = ner_loss + l * re_loss + self.wNED*(l * (1*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
-                #t1 = time.time()
                 # backprop
-                loss.backward()
+                scaler.scale(loss).backward()
+                #loss.backward()
                 #t2 = time.time()
                 #print('> BackProp:', t2-t1)
                 # optimize
-                self.optim.step()
+                #self.optim.step()
+                scaler.step(self.optim)
+                # Updates the scale for next iteration.
+                scaler.update()
 
                 # print statistics
                 ner_running_loss += ner_loss.item()

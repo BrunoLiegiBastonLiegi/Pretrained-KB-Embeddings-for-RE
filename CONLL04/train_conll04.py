@@ -68,8 +68,8 @@ bioes = BIOES(list(e_types.keys()))
 rel2index = dict(zip(r_types.keys(), range(len(r_types))))
 # Define the pretrained model
 #bert = 'bert-base-uncased'
-#bert = 'bert-base-cased'
-bert = 'bert-large-cased'
+bert = 'bert-base-cased'
+#bert = 'bert-large-cased'
 #bert = 'EleutherAI/gpt-neo-2.7B'
 #bert = "facebook/bart-large-mnli"
 #bert = "typeform/distilbert-base-uncased-mnli"
@@ -113,7 +113,7 @@ if device == torch.device("cuda:0"):
 
 # define the optimizer
 #optimizer = torch.optim.SGD(model.parameters(), lr=0.00001, momentum=0.9)
-optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5)
 
 # set up the trainer
 trainer = Trainer(train_data=train_data,

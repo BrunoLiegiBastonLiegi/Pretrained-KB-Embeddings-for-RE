@@ -17,6 +17,7 @@ for i in ('ner', 'ned1', 'ned2', 're'):
         [k*j for j in range(len(d['test'][i]))],
         d['test'][i]
     )
-    plt.savefig('fewrel_{}_loss.png'.format(i))
+    name = input('Save plots to:')
+    plt.savefig(name + '_{}.png'.format(i))
     plt.clf()
     #plt.show()

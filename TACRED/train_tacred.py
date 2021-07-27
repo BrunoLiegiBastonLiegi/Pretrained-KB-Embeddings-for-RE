@@ -68,8 +68,8 @@ bioes = BIOES(list(e_types.keys()))
 rel2index = dict(zip(r_types.keys(), range(len(r_types))))
 # Define the pretrained model
 #bert = 'bert-base-uncased'
-#bert = 'bert-base-cased'
-bert = 'bert-large-cased'
+bert = 'bert-base-cased'
+#bert = 'bert-large-cased'
 #bert = 'EleutherAI/gpt-neo-2.7B'
 #bert = "facebook/bart-large-mnli"
 #bert = "typeform/distilbert-base-uncased-mnli"
@@ -82,7 +82,8 @@ train_data = IEData(
     preprocess=True,
     tokenizer=tokenizer,
     ner_scheme=bioes,
-    rel2index=rel2index
+    rel2index=rel2index#,
+    #save_to=args.train_data.replace('.pkl', '_preprocessed.pkl')
 )
     
 test_data = IEData(
@@ -92,7 +93,8 @@ test_data = IEData(
     preprocess=True,
     tokenizer=tokenizer,
     ner_scheme=bioes,
-    rel2index=rel2index
+    rel2index=rel2index#,
+    #save_to=args.test_data.replace('.pkl', '_preprocessed.pkl')
 )
 
 model = Pipeline(bert,
@@ -113,7 +115,7 @@ if device == torch.device("cuda:0"):
 
 # define the optimizer
 #optimizer = torch.optim.SGD(model.parameters(), lr=0.00001, momentum=0.9)
-optimizer = torch.optim.AdamW(model.parameters(), lr=2e-5)
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5)
 
 # set up the trainer
 trainer = Trainer(train_data=train_data,
@@ -132,7 +134,7 @@ trainer = Trainer(train_data=train_data,
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(6)
+    plots = trainer.train(24)
     yn = input('Save loss plots? (y/n)')
     if yn == 'y':
         with open('loss_plots.pkl', 'wb') as f:
