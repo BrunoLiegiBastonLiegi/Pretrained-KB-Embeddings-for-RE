@@ -40,12 +40,12 @@ class ClassificationReport(object):
                 target.append(self.re_classes[gt[k]])
                 classes[self.re_classes[gt[k]]] = 0
                 try:
-                    #pred.append(self.re_classes[p[k]])
-                    target.append(self.re_classes[gt[k]])
-                    classes[self.re_classes[gt[k]]] = 0
+                    pred.append(self.re_classes[p[k]])
+                    #target.append(self.re_classes[gt[k]])
+                    #classes[self.re_classes[gt[k]]] = 0
                 except:
-                    #pred.append('***ERR***')
-                    pass
+                    pred.append('***ERR***')
+                    #pass
         print(skm.classification_report(target, pred, labels=list(classes.keys())))
         return skm.classification_report(target, pred, labels=list(classes.keys()), output_dict=True)
 
@@ -56,12 +56,12 @@ class ClassificationReport(object):
             for k,v in gt.items():
                 try:
                     tmp = p[k]
-                    #pred.append(self.embedding2id[tuple(tmp.tolist())])
-                    target.append(self.embedding2id[tuple(v.tolist())])
-                    classes[self.embedding2id[tuple(v.tolist())]] = 0
+                    pred.append(self.embedding2id[tuple(tmp.tolist())])
+                    #target.append(self.embedding2id[tuple(v.tolist())])
+                    #3classes[self.embedding2id[tuple(v.tolist())]] = 0
                 except:
-                    #pred.append('***ERR***')
-                    pass
+                    pred.append('***ERR***')
+                    #pass
                 target.append(self.embedding2id[tuple(v.tolist())])
                 classes[self.embedding2id[tuple(v.tolist())]] = 0
         print(skm.classification_report(target, pred, labels=list(classes.keys())))

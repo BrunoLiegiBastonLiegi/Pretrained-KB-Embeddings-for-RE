@@ -102,7 +102,8 @@ model = Pipeline(bert,
                  ner_scheme=bioes,
                  ned_dim=list(kb.values())[0].shape[-1],
                  KB=kb,
-                 re_dim=len(r_types))
+                 re_dim=len(r_types)
+)
 
 
 
@@ -114,7 +115,7 @@ if device == torch.device("cuda:0"):
     model.to(device)
 
 # define the optimizer
-#optimizer = torch.optim.SGD(model.parameters(), lr=0.00001, momentum=0.9)
+#optimizer = torch.optim.SGD(model.parameters(), lr=3e-5, momentum=0.9)
 optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5)
 
 # set up the trainer
@@ -126,7 +127,7 @@ trainer = Trainer(train_data=train_data,
                   rel2index=rel2index,
                   save=True,
                   wNED=wNED,
-                  batchsize=16,
+                  batchsize=32,
                   tokenizer=tokenizer
 )
 

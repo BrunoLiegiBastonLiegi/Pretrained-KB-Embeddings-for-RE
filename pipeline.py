@@ -11,11 +11,15 @@ set_sharing_strategy('file_system')
 
 class Pipeline(torch.nn.Module):
 
-    def __init__(self, bert, ner_dim, ner_scheme, ned_dim, KB, re_dim):
+    def __init__(self, bert, ner_dim, ner_scheme, ned_dim, KB, re_dim, batchsize=None, device=None):
         super().__init__()
 
+        # Misc
         self.sm = torch.nn.Softmax(dim=2)
         self.dropout = torch.nn.Dropout(p=0.1)
+        self.bn = torch.nn.BatchNorm1d(batchsize) if batchsize != None else None
+        self.dev = device if device != None else None
+        self.entity_lim = 10 # maximum number of entities admitted after entity filter
 
         # BERT
         self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
@@ -80,12 +84,16 @@ class Pipeline(torch.nn.Module):
         
 
     def forward(self, x):
-        inputs = torch.vstack([torch.tensor(range(1, len(x['input_ids'][0][1:-1]) + 1)) for i in range(x['input_ids'].shape[0])])
-        if torch.cuda.is_available():
-            inputs = inputs.cuda()
+        #inputs = torch.vstack([torch.tensor(range(1, len(x['input_ids'][0][1:-1]) + 1)) for i in range(x['input_ids'].shape[0])])
+        #if torch.cuda.is_available():
+            #inputs = inputs.cuda()
         t1 = time.time()
         x = self.BERT(x)
         t2 = time.time()
+        if self.dev == None:
+            self.dev = x.device
+        if self.bn == None:
+            self.bn = torch.nn.BatchNorm1d(x.shape[0]).to(self.dev)
         #print('> BERT:', t2-t1)
         t1 = time.time()
         ner = self.NER(x)
@@ -101,14 +109,16 @@ class Pipeline(torch.nn.Module):
         #with Pool(6) as p:
             #x, inputs = list(zip(*p.starmap(self.Entity_filter_slow, zip(x,inputs))))
             #x, inputs = list(zip(*p.map(self.filter_worker, x)))
-        x, inputs = self.Entity_filter(x)
+        x, positions = self.Entity_filter(x)
         t2 = time.time()
         #print('> Filter:', t2-t1)
         # pad to max number of entities in batch sample
         #x, inputs = self.PAD(x), self.PAD(inputs, pad=-1)
         t1 = time.time()
-        x, inputs = self.PAD(x, inputs)
+        x, positions = self.PAD(x, inputs)
         t2 = time.time()
+        if x.shape[1] > self.entity_lim:
+            x, positions = x[:, :self.entity_lim, :], positions[:, :self.entity_lim, :]
         #print('> PAD:', t2-t1)
         if x.shape[1] == 0:
             return (ner, None, None)
@@ -117,24 +127,28 @@ class Pipeline(torch.nn.Module):
         t2 = time.time()
         #print('> NED:', t2-t1)
         if x.shape[1] < 2:
-            ned = (inputs, ned[0], ned[1])
+            ned = (positions, ned[0], ned[1])
             return (ner, ned, None)
         x = torch.cat((
             x,
             (self.sm(ned[1][:,:,:,0].view(x.shape[0], -1, self.n_neighbors, 1))*ned[1][:,:,:,1:]).sum(2)
             ), dim=-1)
-        ned = (inputs, ned[0], ned[1])
+        ned = (positions, ned[0], ned[1])
         t1 = time.time()
-        re = self.RE(x, inputs)
+        re = self.RE(x, positions)
         t2 = time.time()
         #print('> RE:', t2-t1)
         return ner, ned, re
 
     def BERT(self, x):
-        return self.pretrained_model(**x).last_hidden_state[:,:-1]     
+        return self.pretrained_model(**x).last_hidden_state[:,:-1]
+
+    def BatchNorm(self, x):
+        self.bn(x.transpose(0,1)).transpose(0,1)
                                                                    
     def NER(self, x):
         x = self.dropout(self.relu(self.ner_lin0(x)))
+        #x = self.BatchNorm(self.relu(self.ner_lin0(x)))
         return self.ner_lin(x)
     
     def filter_worker(self, x):
@@ -209,17 +223,17 @@ class Pipeline(torch.nn.Module):
 
     def Entity_filter(self, x):
         amax = torch.argmax(x[:,:,-self.ner_dim:], dim=-1)
-        inputs, entities = torch.zeros(1, 2).int().cuda(), torch.zeros(1, x.shape[-1]).int().cuda()
+        inputs, entities = torch.zeros(1, 2).int().to(self.dev), torch.zeros(1, x.shape[-1]).int().to(self.dev)
         for t in self.scheme.e_types: # there is the problem of overlapping entities of different types
-            indB = (amax == self.scheme.to_tensor('B-' + t, index=True).cuda()).nonzero()
-            indE = (amax == self.scheme.to_tensor('E-' + t, index=True).cuda()).nonzero()
+            indB = (amax == self.scheme.to_tensor('B-' + t, index=True).to(self.dev)).nonzero()
+            indE = (amax == self.scheme.to_tensor('E-' + t, index=True).to(self.dev)).nonzero()
             inputs = torch.vstack([
                 inputs,
-                (amax == self.scheme.to_tensor('S-' + t, index=True).cuda()).nonzero()
+                (amax == self.scheme.to_tensor('S-' + t, index=True).to(self.dev)).nonzero()
             ]) # Store S-entities
             entities = torch.vstack([
                 entities,
-                x[amax == self.scheme.to_tensor('S-' + t, index=True).cuda()]
+                x[amax == self.scheme.to_tensor('S-' + t, index=True).to(self.dev)]
             ])# and relative inputs
             end = [-1, -1] # initial end value for entering the loop
             for i in indB: # there is the problem of overlaping S and B-E entities
@@ -234,9 +248,9 @@ class Pipeline(torch.nn.Module):
                         if len(tmp) > 0:
                             end = indE[ind[tmp[0]]].view(2)
                         else:
-                            end = torch.hstack(( i[0], torch.tensor(x.shape[1]).cuda() ))
+                            end = torch.hstack(( i[0], torch.tensor(x.shape[1]).to(self.dev) ))
                     else:
-                        end = torch.hstack(( i[0], torch.tensor(x.shape[1]).cuda() ))
+                        end = torch.hstack(( i[0], torch.tensor(x.shape[1]).to(self.dev) ))
                     entities = torch.vstack([
                         entities,
                         torch.mean(x[start[0].item(), start[1].item():end[1].item()], dim=0)
@@ -317,6 +331,7 @@ class Pipeline(torch.nn.Module):
     def NED(self, x, ctx):
         x = torch.cat((ctx, x), dim=1)
         x = self.dropout(self.relu(self.ned_lin1(x)))
+        #x = self.BatchNorm(self.relu(self.ned_lin1(x)))
         x = self.ned_transformer(x)
         x = self.ned_lin(x)
         ctx, x = x[:,0].unsqueeze(1), x[:,1:]
@@ -343,13 +358,15 @@ class Pipeline(torch.nn.Module):
             0,
             indices.flatten()
         ).view(x.shape[0], -1, self.n_neighbors, self.ned_dim)
-        candidates = candidates.cuda()
+        candidates = candidates.to(self.dev)
         candidates.requires_grad = True
         x = (candidates - x.unsqueeze(2))
-        ctx = 1*(ctx.unsqueeze(2) * candidates)
+        ctx = 1*(ctx.unsqueeze(2) * candidateto(self.dev)s)
         x = self.dropout(self.relu(self.ned_dist_lin1(x)))
+        #x = self.BatchNorm(self.relu(self.ned_dist_lin1(x)))
         x = self.ned_dist_lin2(x)
         ctx = self.dropout(self.relu(self.ned_ctx_lin1(ctx)))
+        #ctx = self.BatchNorm(self.relu(self.ned_ctx_lin1(ctx)))
         ctx = self.ned_ctx_lin2(ctx)
         x = x + ctx
         ned_2 = torch.cat((x,candidates), dim=-1) # scores in first position candidates after score
@@ -358,6 +375,7 @@ class Pipeline(torch.nn.Module):
         
     def HeadTail(self, x, inputs):
         h, t = self.dropout(self.relu(self.h_lin0(x))), self.dropout(self.relu(self.t_lin0(x)))
+        #h, t = self.BatchNorm(self.relu(self.h_lin0(x))), self.BatchNorm(self.relu(self.t_lin0(x)))
         h, t = self.h_lin(x), self.t_lin(x)
         # Building candidate pairs
         # Combining all possible heads
