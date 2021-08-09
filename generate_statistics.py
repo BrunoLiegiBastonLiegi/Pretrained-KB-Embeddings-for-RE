@@ -24,7 +24,6 @@ for s, d in pkl.items():
         'relation_types': {},
         'kb_entities': {},
         'entities': {},
-
     }
     if s == 'test': # this is done to preserve keys order in test/train
         for k in data[s].keys():
@@ -71,7 +70,7 @@ for s, d in pkl.items():
                 data[s]['relation_types'][r] = 1
         if discard:
             discarded_sents.append((v['sentence'], v['entities'], v['relations']))
-    
+        
 
 print('> Discarded {} sentences, due to incomplete annotations.'.format(len(discarded_sents)))
 
@@ -112,7 +111,7 @@ except:
 #}
 #print(kb_top100)
 
-
+print(data['train']['entity_types'])
 
 #for k in data['train'].keys():
 for k in ('entity_types', 'relation_types'):

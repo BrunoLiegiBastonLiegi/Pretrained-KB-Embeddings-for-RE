@@ -4,10 +4,10 @@ from transformers import AutoTokenizer, AutoModel
 from itertools import product, repeat, chain
 #from sklearn.neighbors import NearestNeighbors
 from torch.nn.utils.rnn import pad_sequence
-import os
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-from torch.multiprocessing import Pool, set_start_method, set_sharing_strategy
-set_sharing_strategy('file_system')
+#import os
+#os.environ["TOKENIZERS_PARALLELISM"] = "false"
+#from torch.multiprocessing import Pool, set_start_method, set_sharing_strategy
+#set_sharing_strategy('file_system')
 
 class Pipeline(torch.nn.Module):
 
@@ -99,6 +99,7 @@ class Pipeline(torch.nn.Module):
         ner = self.NER(x)
         t2 = time.time()
         #print('> NER:', t2-t1)
+        #return (ner[:,1:], None, None)
         x = torch.cat((x, self.sm(ner)), dim=-1)
         # detach the context
         ctx = x[:,0].unsqueeze(1)
@@ -115,7 +116,7 @@ class Pipeline(torch.nn.Module):
         # pad to max number of entities in batch sample
         #x, inputs = self.PAD(x), self.PAD(inputs, pad=-1)
         t1 = time.time()
-        x, positions = self.PAD(x, inputs)
+        x, positions = self.PAD(x, positions)
         t2 = time.time()
         if x.shape[1] > self.entity_lim:
             x, positions = x[:, :self.entity_lim, :], positions[:, :self.entity_lim, :]
@@ -361,7 +362,7 @@ class Pipeline(torch.nn.Module):
         candidates = candidates.to(self.dev)
         candidates.requires_grad = True
         x = (candidates - x.unsqueeze(2))
-        ctx = 1*(ctx.unsqueeze(2) * candidateto(self.dev)s)
+        ctx = 1*(ctx.unsqueeze(2) * candidates.to(self.dev))
         x = self.dropout(self.relu(self.ned_dist_lin1(x)))
         #x = self.BatchNorm(self.relu(self.ned_dist_lin1(x)))
         x = self.ned_dist_lin2(x)
@@ -411,3 +412,92 @@ class Pipeline(torch.nn.Module):
                 param.requires_grad = True
 
 
+
+
+class GoldEntities(Pipeline):
+
+    def __init__(self, bert, ned_dim, KB, re_dim, ner_dim=0, ner_scheme=None, batchsize=None, device=None):
+        super(Pipeline, self).__init__()
+        
+        # Misc
+        self.sm = torch.nn.Softmax(dim=2)
+        self.dropout = torch.nn.Dropout(p=0.1)
+        self.bn = torch.nn.BatchNorm1d(batchsize) if batchsize != None else None
+        self.dev = device if device != None else None
+
+        # BERT
+        self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
+        self.pretrained_model = AutoModel.from_pretrained(bert)
+        self.bert_dim = self.pretrained_model.pooler.dense.out_features#768  # BERT encoding dimension
+        for param in self.pretrained_model.base_model.parameters():  
+                param.requires_grad = False                              # freezing the BERT encoder
+
+        # NED
+        self.KB = KB
+        self.KB_embs = torch.vstack(list(KB.values()))
+        quantizer = faiss.IndexFlatL2(ned_dim)  # the other index
+        self.NN = faiss.IndexIVFFlat(quantizer, ned_dim, 100)
+        assert not self.NN.is_trained
+        self.NN.train(self.KB_embs.numpy())
+        assert self.NN.is_trained
+        self.NN.add(self.KB_embs.numpy())
+        self.NN.nprobe = 1
+        self.n_neighbors = 10
+        self.ned_dim = ned_dim  # dimension of the KB graph embedding space
+        nhead = 8
+        hdim = int((self.bert_dim)/nhead)*nhead
+        self.ned_lin1 = torch.nn.Linear(self.bert_dim, hdim)
+        # nhead must be a divisor of hdim, pay attention!!!
+        ned_transformer_layer = torch.nn.TransformerEncoderLayer(d_model=hdim, nhead=8)
+        self.ned_transformer = torch.nn.TransformerEncoder(ned_transformer_layer, num_layers=6)
+        self.relu = torch.nn.ReLU()
+        self.ned_lin = torch.nn.Linear(hdim, self.ned_dim)
+        self.ned_dist_lin1 = torch.nn.Linear(self.ned_dim, self.ned_dim)
+        self.ned_dist_lin2 = torch.nn.Linear(self.ned_dim, 1)
+        self.ned_ctx_lin1 = torch.nn.Linear(self.ned_dim, self.ned_dim)
+        self.ned_ctx_lin2 = torch.nn.Linear(self.ned_dim, 1)
+
+        # Head-Tail
+        self.ht_dim = 128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
+        self.h_lin0 = torch.nn.Linear(self.bert_dim +  self.ned_dim, self.bert_dim + self.ned_dim)
+        self.h_lin = torch.nn.Linear(self.bert_dim + self.ned_dim, self.ht_dim)
+        self.t_lin0 = torch.nn.Linear(self.bert_dim + self.ned_dim, self.bert_dim + self.ned_dim)
+        self.t_lin = torch.nn.Linear(self.bert_dim + self.ned_dim, self.ht_dim)
+        
+        # RE
+        self.re_dim = re_dim  # dimension of RE classification space
+        self.re_bil = torch.nn.Bilinear(self.ht_dim, self.ht_dim, self.re_dim)
+        self.re_lin = torch.nn.Linear(2*self.ht_dim, self.re_dim, bias=False)  # we need only one bias, we can decide to
+                                                                               # switch off either the linear or bilinear bias
+
+    def get_entities(self, x, entities):
+        ner, positions = [], []
+        for i,e in enumerate(entities):
+            ner_tmp, pos_tmp = [], []
+            for p in e:
+                ner_tmp.append(torch.mean(x[i][p[0]:p[1]], dim=0))
+                pos_tmp.append(p[1])
+            ner.append(torch.vstack(ner_tmp).to(self.dev))
+            positions.append(torch.vstack(pos_tmp).to(self.dev))
+        return ner, positions
+        
+    def forward(self, x, entities):
+        x = self.BERT(x)
+        if self.dev == None:
+            self.dev = x.device
+        if self.bn == None:
+            self.bn = torch.nn.BatchNorm1d(x.shape[0]).to(self.dev)
+        # detach the context
+        ctx = x[:,0].unsqueeze(1)
+        x = x[:,1:]
+        # get the entities
+        x, positions = self.get_entities(x, entities)
+        x, positions = self.PAD(x, positions)
+        ned = self.NED(x, ctx)
+        x = torch.cat((
+            x,
+            (self.sm(ned[1][:,:,:,0].view(x.shape[0], -1, self.n_neighbors, 1))*ned[1][:,:,:,1:]).sum(2)
+            ), dim=-1)
+        ned = (positions, ned[0], ned[1])
+        re = self.RE(x, positions)
+        return ned, re

@@ -58,7 +58,7 @@ class ClassificationReport(object):
                     tmp = p[k]
                     pred.append(self.embedding2id[tuple(tmp.tolist())])
                     #target.append(self.embedding2id[tuple(v.tolist())])
-                    #3classes[self.embedding2id[tuple(v.tolist())]] = 0
+                    #classes[self.embedding2id[tuple(v.tolist())]] = 0
                 except:
                     pred.append('***ERR***')
                     #pass

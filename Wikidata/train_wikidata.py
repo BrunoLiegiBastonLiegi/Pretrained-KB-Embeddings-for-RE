@@ -223,6 +223,10 @@ cr = ClassificationReport(
 )
 
 f1 = {'NER': cr.ner_report(), 'NED': cr.ned_report(), 'RE': cr.re_report()}
+stat = Stat(pkl['train'], pkl['test'])
+stat.gen()
+scores = {k: v['f1-score'] for k,v in f1['NER'].items() if k not in ('micro avg', 'macro avg', 'weighted avg')}
+stat.score_vs_support(scores)
 print('NER')
 print(f1['NER']['macro avg'])
 print(f1['NER']['micro avg'])

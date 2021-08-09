@@ -2,8 +2,8 @@ import torch, sys, random, argparse, pickle, time, ngtpy
 sys.path.append('../')
 from trainer import Trainer
 from ner_schemes import BIOES
-from dataset import IEData
-from pipeline import Pipeline
+from dataset import IEData, Stat
+from pipeline import Pipeline, GoldEntities
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
 from evaluation import ClassificationReport, KG, mean_distance
@@ -28,7 +28,7 @@ with open(args.train_data, 'rb') as f:
     pkl['train'] = pickle.load(f)
 with open(args.test_data, 'rb') as f:               
     pkl['test'] = pickle.load(f)
-
+    
 discarded_sents = []
 for s, d in pkl.items():
     data[s] = {
@@ -97,12 +97,20 @@ test_data = IEData(
     #save_to=args.test_data.replace('.pkl', '_preprocessed.pkl')
 )
 
-model = Pipeline(bert,
-                 ner_dim=bioes.space_dim,
-                 ner_scheme=bioes,
-                 ned_dim=list(kb.values())[0].shape[-1],
-                 KB=kb,
-                 re_dim=len(r_types)
+#model = Pipeline(
+#    bert,
+#    ner_dim=bioes.space_dim,
+#    ner_scheme=bioes,
+#    ned_dim=list(kb.values())[0].shape[-1],
+#    KB=kb,
+#    re_dim=len(r_types)
+#)
+
+model = GoldEntities(
+    bert,
+    ned_dim=list(kb.values())[0].shape[-1],
+    KB=kb,
+    re_dim=len(r_types)
 )
 
 
@@ -119,16 +127,18 @@ if device == torch.device("cuda:0"):
 optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5)
 
 # set up the trainer
-trainer = Trainer(train_data=train_data,
-                  test_data=test_data,
-                  model=model,
-                  optim=optimizer,
-                  device=device,
-                  rel2index=rel2index,
-                  save=True,
-                  wNED=wNED,
-                  batchsize=32,
-                  tokenizer=tokenizer
+trainer = Trainer(
+    train_data=train_data,
+    test_data=test_data,
+    model=model,
+    optim=optimizer,
+    device=device,
+    rel2index=rel2index,
+    save=True,
+    wNED=wNED,
+    batchsize=32,
+    tokenizer=tokenizer,
+    gold_entities=True
 )
 
 # load pretrained model or train
@@ -222,7 +232,13 @@ cr = ClassificationReport(
     ned_embeddings=kb
 )
 
+stat = Stat(pkl['train'], pkl['test'])
+stat.gen()
+
 f1 = {'NER': cr.ner_report(), 'NED': cr.ned_report(), 'RE': cr.re_report()}
+scores = {k: v['f1-score'] for k,v in f1['NER'].items() if k not in ('micro avg', 'macro avg', 'weighted avg')}
+stat.score_vs_support(scores)
+
 print('NER')
 print(f1['NER']['macro avg'])
 print(f1['NER']['micro avg'])

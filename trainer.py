@@ -5,13 +5,14 @@ from torch.utils.data import DataLoader
 
 class Trainer(object):
 
-    def __init__(self, train_data, test_data, model, optim, rel2index, device, save=True, wNED=1, batchsize=32, tokenizer=None):
+    def __init__(self, train_data, test_data, model, optim, rel2index, device, gold_entities=False, save=True, wNED=1, batchsize=32, tokenizer=None):
         self.model = model
         self.optim = optim
         self.rel2index = rel2index
         self.device = device     
         self.train_set = train_data
         self.test_set = test_data
+        self.gold = gold_entities
         self.save = save
         self.wNED = wNED
         self.crossentropy = torch.nn.CrossEntropyLoss()
@@ -63,7 +64,7 @@ class Trainer(object):
             } 
         }
         # Loss weights
-        l = 0. # RE loss weight, gradually increased to 1
+        l = 0. if not self.gold else 1.# RE loss weight, gradually increased to 1
         
         for epoch in range(epochs):
 
@@ -108,7 +109,7 @@ class Trainer(object):
                     #t2 = time.time()
                     #print('> Forward:', t2-t1)
                     # unfreeze NED and RE training
-                    if epoch == 1:
+                    if epoch == 1 and not self.gold:
                         l = i / len(train_loader)
                     loss = ner_loss + l * re_loss + self.wNED*(l * (1*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
                 #t1 = time.time()
@@ -167,6 +168,8 @@ class Trainer(object):
 
     def step(self, batch):
         inputs = batch['sent']
+        if self.gold:
+            entities = batch['pos']
         #print(self.tokenizer.decode(inputs['input_ids'][0]))
         ner_target = batch['ner']
         #print(ner_target[0])
@@ -180,13 +183,17 @@ class Trainer(object):
             ned_target = [ t.to(self.device) for t in ned_target ]
             re_target = [ t.to(self.device) for t in re_target ]
 
-        # forward 
-        ner_out, ned_output, re_output = self.model(inputs)
-        # losses
-        ner_loss = self.crossentropy(
-            torch.transpose(ner_out, 1, 2),
-            ner_target
-        )
+        # forward
+        if self.gold:
+           ned_output, re_output = self.model(inputs, entities)
+           ner_loss = torch.tensor(0., device=self.device)
+        else:
+            ner_out, ned_output, re_output = self.model(inputs)
+            # losses
+            ner_loss = self.crossentropy(
+                torch.transpose(ner_out, 1, 2),
+                ner_target
+            )
         ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (self.random_ned_err, torch.tensor(2.3, device=self.device))
         re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(2.3, device=self.device)
         return ner_loss, ned_loss1, ned_loss2, re_loss
