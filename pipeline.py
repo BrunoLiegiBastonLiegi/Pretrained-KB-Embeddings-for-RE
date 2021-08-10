@@ -70,7 +70,7 @@ class Pipeline(torch.nn.Module):
         self.ned_ctx_lin2 = torch.nn.Linear(self.ned_dim, 1)
         
         # Head-Tail
-        self.ht_dim = 128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
+        self.ht_dim = 256  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
         self.h_lin0 = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.bert_dim + self.ner_dim + self.ned_dim)
         self.h_lin = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.ht_dim)
         self.t_lin0 = torch.nn.Linear(self.bert_dim + self.ner_dim + self.ned_dim, self.bert_dim + self.ner_dim + self.ned_dim)

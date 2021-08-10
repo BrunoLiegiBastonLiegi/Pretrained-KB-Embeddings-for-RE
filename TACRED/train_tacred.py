@@ -6,7 +6,7 @@ from dataset import IEData, Stat
 from pipeline import Pipeline, GoldEntities
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
-from evaluation import ClassificationReport, KG, mean_distance
+from evaluation import ClassificationReport, KG, mean_distance, Evaluator
 
 
 # Arguments parser
@@ -15,10 +15,13 @@ parser.add_argument('train_data', help='Path to train data file.')
 parser.add_argument('test_data', help='Path to test data file.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
 parser.add_argument('--NED_weight', metavar='NED', help='Weight for NED.')
+parser.add_argument('--gold_entities', metavar='GOLDENT', default=False, help='Use gold entities if True.')
 args = parser.parse_args()
 
 # Disambiguation weight
 wNED = 1 if args.NED_weight == None else args.NED_weight
+# Gold entities?
+gold = args.gold_entities
 
 kb, data, e_types, r_types = {}, {}, {}, {}
 
@@ -97,23 +100,22 @@ test_data = IEData(
     #save_to=args.test_data.replace('.pkl', '_preprocessed.pkl')
 )
 
-#model = Pipeline(
-#    bert,
-#    ner_dim=bioes.space_dim,
-#    ner_scheme=bioes,
-#    ned_dim=list(kb.values())[0].shape[-1],
-#    KB=kb,
-#    re_dim=len(r_types)
-#)
-
-model = GoldEntities(
-    bert,
-    ned_dim=list(kb.values())[0].shape[-1],
-    KB=kb,
-    re_dim=len(r_types)
-)
-
-
+if gold:
+    model = GoldEntities(
+        bert,
+        ned_dim=list(kb.values())[0].shape[-1],
+        KB=kb,
+        re_dim=len(r_types)
+    )
+else:
+    model = Pipeline(
+        bert,
+        ner_dim=bioes.space_dim,
+        ner_scheme=bioes,
+        ned_dim=list(kb.values())[0].shape[-1],
+        KB=kb,
+        re_dim=len(r_types)
+    )
 
 # check if GPU is avilable
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -138,8 +140,9 @@ trainer = Trainer(
     wNED=wNED,
     batchsize=32,
     tokenizer=tokenizer,
-    gold_entities=True
+    gold_entities=gold
 )
+
 
 # load pretrained model or train
 if args.load_model != None:
@@ -152,85 +155,17 @@ else:
             pickle.dump(plots, f)
 
 
-# ------------------------- Evaluation 
-    
-sm1 = torch.nn.Softmax(dim=1)
-sm0 = torch.nn.Softmax(dim=0)
+# ------------------------- Evaluation
 
-ner_groundtruth, ner_prediction = [], []
-ned_groundtruth, ned_prediction = [], []
-re_groundtruth, re_prediction = [], []
-
-model.eval()
-test_loader = DataLoader(test_data,
-                         batch_size=256,
-                         collate_fn=test_data.collate_fn)
-
-for i, batch in enumerate(test_loader):
-    print('Evaluating on the test set. ({} / {})'.format(i, len(test_loader)), end='\r')
-    with torch.no_grad():
-        inputs = batch['sent']
-        if device != torch.device("cpu"):
-            inputs = inputs.to(device)
-        
-            ner_out, ned_out, re_out = model(inputs)
-            for i in range(len(inputs['input_ids'])):
-                # NER
-                ner_groundtruth.append([ bioes.index2tag[int(j)] for j in batch['ner'][i] ])
-                ner_prediction.append([ bioes.to_tag(j) for j in sm1(ner_out[i]) ])
-                # NED
-                ned_groundtruth.append( dict(zip(
-                    batch['ned'][i][:,0].int().tolist(),
-                    batch['ned'][i][:,1:]))
-                )
-                #print('>>>>> NED\n', ned_out)
-                if ned_out != None:
-                    prob = sm1(ned_out[2][i][:,:,0])
-                    candidates = ned_out[2][i][:,:,1:]
-                    ned_prediction.append(dict(zip(
-                        ned_out[0][i].view(-1,).tolist(),
-                        torch.vstack([ c[torch.argmax(w)] for w,c in zip(prob, candidates) ])
-                    )))
-                else:
-                    ned_prediction.append(None)
-                # RE
-                #print('>>>>> RE\n', re_out)
-                re_groundtruth.append(dict(zip(
-                    zip(
-                        batch['re'][i][:,0].tolist(),
-                        batch['re'][i][:,1].tolist()
-                    ),
-                    batch['re'][i][:,2].tolist()
-                )))
-                if re_out != None:
-                    re_prediction.append(dict(zip(
-                        zip(
-                            re_out[0][i][:,0].tolist(),
-                            re_out[0][i][:,1].tolist(),                    
-                        ),
-                        torch.argmax(sm1(re_out[1][i]), dim=1).view(-1).tolist()
-                    )))
-                else:
-                    re_prediction.append(None)
-
-
-#print('NER:\n',ner_groundtruth[0], ner_prediction[0])
-#print('NED:\n',ned_groundtruth[0], ned_prediction[0])
-#print('RE:\n',re_groundtruth[0], re_prediction[0])
-
-
-
-cr = ClassificationReport(
-    ner_predictions=ner_prediction,
-    ner_groundtruth=ner_groundtruth,
-    ned_predictions=ned_prediction,
-    ned_groundtruth=ned_groundtruth,
-    re_predictions=re_prediction,
-    re_groundtruth=re_groundtruth,
+ev = Evaluator(
+    model=model,
+    ner_scheme=bioes,
+    kb_embeddings=kb,
     re_classes=dict(zip(rel2index.values(),rel2index.keys())),
-    ner_scheme='IOBES',
-    ned_embeddings=kb
+    gold_entities=gold
 )
+ev.classification_report(test_data)
+
 
 stat = Stat(pkl['train'], pkl['test'])
 stat.gen()
@@ -239,12 +174,4 @@ f1 = {'NER': cr.ner_report(), 'NED': cr.ned_report(), 'RE': cr.re_report()}
 scores = {k: v['f1-score'] for k,v in f1['NER'].items() if k not in ('micro avg', 'macro avg', 'weighted avg')}
 stat.score_vs_support(scores)
 
-print('NER')
-print(f1['NER']['macro avg'])
-print(f1['NER']['micro avg'])
-print('NED')
-print(f1['NED']['macro avg'])
-print(f1['NED']['micro avg'])
-print('RE')
-print(f1['RE']['macro avg'])
-print(f1['RE']['micro avg'])
+
