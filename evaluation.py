@@ -11,6 +11,7 @@ from sklearn.metrics import f1_score
 import sklearn.metrics as skm
 
 from torch.utils.data import DataLoader
+#from bidict import bidict
 
 
 class Evaluator(object):
@@ -22,6 +23,7 @@ class Evaluator(object):
         self.gold = gold_entities
         self.batchsize = batchsize
         self.embedding2id = { tuple(v.flatten().tolist()): k for k,v in kb_embeddings.items() }
+        #self.embedding2id = bidict(kb_embeddings)
         self.re_classes = re_classes
         
     def eval(self, data):
@@ -43,7 +45,8 @@ class Evaluator(object):
                 inputs = batch['sent'].to(next(self.model.parameters()).device)
                 entities = batch['pos']
                 if self.gold:
-                    ner_out, ned_out, re_out = None, self.model(inputs, entities)
+                    ned_out, re_out = self.model(inputs, entities)
+                    ner_out = None
                 else:
                     ner_out, ned_out, re_out = self.model(inputs)
                 for i in range(len(inputs['input_ids'])):
@@ -96,11 +99,14 @@ class Evaluator(object):
                 try:
                     tmp = p[k]
                     pred.append(self.embedding2id[tuple(tmp.tolist())])
+                    #pred.append(self.embedding2id.inverse[tmp])
 
                 except:
                     pred.append('***ERR***')
                 target.append(self.embedding2id[tuple(v.tolist())])
                 classes[self.embedding2id[tuple(v.tolist())]] = 0
+                #target.append(self.embedding2id.inverse[v.view(1,-1)])
+                #classes[self.embedding2id.inverse[v.view(1,-1)]] = 0
         print(skm.classification_report(target, pred, labels=list(classes.keys())))
         return skm.classification_report(target, pred, labels=list(classes.keys()), output_dict=True)
 
@@ -113,7 +119,6 @@ class Evaluator(object):
                 classes[self.re_classes[gt[k]]] = 0
                 try:
                     pred.append(self.re_classes[p[k]])
-
                 except:
                     pred.append('***ERR***')
         print(skm.classification_report(target, pred, labels=list(classes.keys())))
@@ -121,7 +126,10 @@ class Evaluator(object):
 
     def classification_report(self, data):
         self.eval(data)
-        return self.ner_report(), self.ned_report(), self.re_report()
+        if self.gold:
+            return self.ned_report(), self.re_report()
+        else:
+            return self.ner_report(), self.ned_report(), self.re_report()
 
 
     

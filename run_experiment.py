@@ -1,29 +1,25 @@
-import torch, sys, random, argparse, pickle, time, ngtpy
-sys.path.append('../')
+import torch, argparse, pickle, re
 from trainer import Trainer
 from ner_schemes import BIOES
 from dataset import IEData, Stat
 from pipeline import Pipeline, GoldEntities
 from transformers import AutoTokenizer
-from torch.utils.data import DataLoader
-from evaluation import ClassificationReport, KG, mean_distance, Evaluator
-
+from evaluation import Evaluator
 
 # Arguments parser
-parser = argparse.ArgumentParser(description='Train the model for ADE.')
+parser = argparse.ArgumentParser(description='Train a model and evaluate on a dataset.')
 parser.add_argument('train_data', help='Path to train data file.')
 parser.add_argument('test_data', help='Path to test data file.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
-parser.add_argument('--NED_weight', metavar='NED', help='Weight for NED.')
-parser.add_argument('--gold_entities', metavar='GOLDENT', default=False, help='Use gold entities if True.')
+parser.add_argument('--gold_entities', dest='gold', action='store_true', help='Use gold entities.')
 args = parser.parse_args()
 
-# Disambiguation weight
-wNED = 1 if args.NED_weight == None else args.NED_weight
 # Gold entities?
-gold = True if args.gold_entities=='True' else False
+gold = args.gold
 
-kb, data, e_types, r_types = {}, {}, {}, {}
+# Input/Output directory
+dir = re.search('.+<?\/', args.train_data).group(0)
+assert dir == re.search('.+<?\/', args.test_data).group(0)
 
 pkl = {}
 # Load the data
@@ -31,7 +27,13 @@ with open(args.train_data, 'rb') as f:
     pkl['train'] = pickle.load(f)
 with open(args.test_data, 'rb') as f:               
     pkl['test'] = pickle.load(f)
-    
+
+# Do some statistics
+stat = Stat(pkl['train'], pkl['test'])
+stat.gen()
+
+# Organize usable data in a suitable way
+kb, data, e_types, r_types = {}, {}, {}, {}
 discarded_sents = []
 for s, d in pkl.items():
     data[s] = {
@@ -42,12 +44,10 @@ for s, d in pkl.items():
     for v in d:
         discard = False
         for e in v['entities'].values():
-            #print(v)
             try:
                 emb_flag = e['embedding'].any() != None
             except:
                 emb_flag = False
-            #print(emb_flag)
             if e['type'] != None and emb_flag:
                 kb[e['id']] = torch.tensor(e['embedding'], dtype=torch.float32).view(1, -1)
                 e['embedding'] = torch.tensor(e['embedding'], dtype=torch.float32).view(1, -1)
@@ -72,12 +72,10 @@ rel2index = dict(zip(r_types.keys(), range(len(r_types))))
 # Define the pretrained model
 #bert = 'bert-base-uncased'
 bert = 'bert-base-cased'
-#bert = 'bert-large-cased'
-#bert = 'EleutherAI/gpt-neo-2.7B'
-#bert = "facebook/bart-large-mnli"
-#bert = "typeform/distilbert-base-uncased-mnli"
 tokenizer = AutoTokenizer.from_pretrained(bert)
 
+
+# Prepare data for training
 train_data = IEData(
     sentences=data['train']['sent'],
     ner_labels=data['train']['ents'],
@@ -100,6 +98,7 @@ test_data = IEData(
     #save_to=args.test_data.replace('.pkl', '_preprocessed.pkl')
 )
 
+# Instantiate the model
 if gold:
     model = GoldEntities(
         bert,
@@ -137,12 +136,10 @@ trainer = Trainer(
     device=device,
     rel2index=rel2index,
     save=True,
-    wNED=wNED,
     batchsize=32,
     tokenizer=tokenizer,
     gold_entities=gold
 )
-
 
 # load pretrained model or train
 if args.load_model != None:
@@ -151,11 +148,11 @@ else:
     plots = trainer.train(24)
     yn = input('Save loss plots? (y/n)')
     if yn == 'y':
-        with open('loss_plots.pkl', 'wb') as f:
+        with open(dir + '/loss_plots.pkl', 'wb') as f:
             pickle.dump(plots, f)
 
 
-# ------------------------- Evaluation
+# Evaluation
 
 ev = Evaluator(
     model=model,
@@ -165,13 +162,3 @@ ev = Evaluator(
     gold_entities=gold
 )
 ev.classification_report(test_data)
-
-
-stat = Stat(pkl['train'], pkl['test'])
-stat.gen()
-
-f1 = {'NER': cr.ner_report(), 'NED': cr.ned_report(), 'RE': cr.re_report()}
-scores = {k: v['f1-score'] for k,v in f1['NER'].items() if k not in ('micro avg', 'macro avg', 'weighted avg')}
-stat.score_vs_support(scores)
-
-

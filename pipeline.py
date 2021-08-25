@@ -416,13 +416,13 @@ class Pipeline(torch.nn.Module):
 
 class GoldEntities(Pipeline):
 
-    def __init__(self, bert, ned_dim, KB, re_dim, ner_dim=0, ner_scheme=None, batchsize=None, device=None):
+    def __init__(self, bert, ned_dim, KB, re_dim, batchsize=None, device=None):
         super(Pipeline, self).__init__()
         
         # Misc
         self.sm = torch.nn.Softmax(dim=2)
         self.dropout = torch.nn.Dropout(p=0.1)
-        self.bn = torch.nn.BatchNorm1d(batchsize) if batchsize != None else None
+        #self.bn = torch.nn.BatchNorm1d(batchsize) if batchsize != None else None
         self.dev = device if device != None else None
 
         # BERT
@@ -442,7 +442,7 @@ class GoldEntities(Pipeline):
         assert self.NN.is_trained
         self.NN.add(self.KB_embs.numpy())
         self.NN.nprobe = 1
-        self.n_neighbors = 10
+        self.n_neighbors = 5
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
         nhead = 8
         hdim = int((self.bert_dim)/nhead)*nhead
@@ -485,8 +485,8 @@ class GoldEntities(Pipeline):
         x = self.BERT(x)
         if self.dev == None:
             self.dev = x.device
-        if self.bn == None:
-            self.bn = torch.nn.BatchNorm1d(x.shape[0]).to(self.dev)
+        #if self.bn == None:
+        #    self.bn = torch.nn.BatchNorm1d(x.shape[0]).to(self.dev)
         # detach the context
         ctx = x[:,0].unsqueeze(1)
         x = x[:,1:]
@@ -501,3 +501,63 @@ class GoldEntities(Pipeline):
         ned = (positions, ned[0], ned[1])
         re = self.RE(x, positions)
         return ned, re
+
+
+class GoldKG(GoldEntities):
+
+    def __init__(self, bert, ned_dim, re_dim, batchsize=None, device=None):
+        super(Pipeline, self).__init__()
+        
+        # Misc
+        self.sm = torch.nn.Softmax(dim=2)
+        self.dropout = torch.nn.Dropout(p=0.1)
+        #self.bn = torch.nn.BatchNorm1d(batchsize) if batchsize != None else None
+        self.dev = device if device != None else None
+
+        # BERT
+        self.pretrained_tokenizer = AutoTokenizer.from_pretrained(bert)
+        self.pretrained_model = AutoModel.from_pretrained(bert)
+        self.bert_dim = self.pretrained_model.pooler.dense.out_features#768  # BERT encoding dimension
+        for param in self.pretrained_model.base_model.parameters():  
+                param.requires_grad = False                              # freezing the BERT encoder
+
+        # Head-Tail
+        self.ht_dim = 768  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
+        self.h_lin0 = torch.nn.Linear(self.bert_dim +  self.ned_dim, self.bert_dim + self.ned_dim)
+        self.h_lin = torch.nn.Linear(self.bert_dim + self.ned_dim, self.ht_dim)
+        self.t_lin0 = torch.nn.Linear(self.bert_dim + self.ned_dim, self.bert_dim + self.ned_dim)
+        self.t_lin = torch.nn.Linear(self.bert_dim + self.ned_dim, self.ht_dim)
+        
+        # RE
+        self.re_dim = re_dim  # dimension of RE classification space
+        self.re_bil = torch.nn.Bilinear(self.ht_dim, self.ht_dim, self.re_dim)
+        self.re_lin = torch.nn.Linear(2*self.ht_dim, self.re_dim, bias=False)  # we need only one bias, we can decide to
+                                                                               # switch off either the linear or bilinear bias
+
+    def get_entities(self, x, entities, embeddings):
+        ner, positions, embs = [], [], []
+        for i,e in enumerate(zip(entities, embeddings)):
+            ner_tmp, pos_tmp = [], []
+            for p in e[0]:
+                ner_tmp.append(torch.mean(x[i][p[0]:p[1]], dim=0))
+                pos_tmp.append(p[1])
+            ner.append(torch.cat(
+                torch.vstack(ner_tmp), e[1],
+                dim=-1)).to(self.dev)
+            positions.append(torch.vstack(pos_tmp).to(self.dev))
+        return ner, positions
+
+    def forward(self, x, entities, embeddings):
+        x = self.BERT(x)
+        if self.dev == None:
+            self.dev = x.device
+        #if self.bn == None:
+        #    self.bn = torch.nn.BatchNorm1d(x.shape[0]).to(self.dev)
+        # detach the context
+        ctx = x[:,0].unsqueeze(1)
+        x = x[:,1:]
+        # get the entities
+        x, positions = self.get_entities(x, entities)
+        x, positions = self.PAD(x, positions)
+        re = self.RE(x, positions)
+        return re
