@@ -16,6 +16,7 @@ class Trainer(object):
         self.save = save
         self.wNED = wNED
         self.crossentropy = torch.nn.CrossEntropyLoss()
+        self.cosine = torch.nn.CosineEmbeddingLoss()
         self.mse = torch.nn.MSELoss(reduction='sum')
         self.batchsize = batchsize
         self.random_ned_err = self.mean_emb_dist()
@@ -271,9 +272,12 @@ class Trainer(object):
                 ned_out[2][i]
             ))
             n2_scores, n2_targets = [], []
+            n1_pred, n1_target = [], []
             for k in g.keys() & n1.keys():
                 gt_tmp = g.pop(k)
-                loss1 += torch.sqrt(self.mse(n1.pop(k), gt_tmp))
+                #loss1 += torch.sqrt(self.mse(n1.pop(k), gt_tmp))
+                n1_pred.append(n1.pop(k))
+                n1_target.append(gt_tmp)
                 p_tmp = n2.pop(k)
                 candidates = p_tmp[:,1:]
                 ind = ((candidates-gt_tmp).sum(-1)==0)
@@ -281,6 +285,8 @@ class Trainer(object):
                     ind = ind.nonzero()
                     n2_targets.append(torch.flatten(ind)[0])
                     n2_scores.append(p_tmp[:,0])
+            #loss1 += torch.sqrt(self.mse(torch.vstack(n1_pred), torch.vstack(n1_target)))
+            loss1 += self.cosine(torch.vstack(n1_pred), torch.vstack(n1_target), torch.ones(len(n1_pred)))
             loss1 += self.random_ned_err*len(g) 
             if len(n2_scores) > 0 :
                 loss2 += self.crossentropy(torch.vstack(n2_scores), torch.hstack(n2_targets)) 
@@ -291,7 +297,7 @@ class Trainer(object):
                     n1.pop(-1)
                 except:
                     pass
-                loss1 += sum(map(self.mse, n1.values(), torch.zeros(len(n1), dim, device=self.device)))
-
+                #loss1 += sum(map(self.mse, n1.values(), torch.zeros(len(n1), dim, device=self.device)))
+                loss1 += self.cosine(torch.vstack(n1.values()), torch.zeros(len(n1), dim, device=self.device), torch.ones(len(n1)))
         return loss1 / len(groundtruth), loss2 / len(groundtruth)
         

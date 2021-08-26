@@ -3,7 +3,7 @@ sys.path.append('../')
 from trainer import Trainer
 from ner_schemes import BIOES
 from dataset import IEData
-from pipeline import Pipeline
+from pipeline import Pipeline, GoldEntities
 from transformers import AutoTokenizer
 from torch.utils.data import DataLoader
 from evaluation import ClassificationReport, KG, mean_distance
@@ -18,7 +18,11 @@ parser.add_argument('train_data', help='Path to train data file.')
 parser.add_argument('test_data', help='Path to test data file.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
 parser.add_argument('--NED_weight', metavar='NED', help='Weight for NED.')
+parser.add_argument('--gold_entities', dest='gold', action='store_true', help='Use gold entities.')
 args = parser.parse_args()
+
+# Gold entities?
+gold = args.gold
 
 # Disambiguation weight
 wNED = 1 if args.NED_weight == None else args.NED_weight
@@ -98,13 +102,20 @@ test_data = IEData(
     ner_scheme=bioes,
     rel2index=rel2index
 )
-
-model = Pipeline(bert,
-                 ner_dim=bioes.space_dim,
-                 ner_scheme=bioes,
-                 ned_dim=list(kb.values())[0].shape[-1],
-                 KB=kb,
-                 re_dim=len(r_types)+1)
+if gold:
+    model = GoldEntities(
+        bert,
+        ned_dim=list(kb.values())[0].shape[-1],
+        KB=kb,
+        re_dim=len(r_types)+1
+    )
+else:
+    model = Pipeline(bert,
+                     ner_dim=bioes.space_dim,
+                     ner_scheme=bioes,
+                     ned_dim=list(kb.values())[0].shape[-1],
+                     KB=kb,
+                     re_dim=len(r_types)+1)
 
 
 
@@ -128,7 +139,8 @@ trainer = Trainer(train_data=train_data,
                   rel2index=rel2index,
                   save=True,
                   wNED=wNED,
-                  batchsize=32
+                  batchsize=32,
+                  gold_entities=gold
 )
 
 # load pretrained model or train
@@ -141,7 +153,18 @@ else:
         with open('loss_plots.pkl', 'wb') as f:
             pickle.dump(plots, f)
 
+# Evaluation
 
+ev = Evaluator(
+    model=model,
+    ner_scheme=bioes,
+    kb_embeddings=kb,
+    re_classes=dict(zip(rel2index.values(),rel2index.keys())),
+    gold_entities=gold
+)
+ev.classification_report(test_data)
+            
+"""
 # ------------------------- Evaluation 
     
 sm1 = torch.nn.Softmax(dim=1)
@@ -236,3 +259,4 @@ print(f1['NED']['micro avg'])
 print('RE')
 print(f1['RE']['macro avg'])
 print(f1['RE']['micro avg'])
+"""
