@@ -3,6 +3,7 @@ from trainer import Trainer
 from ner_schemes import BIOES
 from dataset import IEData, Stat
 from pipeline import Pipeline, GoldEntities
+from model import BaseIEModel, BaseIEModelGoldEntities, IEModel, IEModelGoldEntities, IEModelGoldKG
 from transformers import AutoTokenizer
 from evaluation import Evaluator
 
@@ -99,29 +100,71 @@ test_data = IEData(
 )
 
 # Instantiate the model
-if gold:
-    model = GoldEntities(
-        bert,
-        ned_dim=list(kb.values())[0].shape[-1],
-        KB=kb,
-        re_dim=len(r_types)
-    )
-else:
-    model = Pipeline(
-        bert,
-        ner_dim=bioes.space_dim,
-        ner_scheme=bioes,
-        ned_dim=list(kb.values())[0].shape[-1],
-        KB=kb,
-        re_dim=len(r_types)
-    )
+#if gold:
+#    model = GoldEntities(
+#        bert,
+#        ned_dim=list(kb.values())[0].shape[-1],
+#        KB=kb,
+#        re_dim=len(r_types)
+#    )
+#else:
+#    model = Pipeline(
+#        bert,
+#        ner_dim=bioes.space_dim,
+#        ner_scheme=bioes,
+#       ned_dim=list(kb.values())[0].shape[-1],
+#        KB=kb,
+#        re_dim=len(r_types)
+#   )
 
 # check if GPU is avilable
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('> Found device:', device, ', setting it as the principal device.')
+"""
+model = BaseIEModel(
+    language_model = bert,
+    ner_dim = bioes.space_dim,
+    ner_scheme = bioes,
+    re_dim = len(r_types),
+    device = device
+)
+"""
+"""
+model = BaseIEModelGoldEntities(
+    language_model = bert,
+    re_dim = len(r_types),
+    device = device
+)
+"""
+"""
+model = IEModel(
+    language_model = bert,
+    ner_dim = bioes.space_dim,
+    ner_scheme = bioes,
+    ned_dim = list(kb.values())[0].shape[-1],
+    KB = kb,
+    re_dim = len(r_types),
+    device = device
+)
+"""
+"""
+model = IEModelGoldEntities(
+    language_model = bert,
+    ned_dim = list(kb.values())[0].shape[-1],
+    KB = kb,
+    re_dim = len(r_types),
+    device = device
+)
+"""
+model = IEModelGoldKG(
+    language_model = bert,
+    ned_dim = list(kb.values())[0].shape[-1],
+    re_dim = len(r_types),
+    device = device
+)
 # move model to device
-if device == torch.device("cuda:0"):
-    model.to(device)
+#if device == torch.device("cuda:0"):
+#    model.to(device)
 
 # define the optimizer
 #optimizer = torch.optim.SGD(model.parameters(), lr=3e-5, momentum=0.9)
@@ -136,7 +179,7 @@ trainer = Trainer(
     device=device,
     rel2index=rel2index,
     save=True,
-    batchsize=32,
+    batchsize=8 ,
     tokenizer=tokenizer,
     gold_entities=gold
 )

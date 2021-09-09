@@ -436,13 +436,13 @@ class GoldEntities(Pipeline):
         self.KB = KB
         self.KB_embs = torch.vstack(list(KB.values()))
         quantizer = faiss.IndexFlatL2(ned_dim)  # the other index
-        self.NN = faiss.IndexIVFFlat(quantizer, ned_dim, 100)
+        self.NN = faiss.IndexIVFFlat(quantizer, ned_dim, 10)
         assert not self.NN.is_trained
         self.NN.train(self.KB_embs.numpy())
         assert self.NN.is_trained
         self.NN.add(self.KB_embs.numpy())
         self.NN.nprobe = 1
-        self.n_neighbors = 5
+        self.n_neighbors = 1
         self.ned_dim = ned_dim  # dimension of the KB graph embedding space
         nhead = 8
         hdim = int((self.bert_dim)/nhead)*nhead
@@ -458,7 +458,7 @@ class GoldEntities(Pipeline):
         self.ned_ctx_lin2 = torch.nn.Linear(self.ned_dim, 1)
 
         # Head-Tail
-        self.ht_dim = 128  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
+        self.ht_dim = 256  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
         self.h_lin0 = torch.nn.Linear(self.bert_dim +  self.ned_dim, self.bert_dim + self.ned_dim)
         self.h_lin = torch.nn.Linear(self.bert_dim + self.ned_dim, self.ht_dim)
         self.t_lin0 = torch.nn.Linear(self.bert_dim + self.ned_dim, self.bert_dim + self.ned_dim)
@@ -522,7 +522,7 @@ class GoldKG(GoldEntities):
                 param.requires_grad = False                              # freezing the BERT encoder
 
         # Head-Tail
-        self.ht_dim = 768  # dimension of head/tail embedding # apparently no difference between 64 and 128, but 32 seems to lead to better scores
+        self.ht_dim = 256  # dimension of head/tail embedding 
         self.h_lin0 = torch.nn.Linear(self.bert_dim +  self.ned_dim, self.bert_dim + self.ned_dim)
         self.h_lin = torch.nn.Linear(self.bert_dim + self.ned_dim, self.ht_dim)
         self.t_lin0 = torch.nn.Linear(self.bert_dim + self.ned_dim, self.bert_dim + self.ned_dim)
@@ -561,3 +561,5 @@ class GoldKG(GoldEntities):
         x, positions = self.PAD(x, positions)
         re = self.RE(x, positions)
         return re
+
+

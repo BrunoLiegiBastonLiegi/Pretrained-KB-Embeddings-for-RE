@@ -53,15 +53,16 @@ class IEData(torch.utils.data.Dataset):
         lab = {
             'sent': self.tokenizer(s, return_tensors='pt')['input_ids'],
             'pos': torch.tensor(spans),
+            'emb': torch.vstack([torch.mean(e['embedding'], dim=0) for e in ner.values()]),
             'ner': self.tag_sentence(s_tk.flatten().tolist(), types, spans),
-            'ned': torch.vstack([
-                torch.hstack((
+            'ned': torch.vstack([ # probably it's a good idea to get rid of the initial position now that we specifically 
+                torch.hstack((                       # have the position key
                     torch.tensor(spans[i][1]),
                     torch.mean(e['embedding'], dim=0) # need mean for multi-concept entities
                 ))
                 for i, e in enumerate(ner.values())
             ]),
-            're': torch.vstack([
+            're': torch.vstack([  # same concern about position as with ned
                 torch.tensor([
                     span2span[k[0]][1],
                     span2span[k[1]][1],
@@ -104,7 +105,7 @@ class IEData(torch.utils.data.Dataset):
         Function to vertically stack the batches needed by the torch.Dataloader class
         """
         # alternatively I could use the huggingface tokenizer with option pad=True
-        tmp = {'sent':[], 'pos': [], 'ner':[], 'ned':[], 're':[]} # we need to add padding in order to vstack the sents.
+        tmp = {'sent':[], 'pos': [], 'emb': [], 'ner':[], 'ned':[], 're':[]} # we need to add padding in order to vstack the sents.
         max_len = 0
         for item in batch:
             #max_len = max(max_len, item['sent'][:,:-1].shape[1]) # -1 for discarding [SEP]
@@ -112,6 +113,7 @@ class IEData(torch.utils.data.Dataset):
             #tmp['sent'].append(item['sent'][:,:-1])
             tmp['sent'].append(item['sent'])
             tmp['pos'].append(item['pos'])
+            tmp['emb'].append(item['emb'])
             tmp['ner'].append(item['ner'])
             tmp['ned'].append(item['ned'])
             tmp['re'].append(item['re'])
