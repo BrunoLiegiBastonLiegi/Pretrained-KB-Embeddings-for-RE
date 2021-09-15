@@ -1,4 +1,4 @@
-import torch, argparse, pickle, re
+import torch, argparse, pickle, re, json
 from trainer import Trainer
 from ner_schemes import BIOES
 from dataset import IEData, Stat
@@ -12,11 +12,7 @@ parser = argparse.ArgumentParser(description='Train a model and evaluate on a da
 parser.add_argument('train_data', help='Path to train data file.')
 parser.add_argument('test_data', help='Path to test data file.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
-parser.add_argument('--gold_entities', dest='gold', action='store_true', help='Use gold entities.')
 args = parser.parse_args()
-
-# Gold entities?
-gold = args.gold
 
 # Input/Output directory
 dir = re.search('.+<?\/', args.train_data).group(0)
@@ -34,7 +30,7 @@ stat = Stat(pkl['train'], pkl['test'])
 stat.gen()
 
 # Organize usable data in a suitable way
-kb, data, e_types, r_types = {}, {}, {}, {}
+kb, data, e_types, r_types = {}, {}, {}, {'NO_RELATION':0}
 discarded_sents = []
 for s, d in pkl.items():
     data[s] = {
@@ -70,6 +66,7 @@ print('> Discarded {} sentences, due to incomplete annotations.'.format(len(disc
 bioes = BIOES(list(e_types.keys()))
 # Define the relation scheme
 rel2index = dict(zip(r_types.keys(), range(len(r_types))))
+print(rel2index)
 # Define the pretrained model
 #bert = 'bert-base-uncased'
 bert = 'bert-base-cased'
@@ -99,27 +96,10 @@ test_data = IEData(
     #save_to=args.test_data.replace('.pkl', '_preprocessed.pkl')
 )
 
-# Instantiate the model
-#if gold:
-#    model = GoldEntities(
-#        bert,
-#        ned_dim=list(kb.values())[0].shape[-1],
-#        KB=kb,
-#        re_dim=len(r_types)
-#    )
-#else:
-#    model = Pipeline(
-#        bert,
-#        ner_dim=bioes.space_dim,
-#        ner_scheme=bioes,
-#       ned_dim=list(kb.values())[0].shape[-1],
-#        KB=kb,
-#        re_dim=len(r_types)
-#   )
-
 # check if GPU is avilable
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('> Found device:', device, ', setting it as the principal device.')
+
 """
 model = BaseIEModel(
     language_model = bert,
@@ -156,21 +136,25 @@ model = IEModelGoldEntities(
     device = device
 )
 """
+
 model = IEModelGoldKG(
     language_model = bert,
     ned_dim = list(kb.values())[0].shape[-1],
     re_dim = len(r_types),
     device = device
 )
+
 # move model to device
 #if device == torch.device("cuda:0"):
 #    model.to(device)
 
 # define the optimizer
+lr = 3e-5
 #optimizer = torch.optim.SGD(model.parameters(), lr=3e-5, momentum=0.9)
-optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5)
+optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
 # set up the trainer
+batchsize = 8
 trainer = Trainer(
     train_data=train_data,
     test_data=test_data,
@@ -178,30 +162,41 @@ trainer = Trainer(
     optim=optimizer,
     device=device,
     rel2index=rel2index,
-    save=True,
-    batchsize=8 ,
+    save=False,
+    batchsize=batchsize,
     tokenizer=tokenizer,
-    gold_entities=gold
 )
 
+n_epochs = 8
 # load pretrained model or train
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
 else:
-    plots = trainer.train(24)
-    yn = input('Save loss plots? (y/n)')
+    plots = trainer.train(n_epochs)
+    #yn = input('Save loss plots? (y/n)')
+    yn = 'n'
     if yn == 'y':
         with open(dir + '/loss_plots.pkl', 'wb') as f:
             pickle.dump(plots, f)
 
-
 # Evaluation
-
+results = {}
 ev = Evaluator(
     model=model,
     ner_scheme=bioes,
     kb_embeddings=kb,
     re_classes=dict(zip(rel2index.values(),rel2index.keys())),
-    gold_entities=gold
 )
-ev.classification_report(test_data)
+
+results = {
+    'model': re.search('model\.(.+?)\'\>', str(type(model))).group(1),
+    'learning_rate': lr,
+    'epochs': n_epochs,
+    'batchsize': batchsize,
+    'scores': ev.classification_report(test_data)
+}
+                                       
+with open(dir + '/results_kg.json', 'a') as f:
+    json.dump(results, f, indent=4)
+
+

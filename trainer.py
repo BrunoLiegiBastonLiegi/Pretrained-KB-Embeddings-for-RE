@@ -5,16 +5,14 @@ from torch.utils.data import DataLoader
 
 class Trainer(object):
 
-    def __init__(self, train_data, test_data, model, optim, rel2index, device, gold_entities=False, save=True, wNED=1, batchsize=32, tokenizer=None):
+    def __init__(self, train_data, test_data, model, optim, rel2index, device, save=True, batchsize=32, tokenizer=None):
         self.model = model
         self.optim = optim
         self.rel2index = rel2index
         self.device = device     
         self.train_set = train_data
         self.test_set = test_data
-        self.gold = gold_entities
         self.save = save
-        self.wNED = wNED
         self.crossentropy = torch.nn.CrossEntropyLoss()
         self.cosine = torch.nn.CosineEmbeddingLoss()
         self.mse = torch.nn.MSELoss(reduction='mean')
@@ -63,6 +61,13 @@ class Trainer(object):
 
     def train(self, epochs):
 
+        # Check if loss activation is needed
+        try:
+            self.model.NER
+            loss_activation = True
+        except:
+            loss_activation = False
+        
         # Set model in train mode
         self.model.train()
         # Gradient scaler for automatic mixed precision
@@ -75,7 +80,7 @@ class Trainer(object):
         # BERT layers unfreezing
         k = 0  # counter for bert layers unfreezing
         one_3rd = int(len(train_loader) / 3) # after 1/3 of the data we unfreeze a layer
-        print_step = int(len(train_loader) / 6)
+        print_step = int(len(train_loader) / 5)
         # loss plots
         plots = {
             'train':{
@@ -92,7 +97,7 @@ class Trainer(object):
             } 
         }
         # Loss weights
-        l = 0. if not self.gold else 1.# RE loss weight, gradually increased to 1
+        l = 1. # RE loss weight, gradually increased to 1
         
         for epoch in range(epochs):
 
@@ -106,7 +111,7 @@ class Trainer(object):
             # set model in train mode
             self.model.train()
             
-            print_step = int(len(train_loader) / 6)
+            print_step = int(len(train_loader) / 5)
             
             for i, batch in enumerate(train_loader):
                 if step_t1 == None:
@@ -137,9 +142,9 @@ class Trainer(object):
                     #t2 = time.time()
                     #print('> Forward:', t2-t1)
                     # unfreeze NED and RE training
-                    if epoch == 1 and not self.gold:
+                    if epoch == 1 and loss_activation:
                         l = i / len(train_loader)
-                    loss = losses['ner'] + l * losses['re'] + self.wNED*(l * (losses['ned'][0] + losses['ned'][1])) # wNED is used for discovering the benefit of NED
+                    loss = losses['ner'] + l * losses['re'] + (l * (losses['ned'][0] + losses['ned'][1])) # wNED is used for discovering the benefit of NED
                 #t1 = time.time()
                 # save train losses
                 #for v, j in zip(plots['train'].values(), [ner_loss, ned_loss1, ned_loss2, re_loss]):

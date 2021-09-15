@@ -1,0 +1,591 @@
+{
+"run_1":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 1.0,
+                "recall": 0.5666666666666667,
+                "f1-score": 0.7234042553191489,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.95,
+                "recall": 0.5588235294117647,
+                "f1-score": 0.7037037037037037,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9230769230769231,
+                "recall": 0.6857142857142857,
+                "f1-score": 0.7868852459016394,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1-score": 0.8571428571428571,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.9047619047619048,
+                "f1-score": 0.9500000000000001,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9690721649484536,
+                "recall": 0.6714285714285714,
+                "f1-score": 0.7932489451476792,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9746153846153846,
+                "recall": 0.6931932773109243,
+                "f1-score": 0.8042272124134697,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9686263736263736,
+                "recall": 0.6714285714285714,
+                "f1-score": 0.7875849595351065,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_2":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9473684210526315,
+                "recall": 0.6,
+                "f1-score": 0.7346938775510204,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 1.0,
+                "recall": 0.6470588235294118,
+                "f1-score": 0.7857142857142858,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.92,
+                "recall": 0.6571428571428571,
+                "f1-score": 0.7666666666666667,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.85,
+                "f1-score": 0.9189189189189189,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.8571428571428571,
+                "f1-score": 0.923076923076923,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9702970297029703,
+                "recall": 0.7,
+                "f1-score": 0.8132780082987552,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9734736842105264,
+                "recall": 0.7222689075630252,
+                "f1-score": 0.8258141343855631,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9687218045112782,
+                "recall": 0.7,
+                "f1-score": 0.8096530652653103,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_3":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9523809523809523,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.7843137254901961,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 1.0,
+                "recall": 0.6176470588235294,
+                "f1-score": 0.7636363636363637,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.92,
+                "recall": 0.6571428571428571,
+                "f1-score": 0.7666666666666667,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.65,
+                "f1-score": 0.787878787878788,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.8095238095238095,
+                "f1-score": 0.8947368421052632,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9690721649484536,
+                "recall": 0.6714285714285714,
+                "f1-score": 0.7932489451476792,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9744761904761905,
+                "recall": 0.6801960784313724,
+                "f1-score": 0.7994464771554555,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9697959183673469,
+                "recall": 0.6714285714285714,
+                "f1-score": 0.7919530778818705,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_4":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9583333333333334,
+                "recall": 0.7666666666666667,
+                "f1-score": 0.8518518518518519,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 1.0,
+                "recall": 0.7352941176470589,
+                "f1-score": 0.8474576271186441,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9615384615384616,
+                "recall": 0.7142857142857143,
+                "f1-score": 0.819672131147541,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1-score": 0.8571428571428571,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.9523809523809523,
+                "f1-score": 0.975609756097561,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9818181818181818,
+                "recall": 0.7714285714285715,
+                "f1-score": 0.864,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9839743589743591,
+                "recall": 0.7837254901960785,
+                "f1-score": 0.8703468446716911,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.981456043956044,
+                "recall": 0.7714285714285715,
+                "f1-score": 0.8620592963475665,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_5":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 1.0,
+                "recall": 0.6333333333333333,
+                "f1-score": 0.7755102040816326,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 1.0,
+                "recall": 0.7941176470588235,
+                "f1-score": 0.8852459016393442,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9230769230769231,
+                "recall": 0.6857142857142857,
+                "f1-score": 0.7868852459016394,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.7,
+                "f1-score": 0.8235294117647058,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.8095238095238095,
+                "f1-score": 0.8947368421052632,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9805825242718447,
+                "recall": 0.7214285714285714,
+                "f1-score": 0.8312757201646089,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9846153846153847,
+                "recall": 0.7245378151260503,
+                "f1-score": 0.833181521098517,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9807692307692308,
+                "recall": 0.7214285714285714,
+                "f1-score": 0.8297479450303479,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_6":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9444444444444444,
+                "recall": 0.5666666666666667,
+                "f1-score": 0.7083333333333334,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 1.0,
+                "recall": 0.7352941176470589,
+                "f1-score": 0.8474576271186441,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9310344827586207,
+                "recall": 0.7714285714285715,
+                "f1-score": 0.8437500000000001,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1-score": 0.8571428571428571,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.9523809523809523,
+                "f1-score": 0.975609756097561,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9719626168224299,
+                "recall": 0.7428571428571429,
+                "f1-score": 0.8421052631578947,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9750957854406131,
+                "recall": 0.7551540616246498,
+                "f1-score": 0.846458714738479,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9708538587848933,
+                "recall": 0.7428571428571429,
+                "f1-score": 0.837324795306713,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_7":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 1.0,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.8,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9642857142857143,
+                "recall": 0.7941176470588235,
+                "f1-score": 0.8709677419354839,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9666666666666667,
+                "recall": 0.8285714285714286,
+                "f1-score": 0.8923076923076922,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.7,
+                "f1-score": 0.8235294117647058,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.8571428571428571,
+                "f1-score": 0.923076923076923,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9818181818181818,
+                "recall": 0.7714285714285715,
+                "f1-score": 0.864,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9861904761904763,
+                "recall": 0.7692997198879552,
+                "f1-score": 0.8619763538169611,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9829931972789115,
+                "recall": 0.7714285714285715,
+                "f1-score": 0.8621348291177513,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_8":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 1.0,
+                "recall": 0.5666666666666667,
+                "f1-score": 0.7234042553191489,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 1.0,
+                "recall": 0.8235294117647058,
+                "f1-score": 0.9032258064516129,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9393939393939394,
+                "recall": 0.8857142857142857,
+                "f1-score": 0.9117647058823529,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.9,
+                "f1-score": 0.9473684210526316,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.9523809523809523,
+                "f1-score": 0.975609756097561,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9827586206896551,
+                "recall": 0.8142857142857143,
+                "f1-score": 0.8906250000000001,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9878787878787879,
+                "recall": 0.825658263305322,
+                "f1-score": 0.8922745889606615,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9848484848484849,
+                "recall": 0.8142857142857143,
+                "f1-score": 0.8839910220279504,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_9":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 1.0,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.8,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 1.0,
+                "recall": 0.7352941176470589,
+                "f1-score": 0.8474576271186441,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9333333333333333,
+                "recall": 0.8,
+                "f1-score": 0.8615384615384616,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.8,
+                "f1-score": 0.888888888888889,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.9523809523809523,
+                "f1-score": 0.975609756097561,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9819819819819819,
+                "recall": 0.7785714285714286,
+                "f1-score": 0.8685258964143425,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9866666666666667,
+                "recall": 0.7908683473389356,
+                "f1-score": 0.8746989467287112,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9833333333333333,
+                "recall": 0.7785714285714286,
+                "f1-score": 0.8659499152264759,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_10":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 3e-05,
+    "epochs": 8,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9545454545454546,
+                "recall": 0.7,
+                "f1-score": 0.8076923076923077,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 1.0,
+                "recall": 0.7647058823529411,
+                "f1-score": 0.8666666666666666,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.96,
+                "recall": 0.6857142857142857,
+                "f1-score": 0.7999999999999999,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.55,
+                "f1-score": 0.7096774193548387,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 0.9523809523809523,
+                "f1-score": 0.975609756097561,
+                "support": 21
+            },
+            "micro avg": {
+                "precision": 0.9807692307692307,
+                "recall": 0.7285714285714285,
+                "f1-score": 0.8360655737704917,
+                "support": 140
+            },
+            "macro avg": {
+                "precision": 0.9829090909090908,
+                "recall": 0.730560224089636,
+                "f1-score": 0.8319292299622747,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9802597402597404,
+                "recall": 0.7285714285714285,
+                "f1-score": 0.8312770654470103,
+                "support": 140
+            }
+        }
+    ]
+}}

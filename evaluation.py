@@ -16,11 +16,10 @@ from torch.utils.data import DataLoader
 
 class Evaluator(object):
     
-    def __init__(self, model, ner_scheme, kb_embeddings, re_classes, gold_entities=False, batchsize=64):
+    def __init__(self, model, ner_scheme, kb_embeddings, re_classes, batchsize=64):
         self.model = model
         self.model.eval()
         self.ner_scheme = ner_scheme
-        self.gold = gold_entities
         self.batchsize = batchsize
         self.embedding2id = { tuple(v.flatten().tolist()): k for k,v in kb_embeddings.items() }
         #self.embedding2id = bidict(kb_embeddings)

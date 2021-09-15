@@ -1,6 +1,6 @@
 import torch, faiss, numpy
 from transformers import AutoTokenizer, AutoModel
-from itertools import product
+from itertools import product, repeat
 from torch.nn.utils.rnn import pad_sequence
 
 # --------------------------------------------------------------------------------------------------------------------
@@ -360,14 +360,16 @@ class BaseIEModelGoldEntities(BaseIEModel):
         return [re]
 
     def get_entities(self, x, entities):
-        ner, positions = [], []
-        for i,e in enumerate(entities):
-            ner_tmp, pos_tmp = [], []
-            for p in e:
-                ner_tmp.append(torch.mean(x[i][p[0]:p[1]], dim=0))
-                pos_tmp.append(p[1])
-            ner.append(torch.vstack(ner_tmp).to(self.dev))
-            positions.append(torch.vstack(pos_tmp).to(self.dev))
+        ner = list(map(
+            lambda r,s:
+            torch.vstack(list(map(
+                lambda t,u: t[u[0]:u[1]].mean(0),
+                repeat(r, len(s)),
+                s
+            ))),
+            x, entities
+        ))
+        positions = list(map(lambda t: t[:,-1], entities))
         return ner, positions
 
     def prepare_inputs_targets(self, batch):
@@ -630,17 +632,17 @@ class IEModelGoldKG(BaseIEModelGoldEntities):
         return [re]
 
     def get_entities(self, x, entities, embeddings):
-        ner_ned, positions = [], []
-        for i, (ent, emb) in enumerate(zip(entities, embeddings)):
-            ner_ned_tmp, pos_tmp = [], []
-            for p, e in zip(ent, emb):
-                ner_ned_tmp.append(torch.cat((
-                    torch.mean(x[i][p[0]:p[1]], dim=0),
-                    e
-                    ), dim = -1))
-                pos_tmp.append(p[1])
-            ner_ned.append(torch.vstack(ner_ned_tmp).to(self.dev))
-            positions.append(torch.vstack(pos_tmp).to(self.dev))
+        ner_ned = list(map(
+            lambda r,s,p:
+            torch.vstack(list(map(
+                lambda t,u,v: torch.cat((t[u[0]:u[1]].mean(0), v), dim=-1),
+                repeat(r, len(s)),
+                s,
+                p
+            ))),
+            x, entities, embeddings
+        ))
+        positions = list(map(lambda t: t[:,-1], entities))
         return ner_ned, positions
 
     def prepare_inputs_targets(self, batch):
