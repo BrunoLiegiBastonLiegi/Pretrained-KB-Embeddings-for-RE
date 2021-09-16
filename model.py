@@ -301,11 +301,11 @@ class BaseIEModel(torch.nn.Module):
                 re_pred.append(p.pop(k))
                 re_target.append(g.pop(k))
             loss += random_re_err*len(g)
-            if self.training:
-                for k,v in p.items():
-                    if -1 not in k:
-                        re_pred.append(v)
-                        re_target.append(torch.tensor(no_rel_idx, dtype=torch.int, device=self.dev))
+            #if self.training:
+            #    for k,v in p.items():
+            #        if -1 not in k:
+            #            re_pred.append(v)
+            #            re_target.append(torch.tensor(no_rel_idx, dtype=torch.int, device=self.dev))
             if len(re_pred) > 0:
                 loss += torch.nn.functional.cross_entropy(torch.vstack(re_pred), torch.hstack(re_target).long())
         return loss / len(target)
@@ -608,10 +608,15 @@ class IEModelGoldKG(BaseIEModelGoldEntities):
         # Misc
         self.sm = torch.nn.Softmax(dim=2)
         self.dev = device
+        #self.ned_dim = ned_dim
 
         # Pretrained Language Model
         self.lang_model = PretrainedLanguageModel(language_model)
 
+        ## Biaffine attention
+        #self.bil = torch.nn.Bilinear(self.lang_model.dim, ned_dim, 512)
+        #self.att = torch.nn.Linear(self.lang_model.dim + ned_dim, 512)
+        
         # RE
         self.RE = REModule(
             in_dim = self.lang_model.dim + ned_dim,
@@ -628,6 +633,8 @@ class IEModelGoldKG(BaseIEModelGoldEntities):
         # get the entities
         x, positions = self.get_entities(x, entities, embeddings)
         x, positions = self.PAD(x, positions)
+        #x, embs = x[:,:, :-self.ned_dim], x[:,:, -self.ned_dim:]
+        #x = self.bil(x, embs) + self.att(torch.cat((x, embs), -1))
         re = self.RE(x, positions)
         return [re]
 

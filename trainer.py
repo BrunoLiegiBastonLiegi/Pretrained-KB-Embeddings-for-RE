@@ -230,7 +230,7 @@ class Trainer(object):
         return self.model.loss(
             outs,
             targets,
-            no_rel_idx = self.rel2index['NO_RELATION'],
+            #no_rel_idx = self.rel2index['NO_RELATION'],
             random_ned_err = [1., 1.],
             random_re_err = 1.#self.random_re_err
         )

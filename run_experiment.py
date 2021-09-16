@@ -30,7 +30,7 @@ stat = Stat(pkl['train'], pkl['test'])
 stat.gen()
 
 # Organize usable data in a suitable way
-kb, data, e_types, r_types = {}, {}, {}, {'NO_RELATION':0}
+kb, data, e_types, r_types = {}, {}, {}, {}
 discarded_sents = []
 for s, d in pkl.items():
     data[s] = {
@@ -109,13 +109,13 @@ model = BaseIEModel(
     device = device
 )
 """
-"""
+
 model = BaseIEModelGoldEntities(
     language_model = bert,
     re_dim = len(r_types),
     device = device
 )
-"""
+
 """
 model = IEModel(
     language_model = bert,
@@ -136,20 +136,20 @@ model = IEModelGoldEntities(
     device = device
 )
 """
-
+"""
 model = IEModelGoldKG(
     language_model = bert,
     ned_dim = list(kb.values())[0].shape[-1],
     re_dim = len(r_types),
     device = device
 )
-
+"""
 # move model to device
 #if device == torch.device("cuda:0"):
 #    model.to(device)
 
 # define the optimizer
-lr = 3e-5
+lr = 2e-5
 #optimizer = torch.optim.SGD(model.parameters(), lr=3e-5, momentum=0.9)
 optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
@@ -167,7 +167,7 @@ trainer = Trainer(
     tokenizer=tokenizer,
 )
 
-n_epochs = 8
+n_epochs = 12
 # load pretrained model or train
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))

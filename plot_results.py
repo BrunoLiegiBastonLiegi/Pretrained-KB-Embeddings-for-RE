@@ -6,8 +6,6 @@ with open(sys.argv[1], 'r') as f:
 with open(sys.argv[2], 'r') as f:
     res_kg = json.load(f)
 
-print(list(res['run_1']['scores'][0].keys()))
-
 f1, f1_kg = {}, {}
 for r,f in zip((res, res_kg), (f1, f1_kg)):
     for v in r.values():
@@ -18,11 +16,12 @@ for r,f in zip((res, res_kg), (f1, f1_kg)):
                 except:
                     f[k] = [c['f1-score']]
 
-
     classes, scores = list(zip(*f.items()))
-    scores = numpy.array(scores).mean(-1)
     errs = numpy.array(scores).std(-1)
-    print(scores)
-    print(errs)
-    plt.plot(classes, scores)
+    scores = numpy.array(scores).mean(-1)
+
+    #plt.plot(classes, scores)
+    lab = 'no graph embeddings' if f == f1 else 'graph embeddings'
+    plt.errorbar(classes, scores, yerr=errs, label=lab)
+plt.legend()
 plt.show()
