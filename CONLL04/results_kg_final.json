@@ -1,0 +1,541 @@
+{
+"run_1":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9354838709677419,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9508196721311476,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9696969696969697,
+                "recall": 0.9411764705882353,
+                "f1-score": 0.955223880597015,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9444444444444444,
+                "recall": 0.9714285714285714,
+                "f1-score": 0.9577464788732395,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 0.9473684210526315,
+                "recall": 0.9,
+                "f1-score": 0.9230769230769231,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9571428571428572,
+            "macro avg": {
+                "precision": 0.9593987412323575,
+                "recall": 0.9558543417366947,
+                "f1-score": 0.9573733909356651,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9574081219666957,
+                "recall": 0.9571428571428572,
+                "f1-score": 0.957034766616677,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_2":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9354838709677419,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9508196721311476,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9696969696969697,
+                "recall": 0.9411764705882353,
+                "f1-score": 0.955223880597015,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9459459459459459,
+                "recall": 1.0,
+                "f1-score": 0.9722222222222222,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.9,
+                "f1-score": 0.9473684210526316,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9642857142857143,
+            "macro avg": {
+                "precision": 0.9702253573221317,
+                "recall": 0.9615686274509804,
+                "f1-score": 0.9651268392006033,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9653022943345523,
+                "recall": 0.9642857142857143,
+                "f1-score": 0.9641239164504524,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_3":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9354838709677419,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9508196721311476,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9696969696969697,
+                "recall": 0.9411764705882353,
+                "f1-score": 0.955223880597015,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9444444444444444,
+                "recall": 0.9714285714285714,
+                "f1-score": 0.9577464788732395,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 0.9473684210526315,
+                "recall": 0.9,
+                "f1-score": 0.9230769230769231,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9571428571428572,
+            "macro avg": {
+                "precision": 0.9593987412323575,
+                "recall": 0.9558543417366947,
+                "f1-score": 0.9573733909356651,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9574081219666957,
+                "recall": 0.9571428571428572,
+                "f1-score": 0.957034766616677,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_4":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9666666666666667,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9666666666666667,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9705882352941176,
+                "recall": 0.9705882352941176,
+                "f1-score": 0.9705882352941176,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9459459459459459,
+                "recall": 1.0,
+                "f1-score": 0.9722222222222222,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.9,
+                "f1-score": 0.9473684210526316,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9714285714285714,
+            "macro avg": {
+                "precision": 0.976640169581346,
+                "recall": 0.9674509803921569,
+                "f1-score": 0.9713691090471276,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9722007722007722,
+                "recall": 0.9714285714285714,
+                "f1-score": 0.97125104427736,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_5":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9354838709677419,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9508196721311476,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9696969696969697,
+                "recall": 0.9411764705882353,
+                "f1-score": 0.955223880597015,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9459459459459459,
+                "recall": 1.0,
+                "f1-score": 0.9722222222222222,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.9,
+                "f1-score": 0.9473684210526316,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9642857142857143,
+            "macro avg": {
+                "precision": 0.9702253573221317,
+                "recall": 0.9615686274509804,
+                "f1-score": 0.9651268392006033,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9653022943345523,
+                "recall": 0.9642857142857143,
+                "f1-score": 0.9641239164504524,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_6":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9354838709677419,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9508196721311476,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9696969696969697,
+                "recall": 0.9411764705882353,
+                "f1-score": 0.955223880597015,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9459459459459459,
+                "recall": 1.0,
+                "f1-score": 0.9722222222222222,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.9,
+                "f1-score": 0.9473684210526316,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9642857142857143,
+            "macro avg": {
+                "precision": 0.9702253573221317,
+                "recall": 0.9615686274509804,
+                "f1-score": 0.9651268392006033,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9653022943345523,
+                "recall": 0.9642857142857143,
+                "f1-score": 0.9641239164504524,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_7":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9666666666666667,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9666666666666667,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9705882352941176,
+                "recall": 0.9705882352941176,
+                "f1-score": 0.9705882352941176,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9459459459459459,
+                "recall": 1.0,
+                "f1-score": 0.9722222222222222,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.9,
+                "f1-score": 0.9473684210526316,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9714285714285714,
+            "macro avg": {
+                "precision": 0.976640169581346,
+                "recall": 0.9674509803921569,
+                "f1-score": 0.9713691090471276,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9722007722007722,
+                "recall": 0.9714285714285714,
+                "f1-score": 0.97125104427736,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_8":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9666666666666667,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9666666666666667,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9705882352941176,
+                "recall": 0.9705882352941176,
+                "f1-score": 0.9705882352941176,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9459459459459459,
+                "recall": 1.0,
+                "f1-score": 0.9722222222222222,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.9,
+                "f1-score": 0.9473684210526316,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9714285714285714,
+            "macro avg": {
+                "precision": 0.976640169581346,
+                "recall": 0.9674509803921569,
+                "f1-score": 0.9713691090471276,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9722007722007722,
+                "recall": 0.9714285714285714,
+                "f1-score": 0.97125104427736,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_9":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9666666666666667,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9666666666666667,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9705882352941176,
+                "recall": 0.9705882352941176,
+                "f1-score": 0.9705882352941176,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9459459459459459,
+                "recall": 1.0,
+                "f1-score": 0.9722222222222222,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.9,
+                "f1-score": 0.9473684210526316,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9714285714285714,
+            "macro avg": {
+                "precision": 0.976640169581346,
+                "recall": 0.9674509803921569,
+                "f1-score": 0.9713691090471276,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9722007722007722,
+                "recall": 0.9714285714285714,
+                "f1-score": 0.97125104427736,
+                "support": 140
+            }
+        }
+    ]
+},
+"run_10":
+{
+    "model": "IEModelGoldKG",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "Located_In": {
+                "precision": 0.9666666666666667,
+                "recall": 0.9666666666666667,
+                "f1-score": 0.9666666666666667,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9705882352941176,
+                "recall": 0.9705882352941176,
+                "f1-score": 0.9705882352941176,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9459459459459459,
+                "recall": 1.0,
+                "f1-score": 0.9722222222222222,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 1.0,
+                "recall": 0.9,
+                "f1-score": 0.9473684210526316,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9714285714285714,
+            "macro avg": {
+                "precision": 0.976640169581346,
+                "recall": 0.9674509803921569,
+                "f1-score": 0.9713691090471276,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9722007722007722,
+                "recall": 0.9714285714285714,
+                "f1-score": 0.97125104427736,
+                "support": 140
+            }
+        }
+    ]
+}}

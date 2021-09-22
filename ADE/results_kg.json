@@ -1,0 +1,35 @@
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 1,
+    "batchsize": 8,
+    "scores": [
+        {
+            "ADVERSE_EFFECT_OF": {
+                "precision": 0.9860869565217392,
+                "recall": 0.9982394366197183,
+                "f1-score": 0.9921259842519685,
+                "support": 568
+            },
+            "NO_RELATION": {
+                "precision": 0.9990243902439024,
+                "recall": 0.9922480620155039,
+                "f1-score": 0.9956246961594555,
+                "support": 1032
+            },
+            "accuracy": 0.994375,
+            "macro avg": {
+                "precision": 0.9925556733828208,
+                "recall": 0.9952437493176111,
+                "f1-score": 0.993875340205712,
+                "support": 1600
+            },
+            "weighted avg": {
+                "precision": 0.9944316012725345,
+                "recall": 0.994375,
+                "f1-score": 0.9943826534322977,
+                "support": 1600
+            }
+        }
+    ]
+}

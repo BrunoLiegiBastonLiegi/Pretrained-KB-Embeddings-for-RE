@@ -1,4 +1,4 @@
-import torch, argparse, pickle, re, json
+import torch, argparse, pickle, re, json, random
 from trainer import Trainer
 from ner_schemes import BIOES
 from dataset import IEData, Stat
@@ -12,6 +12,8 @@ parser = argparse.ArgumentParser(description='Train a model and evaluate on a da
 parser.add_argument('train_data', help='Path to train data file.')
 parser.add_argument('test_data', help='Path to test data file.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
+parser.add_argument('--out_file', default='results.json', type=str)
+parser.add_argument('--n_epochs', default=6, type=int)
 args = parser.parse_args()
 
 # Input/Output directory
@@ -38,7 +40,9 @@ for s, d in pkl.items():
         'ents': [],
         'rels': []
     }
-    for v in d:
+    #sample_dim = 10000 if s == 'train' else 1000
+    #sample = random.choices(d, k=sample_dim)
+    for v in d: #sample:
         discard = False
         for e in v['entities'].values():
             try:
@@ -46,8 +50,8 @@ for s, d in pkl.items():
             except:
                 emb_flag = False
             if e['type'] != None and emb_flag:
-                kb[e['id']] = torch.tensor(e['embedding'], dtype=torch.float32).view(1, -1)
-                e['embedding'] = torch.tensor(e['embedding'], dtype=torch.float32).view(1, -1)
+                kb[e['id']] = torch.tensor(e['embedding']).mean(0).float().view(1, -1).clone()
+                e['embedding'] = torch.tensor(e['embedding']).mean(0).float().view(1, -1).clone()
                 e_types[e['type']] = 0
             else:
                discard = True 
@@ -68,8 +72,8 @@ bioes = BIOES(list(e_types.keys()))
 rel2index = dict(zip(r_types.keys(), range(len(r_types))))
 print(rel2index)
 # Define the pretrained model
-#bert = 'bert-base-uncased'
 bert = 'bert-base-cased'
+#bert = 'dmis-lab/biobert-v1.1'
 tokenizer = AutoTokenizer.from_pretrained(bert)
 
 
@@ -167,7 +171,7 @@ trainer = Trainer(
     tokenizer=tokenizer,
 )
 
-n_epochs = 12
+n_epochs = args.n_epochs
 # load pretrained model or train
 if args.load_model != None:
     model.load_state_dict(torch.load(args.load_model))
@@ -196,7 +200,7 @@ results = {
     'scores': ev.classification_report(test_data)
 }
                                        
-with open(dir + '/results_kg.json', 'a') as f:
+with open(dir + '/' + args.out_file, 'a') as f:
     json.dump(results, f, indent=4)
 
 
