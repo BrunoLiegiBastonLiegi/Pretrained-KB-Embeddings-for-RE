@@ -115,6 +115,7 @@ model = BaseIEModelGoldEntities(
     re_dim = len(r_types),
     device = device
 )
+model = torch.nn.DataParallel(model)
 
 """
 model = IEModel(
