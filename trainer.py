@@ -9,7 +9,7 @@ class Trainer(object):
         self.model = model
         self.optim = optim
         self.rel2index = rel2index
-        self.device = device     
+        self.device = device[0]     
         self.train_set = train_data
         self.test_set = test_data
         self.save = save
@@ -120,17 +120,17 @@ class Trainer(object):
                 if k < 4:
                     if epoch == 0:
                         if i >= one_3rd and k == 0:
-                            self.model.module.lang_model.unfreeze_layer(k) # gradually unfreeze the last layers
+                            self.model.lang_model.unfreeze_layer(k) # gradually unfreeze the last layers
                             k += 1
                         elif i >= 2*one_3rd and k == 1:
-                            self.model.module.lang_model.unfreeze_layer(k) # gradually unfreeze the last layers
+                            self.model.lang_model.unfreeze_layer(k) # gradually unfreeze the last layers
                             k += 1
                     elif epoch == 1:
                         if k == 2:
-                            self.model.module.lang_model.unfreeze_layer(k) # gradually unfreeze the last layers
+                            self.model.lang_model.unfreeze_layer(k) # gradually unfreeze the last layers
                             k += 1
                         if i >= one_3rd and k == 3:
-                            self.model.module.lang_model.unfreeze_layer(k) # gradually unfreeze the last layers
+                            self.model.lang_model.unfreeze_layer(k) # gradually unfreeze the last layers
                             k += 1
 
                 # zero the parameter gradients
@@ -211,7 +211,7 @@ class Trainer(object):
         #print(ner_target[0])
         #ned_target = batch['ned']
         #re_target = batch['re']
-        inputs, targets = self.model.module.prepare_inputs_targets(batch)
+        inputs, targets = self.model.prepare_inputs_targets(batch)
 
         # move inputs and labels to device
         #if self.device != torch.device("cpu"):
@@ -227,7 +227,7 @@ class Trainer(object):
         #else:
         #    ner_out, ned_output, re_output = self.model(inputs)
         outs = self.model(*inputs)
-        return self.model.module.loss(
+        return self.model.loss(
             outs,
             targets,
             #no_rel_idx = self.rel2index['NO_RELATION'],

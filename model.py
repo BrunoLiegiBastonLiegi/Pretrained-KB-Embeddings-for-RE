@@ -333,7 +333,7 @@ class BaseIEModelGoldEntities(BaseIEModel):
 
         # Misc
         self.sm = torch.nn.Softmax(dim=2)
-        self.dev = device
+        self.dev = device[0]
     
         # Pretrained Language Model
         self.lang_model = PretrainedLanguageModel(language_model)
@@ -346,8 +346,10 @@ class BaseIEModelGoldEntities(BaseIEModel):
             h_dim = 512
         )
 
+        # Parallelize over available GPUs
+        self = torch.nn.DataParallel(self, device_ids=device)
         # Move itself to device
-        self.to(device)
+        self.to(device[0])
 
     def forward(self, x, entities):
         x = self.lang_model(x)

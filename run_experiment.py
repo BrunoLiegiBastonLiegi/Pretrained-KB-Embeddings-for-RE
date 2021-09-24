@@ -97,8 +97,11 @@ test_data = IEData(
 )
 
 # check if GPU is avilable
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print('> Found device:', device, ', setting it as the principal device.')
+if torch.cuda.device_count() > 0:
+    print('> Found {} device/s, select which to use [0-{}]. (Default all)'.format(torch.cuda.device_count(), torch.cuda.device_count()-1))
+    inp = input()
+    device = list(map(int, inp.split(' '))) if inp != '' else list(range(torch.cuda.device_count()))
+    assert len(device) <= torch.cuda.device_count()
 
 """
 model = BaseIEModel(
@@ -115,7 +118,6 @@ model = BaseIEModelGoldEntities(
     re_dim = len(r_types),
     device = device
 )
-model = torch.nn.DataParallel(model)
 
 """
 model = IEModel(
