@@ -346,8 +346,6 @@ class BaseIEModelGoldEntities(BaseIEModel):
             h_dim = 512
         )
 
-        # Parallelize over available GPUs
-        self = torch.nn.DataParallel(self, device_ids=device)
         # Move itself to device
         self.to(device[0])
 
