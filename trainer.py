@@ -106,7 +106,6 @@ class Trainer(object):
             ned_running_loss1 = 0.0
             ned_running_loss2 = 0.0
             re_running_loss = 0.0
-            avg_iter_time = 0.
             step_t1 = None
             # set model in train mode
             self.model.train()
@@ -116,7 +115,6 @@ class Trainer(object):
             for i, batch in enumerate(train_loader):
                 if step_t1 == None:
                     step_t1 = time.time()
-                it_t1 = time.time()
                 if k < 4:
                     if epoch == 0:
                         if i >= one_3rd and k == 0:
@@ -170,18 +168,16 @@ class Trainer(object):
                 re_running_loss += losses['re'] #re_loss.item()
                 running_loss += loss.item()
                 it_t2 = time.time()
-                avg_iter_time += it_t2 - it_t1
 
                 if i % print_step == print_step - 1:    # print every print_step sentences
                     step_t2 = time.time()
-                    print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f \t Total time: %.2f (%.2f it/s)' %
-                          (epoch + 1, i*self.batchsize + 1, running_loss / print_step, ner_running_loss / print_step, ned_running_loss1 / print_step, ned_running_loss2 / print_step, re_running_loss / print_step, step_t2-step_t1, 1/(avg_iter_time / print_step)))
+                    print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f \t Total time: %.2f (%.2f it/s, %.2f sent/s)' %
+                          (epoch + 1, i*self.batchsize + 1, running_loss / print_step, ner_running_loss / print_step, ned_running_loss1 / print_step, ned_running_loss2 / print_step, re_running_loss / print_step, step_t2-step_t1, print_step / (step_t2-step_t1), (print_step*self.batchsize + 1) / (step_t2-step_t1)))
                     running_loss = 0.
                     ner_running_loss = 0.
                     ned_running_loss1 = 0.
                     ned_running_loss2 = 0.
                     re_running_loss = 0.
-                    avg_iter_time = 0.
                     step_t1 = None
                     
             test_loss = self.test_loss()

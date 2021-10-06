@@ -26,9 +26,13 @@ for r,f in zip((res, res_kg), (f1, f1_kg)):
         f['micro avg'] += f['accuracy']
         f.pop('accuracy')
     except:
-        f['micro avg'] = f['accuracy']
-        f.pop('accuracy')
-    print(list(f.keys()))
+        try:
+            f['micro avg'] = f['accuracy']
+            f.pop('accuracy')
+        except:
+            pass
+    #print(list(f.keys()))
+    print('micro avg: {}\n macro avg: {}'.format(numpy.mean(f['micro avg']), numpy.mean(f['macro avg'])))
     classes, scores = list(zip(*f.items()))
     #errs = numpy.array(scores).std(-1)
     #scores = numpy.array(scores).mean(-1)
@@ -39,7 +43,7 @@ for r,f in zip((res, res_kg), (f1, f1_kg)):
     ax.scatter(range(1,len(classes)+1), numpy.array(scores).mean(-1))
     ax.violinplot(scores)
     ax.set_xticks(range(1,len(classes)+1))
-    ax.set_xticklabels(classes, rotation=90)
+    ax.set_xticklabels(classes, rotation=45)
 ax.legend([Patch(color='cornflowerblue'), Patch(color='orange')] ,['no graph embeddings', 'graph embeddings'])
 fig.tight_layout()
 plt.show()

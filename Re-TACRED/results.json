@@ -1,0 +1,2496 @@
+{
+"run_1":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.8966230186078566,
+                "recall": 0.9183529411764706,
+                "f1-score": 0.9073578984075322,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9144451332920025,
+                "recall": 0.9634225996080993,
+                "f1-score": 0.9382951653944022,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.6993865030674846,
+                "recall": 0.6551724137931034,
+                "f1-score": 0.6765578635014836,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.6764705882352942,
+                "recall": 0.7666666666666667,
+                "f1-score": 0.71875,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.8861538461538462,
+                "recall": 0.9,
+                "f1-score": 0.8930232558139535,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.9523809523809523,
+                "recall": 0.6060606060606061,
+                "f1-score": 0.7407407407407407,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 1.0,
+                "recall": 0.7659574468085106,
+                "f1-score": 0.8674698795180723,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.5925925925925926,
+                "recall": 0.5614035087719298,
+                "f1-score": 0.5765765765765766,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.5760869565217391,
+                "recall": 0.5578947368421052,
+                "f1-score": 0.5668449197860962,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.9140625,
+                "recall": 0.8796992481203008,
+                "f1-score": 0.896551724137931,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 0.41935483870967744,
+                "recall": 0.8666666666666667,
+                "f1-score": 0.5652173913043478,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.6666666666666666,
+                "recall": 0.7894736842105263,
+                "f1-score": 0.7228915662650601,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.72,
+                "recall": 0.5294117647058824,
+                "f1-score": 0.6101694915254237,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.8653846153846154,
+                "recall": 0.625,
+                "f1-score": 0.7258064516129031,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.8571428571428571,
+                "recall": 0.3157894736842105,
+                "f1-score": 0.46153846153846156,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.9142857142857143,
+                "recall": 0.9320388349514563,
+                "f1-score": 0.9230769230769231,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.92,
+                "recall": 0.3382352941176471,
+                "f1-score": 0.49462365591397855,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.7843137254901961,
+                "recall": 0.8421052631578947,
+                "f1-score": 0.8121827411167514,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 0.6875,
+                "recall": 0.3548387096774194,
+                "f1-score": 0.4680851063829787,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.7368421052631579,
+                "recall": 0.7,
+                "f1-score": 0.717948717948718,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.9342105263157895,
+                "recall": 0.8352941176470589,
+                "f1-score": 0.8819875776397516,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 0.5882352941176471,
+                "recall": 0.38461538461538464,
+                "f1-score": 0.46511627906976744,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 0.7142857142857143,
+                "recall": 0.5,
+                "f1-score": 0.588235294117647,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.8235294117647058,
+                "recall": 0.6086956521739131,
+                "f1-score": 0.7,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.7428571428571429,
+                "recall": 0.8666666666666667,
+                "f1-score": 0.8,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 0.9629629629629629,
+                "recall": 0.8125,
+                "f1-score": 0.8813559322033898,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.7916666666666666,
+                "recall": 0.5757575757575758,
+                "f1-score": 0.6666666666666667,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 1.0,
+                "recall": 0.16666666666666666,
+                "f1-score": 0.2857142857142857,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 1.0,
+                "recall": 0.11538461538461539,
+                "f1-score": 0.20689655172413793,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.8888888888888888,
+                "recall": 0.36363636363636365,
+                "f1-score": 0.5161290322580644,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 0.8333333333333334,
+                "recall": 0.45454545454545453,
+                "f1-score": 0.5882352941176471,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.9444444444444444,
+                "recall": 0.8947368421052632,
+                "f1-score": 0.918918918918919,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 0.2,
+                "recall": 0.25,
+                "f1-score": 0.22222222222222224,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 0.5,
+                "recall": 0.2857142857142857,
+                "f1-score": 0.36363636363636365,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 1.0,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.8,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "accuracy": 0.8792517006802721,
+            "macro avg": {
+                "precision": 0.8001109999846473,
+                "recall": 0.6391640581243084,
+                "f1-score": 0.6802384580770594,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8804111238981677,
+                "recall": 0.8792517006802721,
+                "f1-score": 0.8748180546488461,
+                "support": 7644
+            }
+        }
+    ]
+},
+"run_2":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.907280056912497,
+                "recall": 0.900235294117647,
+                "f1-score": 0.9037439470886973,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9189526184538653,
+                "recall": 0.9627694317439582,
+                "f1-score": 0.9403508771929825,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.7642276422764228,
+                "recall": 0.5402298850574713,
+                "f1-score": 0.632996632996633,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.6666666666666666,
+                "recall": 0.7333333333333333,
+                "f1-score": 0.6984126984126984,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.8769716088328076,
+                "recall": 0.86875,
+                "f1-score": 0.8728414442700158,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.8181818181818182,
+                "recall": 0.8181818181818182,
+                "f1-score": 0.8181818181818182,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 0.9393939393939394,
+                "recall": 0.6595744680851063,
+                "f1-score": 0.775,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.4782608695652174,
+                "recall": 0.5789473684210527,
+                "f1-score": 0.5238095238095238,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.6078431372549019,
+                "recall": 0.6526315789473685,
+                "f1-score": 0.6294416243654823,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.8263888888888888,
+                "recall": 0.8947368421052632,
+                "f1-score": 0.8592057761732851,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 0.84,
+                "recall": 0.7,
+                "f1-score": 0.7636363636363636,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.7428571428571429,
+                "recall": 0.6842105263157895,
+                "f1-score": 0.7123287671232877,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.7894736842105263,
+                "recall": 0.4411764705882353,
+                "f1-score": 0.5660377358490566,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.5663716814159292,
+                "recall": 0.8888888888888888,
+                "f1-score": 0.6918918918918918,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.6666666666666666,
+                "recall": 0.5263157894736842,
+                "f1-score": 0.5882352941176471,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.8869565217391304,
+                "recall": 0.9902912621359223,
+                "f1-score": 0.9357798165137615,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.8571428571428571,
+                "recall": 0.7058823529411765,
+                "f1-score": 0.7741935483870968,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.7731958762886598,
+                "recall": 0.7894736842105263,
+                "f1-score": 0.78125,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 0.8,
+                "recall": 0.3870967741935484,
+                "f1-score": 0.5217391304347827,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.7230769230769231,
+                "recall": 0.7833333333333333,
+                "f1-score": 0.752,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.8806818181818182,
+                "recall": 0.9117647058823529,
+                "f1-score": 0.8959537572254335,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 0.3142857142857143,
+                "recall": 0.4230769230769231,
+                "f1-score": 0.360655737704918,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 0.5,
+                "recall": 0.1,
+                "f1-score": 0.16666666666666669,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.8947368421052632,
+                "recall": 0.7391304347826086,
+                "f1-score": 0.8095238095238095,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.7714285714285715,
+                "recall": 0.9,
+                "f1-score": 0.8307692307692307,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 0.8888888888888888,
+                "recall": 0.75,
+                "f1-score": 0.8135593220338982,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.6896551724137931,
+                "recall": 0.6060606060606061,
+                "f1-score": 0.6451612903225807,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 0.4,
+                "recall": 0.3333333333333333,
+                "f1-score": 0.3636363636363636,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 0.6818181818181818,
+                "recall": 0.5769230769230769,
+                "f1-score": 0.6249999999999999,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.8571428571428571,
+                "recall": 0.5454545454545454,
+                "f1-score": 0.6666666666666665,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 0.26666666666666666,
+                "recall": 0.36363636363636365,
+                "f1-score": 0.30769230769230765,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.8636363636363636,
+                "recall": 1.0,
+                "f1-score": 0.9268292682926829,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1-score": 0.8571428571428571,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 0.4,
+                "recall": 0.2857142857142857,
+                "f1-score": 0.3333333333333333,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "accuracy": 0.8768969126111983,
+            "macro avg": {
+                "precision": 0.7529418831457562,
+                "recall": 0.6970581993767087,
+                "f1-score": 0.7119910135528588,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8785277396001475,
+                "recall": 0.8768969126111983,
+                "f1-score": 0.8754815739385248,
+                "support": 7644
+            }
+        }
+    ]
+},
+"run_3":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.8875338753387534,
+                "recall": 0.9247058823529412,
+                "f1-score": 0.9057386494584004,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9179197994987469,
+                "recall": 0.9568909209666885,
+                "f1-score": 0.937000319795331,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.7218045112781954,
+                "recall": 0.5517241379310345,
+                "f1-score": 0.6254071661237784,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.84,
+                "recall": 0.7,
+                "f1-score": 0.7636363636363636,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.9146757679180887,
+                "recall": 0.8375,
+                "f1-score": 0.8743882544861338,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.7837837837837838,
+                "recall": 0.8787878787878788,
+                "f1-score": 0.8285714285714285,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 0.9736842105263158,
+                "recall": 0.7872340425531915,
+                "f1-score": 0.8705882352941177,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.7272727272727273,
+                "recall": 0.5614035087719298,
+                "f1-score": 0.6336633663366337,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.5853658536585366,
+                "recall": 0.5052631578947369,
+                "f1-score": 0.5423728813559322,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.8472222222222222,
+                "recall": 0.9172932330827067,
+                "f1-score": 0.8808664259927798,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 0.8260869565217391,
+                "recall": 0.6333333333333333,
+                "f1-score": 0.7169811320754716,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.7027027027027027,
+                "recall": 0.6842105263157895,
+                "f1-score": 0.6933333333333334,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.7894736842105263,
+                "recall": 0.4411764705882353,
+                "f1-score": 0.5660377358490566,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.7777777777777778,
+                "recall": 0.5833333333333334,
+                "f1-score": 0.6666666666666666,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.8888888888888888,
+                "recall": 0.42105263157894735,
+                "f1-score": 0.5714285714285714,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.9439252336448598,
+                "recall": 0.9805825242718447,
+                "f1-score": 0.9619047619047619,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.8166666666666667,
+                "recall": 0.7205882352941176,
+                "f1-score": 0.7656250000000001,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.8072289156626506,
+                "recall": 0.7052631578947368,
+                "f1-score": 0.752808988764045,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 0.6428571428571429,
+                "recall": 0.2903225806451613,
+                "f1-score": 0.4,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.6470588235294118,
+                "recall": 0.7333333333333333,
+                "f1-score": 0.6875,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.9320987654320988,
+                "recall": 0.888235294117647,
+                "f1-score": 0.9096385542168673,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 0.9230769230769231,
+                "recall": 0.46153846153846156,
+                "f1-score": 0.6153846153846155,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 1.0,
+                "recall": 0.3,
+                "f1-score": 0.4615384615384615,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.8260869565217391,
+                "recall": 0.8260869565217391,
+                "f1-score": 0.8260869565217391,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.627906976744186,
+                "recall": 0.9,
+                "f1-score": 0.7397260273972602,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 0.9333333333333333,
+                "recall": 0.875,
+                "f1-score": 0.9032258064516129,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.9333333333333333,
+                "recall": 0.42424242424242425,
+                "f1-score": 0.5833333333333333,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 0.875,
+                "recall": 0.2692307692307692,
+                "f1-score": 0.411764705882353,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.8333333333333334,
+                "recall": 0.22727272727272727,
+                "f1-score": 0.35714285714285715,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 0.6,
+                "recall": 0.2727272727272727,
+                "f1-score": 0.37499999999999994,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.8571428571428571,
+                "recall": 0.9473684210526315,
+                "f1-score": 0.9,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 0.8,
+                "recall": 1.0,
+                "f1-score": 0.888888888888889,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 0.5,
+                "recall": 0.42857142857142855,
+                "f1-score": 0.4615384615384615,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 1.0,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.8,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 0.3333333333333333,
+                "recall": 1.0,
+                "f1-score": 0.5,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "micro avg": {
+                "precision": 0.880020934188146,
+                "recall": 0.8799058084772371,
+                "f1-score": 0.8799633675672139,
+                "support": 7644
+            },
+            "macro avg": {
+                "precision": 0.7842317663840777,
+                "recall": 0.6567821435370732,
+                "f1-score": 0.6858861607937637,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8774977925965483,
+                "recall": 0.8799058084772371,
+                "f1-score": 0.8746557129636987,
+                "support": 7644
+            }
+        }
+    ]
+},
+"run_4":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.8990868649028331,
+                "recall": 0.9035294117647059,
+                "f1-score": 0.901302664006572,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9010384850335981,
+                "recall": 0.9634225996080993,
+                "f1-score": 0.9311868686868687,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.7482014388489209,
+                "recall": 0.5977011494252874,
+                "f1-score": 0.6645367412140576,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.7619047619047619,
+                "recall": 0.5333333333333333,
+                "f1-score": 0.6274509803921569,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.8819875776397516,
+                "recall": 0.8875,
+                "f1-score": 0.8847352024922119,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.8235294117647058,
+                "recall": 0.42424242424242425,
+                "f1-score": 0.5599999999999999,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 0.9210526315789473,
+                "recall": 0.7446808510638298,
+                "f1-score": 0.8235294117647057,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.6578947368421053,
+                "recall": 0.43859649122807015,
+                "f1-score": 0.5263157894736842,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.6756756756756757,
+                "recall": 0.5263157894736842,
+                "f1-score": 0.5917159763313609,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.8321678321678322,
+                "recall": 0.8947368421052632,
+                "f1-score": 0.8623188405797102,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 0.7333333333333333,
+                "recall": 0.7333333333333333,
+                "f1-score": 0.7333333333333333,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.7222222222222222,
+                "recall": 0.6842105263157895,
+                "f1-score": 0.7027027027027027,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.55,
+                "recall": 0.6470588235294118,
+                "f1-score": 0.5945945945945946,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.803030303030303,
+                "recall": 0.7361111111111112,
+                "f1-score": 0.7681159420289856,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.8888888888888888,
+                "recall": 0.42105263157894735,
+                "f1-score": 0.5714285714285714,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.9528301886792453,
+                "recall": 0.9805825242718447,
+                "f1-score": 0.9665071770334929,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.819672131147541,
+                "recall": 0.7352941176470589,
+                "f1-score": 0.7751937984496124,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.7473684210526316,
+                "recall": 0.7473684210526316,
+                "f1-score": 0.7473684210526316,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 0.6153846153846154,
+                "recall": 0.25806451612903225,
+                "f1-score": 0.36363636363636365,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.703125,
+                "recall": 0.75,
+                "f1-score": 0.7258064516129032,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.812807881773399,
+                "recall": 0.9705882352941176,
+                "f1-score": 0.8847184986595175,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 1.0,
+                "recall": 0.11538461538461539,
+                "f1-score": 0.20689655172413793,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 0.25,
+                "recall": 0.1,
+                "f1-score": 0.14285714285714288,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.8947368421052632,
+                "recall": 0.7391304347826086,
+                "f1-score": 0.8095238095238095,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.7105263157894737,
+                "recall": 0.9,
+                "f1-score": 0.7941176470588235,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 0.896551724137931,
+                "recall": 0.8125,
+                "f1-score": 0.8524590163934426,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.6363636363636364,
+                "recall": 0.6363636363636364,
+                "f1-score": 0.6363636363636364,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 0.8333333333333334,
+                "recall": 0.38461538461538464,
+                "f1-score": 0.5263157894736842,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.4642857142857143,
+                "recall": 0.5909090909090909,
+                "f1-score": 0.52,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 0.6,
+                "recall": 0.2727272727272727,
+                "f1-score": 0.37499999999999994,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.7307692307692307,
+                "recall": 1.0,
+                "f1-score": 0.8444444444444443,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 1.0,
+                "recall": 0.75,
+                "f1-score": 0.8571428571428571,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 0.2,
+                "recall": 0.2857142857142857,
+                "f1-score": 0.23529411764705882,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 0.75,
+                "recall": 1.0,
+                "f1-score": 0.8571428571428571,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 1
+            },
+            "micro avg": {
+                "precision": 0.8747218222280403,
+                "recall": 0.8741496598639455,
+                "f1-score": 0.8744356474514166,
+                "support": 7644
+            },
+            "macro avg": {
+                "precision": 0.713993762125835,
+                "recall": 0.6260829149460776,
+                "f1-score": 0.6449744918715116,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8721867113928583,
+                "recall": 0.8741496598639455,
+                "f1-score": 0.8695546648960557,
+                "support": 7644
+            }
+        }
+    ]
+},
+"run_5":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.8924829157175399,
+                "recall": 0.9218823529411765,
+                "f1-score": 0.9069444444444444,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9183929692404269,
+                "recall": 0.9555845852384063,
+                "f1-score": 0.9366197183098592,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.7152777777777778,
+                "recall": 0.5919540229885057,
+                "f1-score": 0.6477987421383649,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.8636363636363636,
+                "recall": 0.6333333333333333,
+                "f1-score": 0.7307692307692307,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.8920634920634921,
+                "recall": 0.878125,
+                "f1-score": 0.8850393700787402,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.8,
+                "recall": 0.48484848484848486,
+                "f1-score": 0.6037735849056605,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 1.0,
+                "recall": 0.723404255319149,
+                "f1-score": 0.8395061728395062,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.578125,
+                "recall": 0.6491228070175439,
+                "f1-score": 0.6115702479338843,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.7454545454545455,
+                "recall": 0.43157894736842106,
+                "f1-score": 0.5466666666666666,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.8712121212121212,
+                "recall": 0.8646616541353384,
+                "f1-score": 0.8679245283018867,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 0.92,
+                "recall": 0.7666666666666667,
+                "f1-score": 0.8363636363636363,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.7948717948717948,
+                "recall": 0.8157894736842105,
+                "f1-score": 0.8051948051948051,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.85,
+                "recall": 0.5,
+                "f1-score": 0.6296296296296295,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.7741935483870968,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.7164179104477612,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.75,
+                "recall": 0.3157894736842105,
+                "f1-score": 0.44444444444444436,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.9439252336448598,
+                "recall": 0.9805825242718447,
+                "f1-score": 0.9619047619047619,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.8703703703703703,
+                "recall": 0.6911764705882353,
+                "f1-score": 0.7704918032786884,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.7087378640776699,
+                "recall": 0.7684210526315789,
+                "f1-score": 0.7373737373737375,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 0.6538461538461539,
+                "recall": 0.5483870967741935,
+                "f1-score": 0.5964912280701755,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.6935483870967742,
+                "recall": 0.7166666666666667,
+                "f1-score": 0.7049180327868854,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.9096045197740112,
+                "recall": 0.9470588235294117,
+                "f1-score": 0.9279538904899135,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 0.8461538461538461,
+                "recall": 0.4230769230769231,
+                "f1-score": 0.5641025641025641,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 0.75,
+                "recall": 0.3,
+                "f1-score": 0.4285714285714285,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.8571428571428571,
+                "recall": 0.782608695652174,
+                "f1-score": 0.8181818181818182,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.6842105263157895,
+                "recall": 0.8666666666666667,
+                "f1-score": 0.7647058823529413,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 0.9629629629629629,
+                "recall": 0.8125,
+                "f1-score": 0.8813559322033898,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.8,
+                "recall": 0.48484848484848486,
+                "f1-score": 0.6037735849056605,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 0.25,
+                "recall": 0.16666666666666666,
+                "f1-score": 0.2,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 0.75,
+                "recall": 0.23076923076923078,
+                "f1-score": 0.3529411764705882,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.75,
+                "recall": 0.13636363636363635,
+                "f1-score": 0.23076923076923075,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 0.5,
+                "recall": 0.6363636363636364,
+                "f1-score": 0.56,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.9473684210526315,
+                "recall": 0.9473684210526315,
+                "f1-score": 0.9473684210526315,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 0.6,
+                "recall": 0.75,
+                "f1-score": 0.6666666666666665,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 0.25,
+                "recall": 0.2857142857142857,
+                "f1-score": 0.26666666666666666,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 0.3333333333333333,
+                "recall": 1.0,
+                "f1-score": 0.5,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "accuracy": 0.8816064887493459,
+            "macro avg": {
+                "precision": 0.7682950001116869,
+                "recall": 0.666882351500767,
+                "f1-score": 0.6889972961707099,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8793004428812512,
+                "recall": 0.8816064887493459,
+                "f1-score": 0.8768454603991958,
+                "support": 7644
+            }
+        }
+    ]
+},
+"run_6":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.887093102663328,
+                "recall": 0.9169411764705883,
+                "f1-score": 0.9017702186740716,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9198497182216656,
+                "recall": 0.9595035924232528,
+                "f1-score": 0.9392583120204604,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.6666666666666666,
+                "recall": 0.5057471264367817,
+                "f1-score": 0.5751633986928104,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.7307692307692307,
+                "recall": 0.6333333333333333,
+                "f1-score": 0.6785714285714285,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.9263565891472868,
+                "recall": 0.746875,
+                "f1-score": 0.8269896193771625,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.8333333333333334,
+                "recall": 0.9090909090909091,
+                "f1-score": 0.8695652173913043,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 0.9459459459459459,
+                "recall": 0.7446808510638298,
+                "f1-score": 0.8333333333333334,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.5909090909090909,
+                "recall": 0.6842105263157895,
+                "f1-score": 0.6341463414634148,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.5698924731182796,
+                "recall": 0.5578947368421052,
+                "f1-score": 0.5638297872340426,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.8243243243243243,
+                "recall": 0.9172932330827067,
+                "f1-score": 0.8683274021352313,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 1.0,
+                "recall": 0.7666666666666667,
+                "f1-score": 0.8679245283018869,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.6666666666666666,
+                "recall": 0.7368421052631579,
+                "f1-score": 0.7,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.5135135135135135,
+                "recall": 0.5588235294117647,
+                "f1-score": 0.5352112676056339,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.8275862068965517,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.7384615384615385,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.75,
+                "recall": 0.631578947368421,
+                "f1-score": 0.6857142857142857,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.9523809523809523,
+                "recall": 0.970873786407767,
+                "f1-score": 0.9615384615384616,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.82,
+                "recall": 0.6029411764705882,
+                "f1-score": 0.6949152542372881,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.7865168539325843,
+                "recall": 0.7368421052631579,
+                "f1-score": 0.7608695652173914,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 0.9333333333333333,
+                "recall": 0.45161290322580644,
+                "f1-score": 0.608695652173913,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.7547169811320755,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.7079646017699115,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.8,
+                "recall": 0.9411764705882353,
+                "f1-score": 0.8648648648648648,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 1.0,
+                "recall": 0.07692307692307693,
+                "f1-score": 0.14285714285714288,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 1.0,
+                "recall": 0.3,
+                "f1-score": 0.4615384615384615,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.7777777777777778,
+                "recall": 0.6086956521739131,
+                "f1-score": 0.6829268292682927,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.7058823529411765,
+                "recall": 0.8,
+                "f1-score": 0.7500000000000001,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 0.9629629629629629,
+                "recall": 0.8125,
+                "f1-score": 0.8813559322033898,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.8260869565217391,
+                "recall": 0.5757575757575758,
+                "f1-score": 0.6785714285714286,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 0.3333333333333333,
+                "recall": 0.16666666666666666,
+                "f1-score": 0.2222222222222222,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 0.7777777777777778,
+                "recall": 0.2692307692307692,
+                "f1-score": 0.39999999999999997,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.5714285714285714,
+                "recall": 0.18181818181818182,
+                "f1-score": 0.27586206896551724,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 0.5,
+                "recall": 0.36363636363636365,
+                "f1-score": 0.4210526315789474,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.7916666666666666,
+                "recall": 1.0,
+                "f1-score": 0.8837209302325582,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 0.6,
+                "recall": 0.75,
+                "f1-score": 0.6666666666666665,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 1.0,
+                "recall": 0.2857142857142857,
+                "f1-score": 0.4444444444444445,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 1.0,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.8,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 1
+            },
+            "micro avg": {
+                "precision": 0.8737076298913755,
+                "recall": 0.8733647305075877,
+                "f1-score": 0.8735361465489042,
+                "support": 7644
+            },
+            "macro avg": {
+                "precision": 0.7445073346585092,
+                "recall": 0.5990235337201538,
+                "f1-score": 0.6359009145223651,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8723842282203402,
+                "recall": 0.8733647305075877,
+                "f1-score": 0.8682860121295638,
+                "support": 7644
+            }
+        }
+    ]
+},
+"run_7":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.8853835678620063,
+                "recall": 0.9178823529411765,
+                "f1-score": 0.9013401109057302,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9283870967741935,
+                "recall": 0.9399085564990203,
+                "f1-score": 0.9341123012009088,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.753731343283582,
+                "recall": 0.5804597701149425,
+                "f1-score": 0.6558441558441559,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.8076923076923077,
+                "recall": 0.7,
+                "f1-score": 0.75,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.8753894080996885,
+                "recall": 0.878125,
+                "f1-score": 0.8767550702028082,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.4716981132075472,
+                "recall": 0.7575757575757576,
+                "f1-score": 0.5813953488372093,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 0.9428571428571428,
+                "recall": 0.7021276595744681,
+                "f1-score": 0.8048780487804879,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.5128205128205128,
+                "recall": 0.3508771929824561,
+                "f1-score": 0.41666666666666663,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.660377358490566,
+                "recall": 0.3684210526315789,
+                "f1-score": 0.47297297297297297,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.7515527950310559,
+                "recall": 0.9097744360902256,
+                "f1-score": 0.8231292517006802,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 0.6551724137931034,
+                "recall": 0.6333333333333333,
+                "f1-score": 0.6440677966101694,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.6744186046511628,
+                "recall": 0.7631578947368421,
+                "f1-score": 0.7160493827160495,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.7727272727272727,
+                "recall": 0.5,
+                "f1-score": 0.6071428571428571,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.85,
+                "recall": 0.7083333333333334,
+                "f1-score": 0.7727272727272727,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.7777777777777778,
+                "recall": 0.3684210526315789,
+                "f1-score": 0.5,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.8632478632478633,
+                "recall": 0.9805825242718447,
+                "f1-score": 0.9181818181818182,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.8360655737704918,
+                "recall": 0.75,
+                "f1-score": 0.7906976744186046,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.797752808988764,
+                "recall": 0.7473684210526316,
+                "f1-score": 0.7717391304347826,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 0.7272727272727273,
+                "recall": 0.25806451612903225,
+                "f1-score": 0.38095238095238093,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.7547169811320755,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.7079646017699115,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.896551724137931,
+                "recall": 0.9176470588235294,
+                "f1-score": 0.9069767441860465,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 0.6666666666666666,
+                "recall": 0.23076923076923078,
+                "f1-score": 0.3428571428571429,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 0.6666666666666666,
+                "recall": 0.2,
+                "f1-score": 0.30769230769230765,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.7692307692307693,
+                "recall": 0.43478260869565216,
+                "f1-score": 0.5555555555555555,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.6764705882352942,
+                "recall": 0.7666666666666667,
+                "f1-score": 0.71875,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 0.9285714285714286,
+                "recall": 0.8125,
+                "f1-score": 0.8666666666666666,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.7241379310344828,
+                "recall": 0.6363636363636364,
+                "f1-score": 0.6774193548387097,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 0.4,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.5,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 1.0,
+                "recall": 0.23076923076923078,
+                "f1-score": 0.375,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.6153846153846154,
+                "recall": 0.36363636363636365,
+                "f1-score": 0.4571428571428572,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 0.6,
+                "recall": 0.2727272727272727,
+                "f1-score": 0.37499999999999994,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.9047619047619048,
+                "recall": 1.0,
+                "f1-score": 0.9500000000000001,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 0.75,
+                "recall": 0.75,
+                "f1-score": 0.75,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 0.21428571428571427,
+                "recall": 0.42857142857142855,
+                "f1-score": 0.2857142857142857,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 1.0,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.8,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "micro avg": {
+                "precision": 0.8724797067295104,
+                "recall": 0.8717948717948718,
+                "f1-score": 0.8721371548226673,
+                "support": 7644
+            },
+            "macro avg": {
+                "precision": 0.7327505318501437,
+                "recall": 0.6178066581330062,
+                "f1-score": 0.6458213988302444,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8700555288925853,
+                "recall": 0.8717948717948718,
+                "f1-score": 0.8667472021748271,
+                "support": 7644
+            }
+        }
+    ]
+},
+"run_8":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.8810955243820975,
+                "recall": 0.9310588235294117,
+                "f1-score": 0.9053883994966251,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9477167438782264,
+                "recall": 0.9353363814500326,
+                "f1-score": 0.9414858645627877,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.7350993377483444,
+                "recall": 0.6379310344827587,
+                "f1-score": 0.683076923076923,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.8947368421052632,
+                "recall": 0.5666666666666667,
+                "f1-score": 0.6938775510204083,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.9122807017543859,
+                "recall": 0.8125,
+                "f1-score": 0.859504132231405,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.8235294117647058,
+                "recall": 0.8484848484848485,
+                "f1-score": 0.8358208955223881,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 0.9714285714285714,
+                "recall": 0.723404255319149,
+                "f1-score": 0.8292682926829269,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.5370370370370371,
+                "recall": 0.5087719298245614,
+                "f1-score": 0.5225225225225226,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.5526315789473685,
+                "recall": 0.4421052631578947,
+                "f1-score": 0.4912280701754386,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.9147286821705426,
+                "recall": 0.8872180451127819,
+                "f1-score": 0.9007633587786259,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 0.7647058823529411,
+                "recall": 0.8666666666666667,
+                "f1-score": 0.8125,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.6756756756756757,
+                "recall": 0.6578947368421053,
+                "f1-score": 0.6666666666666667,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.7272727272727273,
+                "recall": 0.47058823529411764,
+                "f1-score": 0.5714285714285714,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.8703703703703703,
+                "recall": 0.6527777777777778,
+                "f1-score": 0.746031746031746,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.6923076923076923,
+                "recall": 0.47368421052631576,
+                "f1-score": 0.5625,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.9587628865979382,
+                "recall": 0.9029126213592233,
+                "f1-score": 0.9299999999999999,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.7361111111111112,
+                "recall": 0.7794117647058824,
+                "f1-score": 0.7571428571428572,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.8181818181818182,
+                "recall": 0.6631578947368421,
+                "f1-score": 0.7325581395348837,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 1.0,
+                "recall": 0.12903225806451613,
+                "f1-score": 0.2285714285714286,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.6438356164383562,
+                "recall": 0.7833333333333333,
+                "f1-score": 0.7067669172932332,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.9281437125748503,
+                "recall": 0.9117647058823529,
+                "f1-score": 0.9198813056379822,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 0.5,
+                "recall": 0.3076923076923077,
+                "f1-score": 0.380952380952381,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 0.5,
+                "recall": 0.1,
+                "f1-score": 0.16666666666666669,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.7619047619047619,
+                "recall": 0.6956521739130435,
+                "f1-score": 0.7272727272727272,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.8,
+                "recall": 0.8,
+                "f1-score": 0.8000000000000002,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 0.9642857142857143,
+                "recall": 0.84375,
+                "f1-score": 0.8999999999999999,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.6785714285714286,
+                "recall": 0.5757575757575758,
+                "f1-score": 0.6229508196721312,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 0.6666666666666666,
+                "recall": 0.38461538461538464,
+                "f1-score": 0.4878048780487804,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.8,
+                "recall": 0.36363636363636365,
+                "f1-score": 0.5000000000000001,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 0.45454545454545453,
+                "recall": 0.45454545454545453,
+                "f1-score": 0.45454545454545453,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.9047619047619048,
+                "recall": 1.0,
+                "f1-score": 0.9500000000000001,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 0.8,
+                "recall": 1.0,
+                "f1-score": 0.888888888888889,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 0.23076923076923078,
+                "recall": 0.42857142857142855,
+                "f1-score": 0.3,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 1.0,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.8,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "micro avg": {
+                "precision": 0.8788949986907567,
+                "recall": 0.8782051282051282,
+                "f1-score": 0.8785499280198927,
+                "support": 7644
+            },
+            "macro avg": {
+                "precision": 0.7310042455568969,
+                "recall": 0.6271780759085261,
+                "f1-score": 0.6561098772547149,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8767295633781946,
+                "recall": 0.8782051282051282,
+                "f1-score": 0.8739615131442785,
+                "support": 7644
+            }
+        }
+    ]
+},
+"run_9":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.914980732177264,
+                "recall": 0.8938823529411765,
+                "f1-score": 0.9043084979766722,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9208045254556882,
+                "recall": 0.9568909209666885,
+                "f1-score": 0.9385009609224856,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.6976744186046512,
+                "recall": 0.6896551724137931,
+                "f1-score": 0.6936416184971099,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.7096774193548387,
+                "recall": 0.7333333333333333,
+                "f1-score": 0.7213114754098361,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.8494318181818182,
+                "recall": 0.934375,
+                "f1-score": 0.8898809523809524,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.8387096774193549,
+                "recall": 0.7878787878787878,
+                "f1-score": 0.8125,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 0.78,
+                "recall": 0.8297872340425532,
+                "f1-score": 0.8041237113402062,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.6829268292682927,
+                "recall": 0.49122807017543857,
+                "f1-score": 0.5714285714285715,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.5925925925925926,
+                "recall": 0.6736842105263158,
+                "f1-score": 0.6305418719211823,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.7560975609756098,
+                "recall": 0.9323308270676691,
+                "f1-score": 0.835016835016835,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 0.9259259259259259,
+                "recall": 0.8333333333333334,
+                "f1-score": 0.8771929824561403,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.7083333333333334,
+                "recall": 0.8947368421052632,
+                "f1-score": 0.7906976744186046,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.6176470588235294,
+                "recall": 0.6176470588235294,
+                "f1-score": 0.6176470588235294,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.7397260273972602,
+                "recall": 0.75,
+                "f1-score": 0.7448275862068966,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.6666666666666666,
+                "recall": 0.42105263157894735,
+                "f1-score": 0.5161290322580646,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.9029126213592233,
+                "recall": 0.9029126213592233,
+                "f1-score": 0.9029126213592235,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.8181818181818182,
+                "recall": 0.7941176470588235,
+                "f1-score": 0.8059701492537314,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.719626168224299,
+                "recall": 0.8105263157894737,
+                "f1-score": 0.7623762376237623,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 0.75,
+                "recall": 0.6774193548387096,
+                "f1-score": 0.7118644067796611,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.8461538461538461,
+                "recall": 0.55,
+                "f1-score": 0.6666666666666667,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.9,
+                "recall": 0.9,
+                "f1-score": 0.9,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 0.6190476190476191,
+                "recall": 0.5,
+                "f1-score": 0.5531914893617021,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 0.3333333333333333,
+                "recall": 0.4,
+                "f1-score": 0.3636363636363636,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.8,
+                "recall": 0.8695652173913043,
+                "f1-score": 0.8333333333333333,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.7272727272727273,
+                "recall": 0.8,
+                "f1-score": 0.761904761904762,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 0.9,
+                "recall": 0.84375,
+                "f1-score": 0.870967741935484,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.8333333333333334,
+                "recall": 0.6060606060606061,
+                "f1-score": 0.7017543859649124,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 0.5517241379310345,
+                "recall": 0.6153846153846154,
+                "f1-score": 0.5818181818181819,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.75,
+                "recall": 0.2727272727272727,
+                "f1-score": 0.39999999999999997,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 0.5,
+                "recall": 0.2727272727272727,
+                "f1-score": 0.3529411764705882,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.8260869565217391,
+                "recall": 1.0,
+                "f1-score": 0.9047619047619047,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 0.5,
+                "recall": 0.5,
+                "f1-score": 0.5,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 0.25,
+                "recall": 0.42857142857142855,
+                "f1-score": 0.3157894736842105,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 0.6,
+                "recall": 1.0,
+                "f1-score": 0.7499999999999999,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 0.2,
+                "recall": 1.0,
+                "f1-score": 0.33333333333333337,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 1
+            },
+            "micro avg": {
+                "precision": 0.879827202513418,
+                "recall": 0.8792517006802721,
+                "f1-score": 0.8795393574559968,
+                "support": 7644
+            },
+            "macro avg": {
+                "precision": 0.6953747877712378,
+                "recall": 0.7076642737052854,
+                "f1-score": 0.6843505691066191,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8808770162831947,
+                "recall": 0.8792517006802721,
+                "f1-score": 0.8785124623542024,
+                "support": 7644
+            }
+        }
+    ]
+},
+"run_10":
+{
+    "model": "BaseIEModelGoldEntities",
+    "learning_rate": 2e-05,
+    "epochs": 12,
+    "batchsize": 8,
+    "scores": [
+        {
+            "no_relation": {
+                "precision": 0.8931750741839762,
+                "recall": 0.9207058823529412,
+                "f1-score": 0.9067315490673155,
+                "support": 4250
+            },
+            "per:identity": {
+                "precision": 0.9346701164294955,
+                "recall": 0.9438275636838668,
+                "f1-score": 0.9392265193370165,
+                "support": 1531
+            },
+            "per:employee_of": {
+                "precision": 0.7083333333333334,
+                "recall": 0.5862068965517241,
+                "f1-score": 0.6415094339622641,
+                "support": 174
+            },
+            "per:schools_attended": {
+                "precision": 0.8235294117647058,
+                "recall": 0.4666666666666667,
+                "f1-score": 0.5957446808510638,
+                "support": 30
+            },
+            "per:title": {
+                "precision": 0.8682634730538922,
+                "recall": 0.90625,
+                "f1-score": 0.8868501529051986,
+                "support": 320
+            },
+            "per:children": {
+                "precision": 0.7352941176470589,
+                "recall": 0.7575757575757576,
+                "f1-score": 0.746268656716418,
+                "support": 33
+            },
+            "per:parents": {
+                "precision": 0.9705882352941176,
+                "recall": 0.7021276595744681,
+                "f1-score": 0.8148148148148149,
+                "support": 47
+            },
+            "per:cities_of_residence": {
+                "precision": 0.5,
+                "recall": 0.21052631578947367,
+                "f1-score": 0.2962962962962963,
+                "support": 57
+            },
+            "per:countries_of_residence": {
+                "precision": 0.5432098765432098,
+                "recall": 0.4631578947368421,
+                "f1-score": 0.5,
+                "support": 95
+            },
+            "org:top_members/employees": {
+                "precision": 0.9097744360902256,
+                "recall": 0.9097744360902256,
+                "f1-score": 0.9097744360902256,
+                "support": 133
+            },
+            "per:siblings": {
+                "precision": 0.88,
+                "recall": 0.7333333333333333,
+                "f1-score": 0.8,
+                "support": 30
+            },
+            "per:spouse": {
+                "precision": 0.6521739130434783,
+                "recall": 0.7894736842105263,
+                "f1-score": 0.7142857142857143,
+                "support": 38
+            },
+            "per:religion": {
+                "precision": 0.5925925925925926,
+                "recall": 0.47058823529411764,
+                "f1-score": 0.5245901639344261,
+                "support": 34
+            },
+            "per:origin": {
+                "precision": 0.6741573033707865,
+                "recall": 0.8333333333333334,
+                "f1-score": 0.7453416149068324,
+                "support": 72
+            },
+            "per:date_of_death": {
+                "precision": 0.8,
+                "recall": 0.21052631578947367,
+                "f1-score": 0.3333333333333333,
+                "support": 19
+            },
+            "per:age": {
+                "precision": 0.9351851851851852,
+                "recall": 0.9805825242718447,
+                "f1-score": 0.9573459715639812,
+                "support": 103
+            },
+            "per:charges": {
+                "precision": 0.7285714285714285,
+                "recall": 0.75,
+                "f1-score": 0.7391304347826085,
+                "support": 68
+            },
+            "org:country_of_branch": {
+                "precision": 0.8089887640449438,
+                "recall": 0.7578947368421053,
+                "f1-score": 0.782608695652174,
+                "support": 95
+            },
+            "org:member_of": {
+                "precision": 0.6176470588235294,
+                "recall": 0.6774193548387096,
+                "f1-score": 0.6461538461538462,
+                "support": 31
+            },
+            "org:city_of_branch": {
+                "precision": 0.7580645161290323,
+                "recall": 0.7833333333333333,
+                "f1-score": 0.7704918032786884,
+                "support": 60
+            },
+            "org:alternate_names": {
+                "precision": 0.896551724137931,
+                "recall": 0.9176470588235294,
+                "f1-score": 0.9069767441860465,
+                "support": 170
+            },
+            "per:other_family": {
+                "precision": 1.0,
+                "recall": 0.07692307692307693,
+                "f1-score": 0.14285714285714288,
+                "support": 26
+            },
+            "per:stateorprovince_of_death": {
+                "precision": 0.5714285714285714,
+                "recall": 0.4,
+                "f1-score": 0.47058823529411764,
+                "support": 10
+            },
+            "org:political/religious_affiliation": {
+                "precision": 0.72,
+                "recall": 0.782608695652174,
+                "f1-score": 0.7499999999999999,
+                "support": 23
+            },
+            "org:stateorprovince_of_branch": {
+                "precision": 0.7027027027027027,
+                "recall": 0.8666666666666667,
+                "f1-score": 0.7761194029850748,
+                "support": 30
+            },
+            "org:founded_by": {
+                "precision": 1.0,
+                "recall": 0.78125,
+                "f1-score": 0.8771929824561403,
+                "support": 32
+            },
+            "per:stateorprovinces_of_residence": {
+                "precision": 0.9,
+                "recall": 0.5454545454545454,
+                "f1-score": 0.679245283018868,
+                "support": 33
+            },
+            "org:shareholders": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 6
+            },
+            "per:cause_of_death": {
+                "precision": 0.8333333333333334,
+                "recall": 0.38461538461538464,
+                "f1-score": 0.5263157894736842,
+                "support": 26
+            },
+            "org:members": {
+                "precision": 0.5,
+                "recall": 0.36363636363636365,
+                "f1-score": 0.4210526315789474,
+                "support": 22
+            },
+            "per:city_of_death": {
+                "precision": 1.0,
+                "recall": 0.2727272727272727,
+                "f1-score": 0.42857142857142855,
+                "support": 11
+            },
+            "org:founded": {
+                "precision": 0.9473684210526315,
+                "recall": 0.9473684210526315,
+                "f1-score": 0.9473684210526315,
+                "support": 19
+            },
+            "per:stateorprovince_of_birth": {
+                "precision": 0.6666666666666666,
+                "recall": 1.0,
+                "f1-score": 0.8,
+                "support": 4
+            },
+            "per:city_of_birth": {
+                "precision": 0.5,
+                "recall": 0.2857142857142857,
+                "f1-score": 0.36363636363636365,
+                "support": 7
+            },
+            "org:number_of_employees/members": {
+                "precision": 1.0,
+                "recall": 0.6666666666666666,
+                "f1-score": 0.8,
+                "support": 3
+            },
+            "per:country_of_death": {
+                "precision": 0.3333333333333333,
+                "recall": 1.0,
+                "f1-score": 0.5,
+                "support": 1
+            },
+            "per:date_of_birth": {
+                "precision": 0.0,
+                "recall": 0.0,
+                "f1-score": 0.0,
+                "support": 1
+            },
+            "micro avg": {
+                "precision": 0.8798114689709348,
+                "recall": 0.8791208791208791,
+                "f1-score": 0.8794660384766393,
+                "support": 7644
+            },
+            "macro avg": {
+                "precision": 0.7271784753717881,
+                "recall": 0.6255292530324685,
+                "f1-score": 0.638930339001153,
+                "support": 7644
+            },
+            "weighted avg": {
+                "precision": 0.8766116171275349,
+                "recall": 0.8791208791208791,
+                "f1-score": 0.873828964150176,
+                "support": 7644
+            }
+        }
+    ]
+}}

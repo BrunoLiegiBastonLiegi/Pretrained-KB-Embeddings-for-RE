@@ -589,542 +589,8 @@
         }
     ]
 }}
+
 {
-    "model": "IEModelGoldKG",
-    "learning_rate": 3e-05,
-    "epochs": 8,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 1.0,
-                "recall": 0.36666666666666664,
-                "f1-score": 0.5365853658536585,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 1.0,
-                "recall": 0.6470588235294118,
-                "f1-score": 0.7857142857142858,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 0.9545454545454546,
-                "recall": 0.6,
-                "f1-score": 0.7368421052631579,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 1.0,
-                "recall": 0.15,
-                "f1-score": 0.2608695652173913,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 1.0,
-                "recall": 0.9523809523809523,
-                "f1-score": 0.975609756097561,
-                "support": 21
-            },
-            "micro avg": {
-                "precision": 0.9871794871794872,
-                "recall": 0.55,
-                "f1-score": 0.706422018348624,
-                "support": 140
-            },
-            "macro avg": {
-                "precision": 0.990909090909091,
-                "recall": 0.5432212885154062,
-                "f1-score": 0.6591242156292109,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.9886363636363636,
-                "recall": 0.55,
-                "f1-score": 0.67361797540359,
-                "support": 140
-            }
-        }
-    ]
-}{
-    "model": "IEModelGoldKG",
-    "learning_rate": 3e-05,
-    "epochs": 8,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 1.0,
-                "recall": 0.3333333333333333,
-                "f1-score": 0.5,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 0.9583333333333334,
-                "recall": 0.6764705882352942,
-                "f1-score": 0.7931034482758621,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 1.0,
-                "recall": 0.4857142857142857,
-                "f1-score": 0.6538461538461539,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 1.0,
-                "recall": 0.35,
-                "f1-score": 0.5185185185185185,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 1.0,
-                "recall": 0.9523809523809523,
-                "f1-score": 0.975609756097561,
-                "support": 21
-            },
-            "micro avg": {
-                "precision": 0.9871794871794872,
-                "recall": 0.55,
-                "f1-score": 0.706422018348624,
-                "support": 140
-            },
-            "macro avg": {
-                "precision": 0.9916666666666668,
-                "recall": 0.559579831932773,
-                "f1-score": 0.6882155753476191,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.9898809523809524,
-                "recall": 0.55,
-                "f1-score": 0.6836307705315274,
-                "support": 140
-            }
-        }
-    ]
-}{
-    "model": "IEModelGoldKG",
-    "learning_rate": 3e-05,
-    "epochs": 12,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 1.0,
-                "recall": 0.16666666666666666,
-                "f1-score": 0.2857142857142857,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 0.96,
-                "recall": 0.7058823529411765,
-                "f1-score": 0.8135593220338982,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 1.0,
-                "recall": 0.42857142857142855,
-                "f1-score": 0.6,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 1.0,
-                "recall": 0.35,
-                "f1-score": 0.5185185185185185,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 1.0,
-                "recall": 0.9523809523809523,
-                "f1-score": 0.975609756097561,
-                "support": 21
-            },
-            "micro avg": {
-                "precision": 0.9861111111111112,
-                "recall": 0.5071428571428571,
-                "f1-score": 0.6698113207547169,
-                "support": 140
-            },
-            "macro avg": {
-                "precision": 0.992,
-                "recall": 0.5207002801120447,
-                "f1-score": 0.6386803764728527,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.9902857142857142,
-                "recall": 0.5071428571428571,
-                "f1-score": 0.6292187197785732,
-                "support": 140
-            }
-        }
-    ]
-}{
-    "model": "IEModelGoldKG",
-    "learning_rate": 3e-05,
-    "epochs": 12,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 0.9259259259259259,
-                "recall": 0.8333333333333334,
-                "f1-score": 0.8771929824561403,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 0.8648648648648649,
-                "recall": 0.9411764705882353,
-                "f1-score": 0.9014084507042254,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 0.8461538461538461,
-                "recall": 0.9428571428571428,
-                "f1-score": 0.8918918918918919,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 1.0,
-                "recall": 0.8,
-                "f1-score": 0.888888888888889,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1-score": 1.0,
-                "support": 21
-            },
-            "accuracy": 0.9071428571428571,
-            "macro avg": {
-                "precision": 0.9273889273889274,
-                "recall": 0.9034733893557423,
-                "f1-score": 0.9118764427882293,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.9128469128469129,
-                "recall": 0.9071428571428571,
-                "f1-score": 0.9068405056544419,
-                "support": 140
-            }
-        }
-    ]
-}{
-    "model": "IEModelGoldKG",
-    "learning_rate": 3e-05,
-    "epochs": 12,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 0.725,
-                "recall": 0.9666666666666667,
-                "f1-score": 0.8285714285714285,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 0.9310344827586207,
-                "recall": 0.7941176470588235,
-                "f1-score": 0.8571428571428571,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 0.896551724137931,
-                "recall": 0.7428571428571429,
-                "f1-score": 0.8125,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 0.75,
-                "recall": 0.75,
-                "f1-score": 0.75,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 0.9545454545454546,
-                "recall": 1.0,
-                "f1-score": 0.9767441860465117,
-                "support": 21
-            },
-            "accuracy": 0.8428571428571429,
-            "macro avg": {
-                "precision": 0.8514263322884013,
-                "recall": 0.8507282913165266,
-                "f1-score": 0.8449916943521595,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.8559281236005375,
-                "recall": 0.8428571428571429,
-                "f1-score": 0.8424937707641196,
-                "support": 140
-            }
-        }
-    ]
-}{
-    "model": "IEModelGoldKG",
-    "learning_rate": 3e-05,
-    "epochs": 6,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 0.8571428571428571,
-                "recall": 0.8,
-                "f1-score": 0.8275862068965518,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 0.8378378378378378,
-                "recall": 0.9117647058823529,
-                "f1-score": 0.8732394366197184,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 1.0,
-                "recall": 0.8857142857142857,
-                "f1-score": 0.9393939393939393,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 0.8333333333333334,
-                "recall": 1.0,
-                "f1-score": 0.9090909090909091,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 1.0,
-                "recall": 0.9523809523809523,
-                "f1-score": 0.975609756097561,
-                "support": 21
-            },
-            "accuracy": 0.9,
-            "macro avg": {
-                "precision": 0.9056628056628057,
-                "recall": 0.9099719887955182,
-                "f1-score": 0.9049840496197359,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.9061959919102777,
-                "recall": 0.9,
-                "f1-score": 0.9004724142187273,
-                "support": 140
-            }
-        }
-    ]
-}{
-    "model": "IEModelGoldKG",
-    "learning_rate": 3e-05,
-    "epochs": 6,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 0.8125,
-                "recall": 0.8666666666666667,
-                "f1-score": 0.8387096774193549,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 0.9,
-                "recall": 0.7941176470588235,
-                "f1-score": 0.84375,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 0.85,
-                "recall": 0.9714285714285714,
-                "f1-score": 0.9066666666666667,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 1.0,
-                "recall": 0.85,
-                "f1-score": 0.9189189189189189,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1-score": 1.0,
-                "support": 21
-            },
-            "accuracy": 0.8928571428571429,
-            "macro avg": {
-                "precision": 0.9125,
-                "recall": 0.8964425770308123,
-                "f1-score": 0.9016090526009881,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.8980357142857143,
-                "recall": 0.8928571428571429,
-                "f1-score": 0.8925750145306598,
-                "support": 140
-            }
-        }
-    ]
-}{
-    "model": "IEModelGoldKG",
-    "learning_rate": 2e-05,
-    "epochs": 6,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 0.8387096774193549,
-                "recall": 0.8666666666666667,
-                "f1-score": 0.8524590163934426,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 0.8823529411764706,
-                "recall": 0.8823529411764706,
-                "f1-score": 0.8823529411764706,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 0.8108108108108109,
-                "recall": 0.8571428571428571,
-                "f1-score": 0.8333333333333334,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 1.0,
-                "recall": 0.8,
-                "f1-score": 0.888888888888889,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 0.9545454545454546,
-                "recall": 1.0,
-                "f1-score": 0.9767441860465117,
-                "support": 21
-            },
-            "accuracy": 0.8785714285714286,
-            "macro avg": {
-                "precision": 0.8972837767904182,
-                "recall": 0.881232492997199,
-                "f1-score": 0.8867556731677295,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.8827508803315255,
-                "recall": 0.8785714285714286,
-                "f1-score": 0.8787845917373176,
-                "support": 140
-            }
-        }
-    ]
-}{
-    "model": "IEModelGoldKG",
-    "learning_rate": 2e-05,
-    "epochs": 12,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 0.8125,
-                "recall": 0.8666666666666667,
-                "f1-score": 0.8387096774193549,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 0.8648648648648649,
-                "recall": 0.9411764705882353,
-                "f1-score": 0.9014084507042254,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 0.9393939393939394,
-                "recall": 0.8857142857142857,
-                "f1-score": 0.9117647058823529,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 1.0,
-                "recall": 0.9,
-                "f1-score": 0.9473684210526316,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 1.0,
-                "recall": 0.9523809523809523,
-                "f1-score": 0.975609756097561,
-                "support": 21
-            },
-            "accuracy": 0.9071428571428571,
-            "macro avg": {
-                "precision": 0.9233517608517608,
-                "recall": 0.909187675070028,
-                "f1-score": 0.9149722022312252,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.9118513806013807,
-                "recall": 0.9071428571428571,
-                "f1-score": 0.9082579689393434,
-                "support": 140
-            }
-        }
-    ]
-}{
-    "model": "IEModelGoldKG",
-    "learning_rate": 2e-05,
-    "epochs": 12,
-    "batchsize": 8,
-    "scores": [
-        {
-            "Located_In": {
-                "precision": 0.9666666666666667,
-                "recall": 0.9666666666666667,
-                "f1-score": 0.9666666666666667,
-                "support": 30
-            },
-            "OrgBased_In": {
-                "precision": 0.9705882352941176,
-                "recall": 0.9705882352941176,
-                "f1-score": 0.9705882352941176,
-                "support": 34
-            },
-            "Live_In": {
-                "precision": 0.9459459459459459,
-                "recall": 1.0,
-                "f1-score": 0.9722222222222222,
-                "support": 35
-            },
-            "Work_For": {
-                "precision": 1.0,
-                "recall": 0.9,
-                "f1-score": 0.9473684210526316,
-                "support": 20
-            },
-            "Kill": {
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1-score": 1.0,
-                "support": 21
-            },
-            "accuracy": 0.9714285714285714,
-            "macro avg": {
-                "precision": 0.976640169581346,
-                "recall": 0.9674509803921569,
-                "f1-score": 0.9713691090471276,
-                "support": 140
-            },
-            "weighted avg": {
-                "precision": 0.9722007722007722,
-                "recall": 0.9714285714285714,
-                "f1-score": 0.97125104427736,
-                "support": 140
-            }
-        }
-    ]
-}{
     "model": "BaseIEModelGoldEntities",
     "learning_rate": 2e-05,
     "epochs": 12,
@@ -1132,47 +598,53 @@
     "scores": [
         {
             "Located_In": {
-                "precision": 0.9354838709677419,
-                "recall": 0.9666666666666667,
-                "f1-score": 0.9508196721311476,
+                "precision": 0.4426229508196721,
+                "recall": 0.9,
+                "f1-score": 0.5934065934065934,
                 "support": 30
             },
+            "NO_RELATION": {
+                "precision": 0.9708520179372198,
+                "recall": 0.8983402489626556,
+                "f1-score": 0.9331896551724138,
+                "support": 482
+            },
             "OrgBased_In": {
-                "precision": 0.9696969696969697,
-                "recall": 0.9411764705882353,
-                "f1-score": 0.955223880597015,
+                "precision": 0.8387096774193549,
+                "recall": 0.7647058823529411,
+                "f1-score": 0.7999999999999999,
                 "support": 34
             },
             "Live_In": {
-                "precision": 0.9459459459459459,
-                "recall": 1.0,
-                "f1-score": 0.9722222222222222,
+                "precision": 0.7142857142857143,
+                "recall": 0.8571428571428571,
+                "f1-score": 0.7792207792207793,
                 "support": 35
             },
             "Work_For": {
-                "precision": 1.0,
-                "recall": 0.9,
-                "f1-score": 0.9473684210526316,
+                "precision": 0.8095238095238095,
+                "recall": 0.85,
+                "f1-score": 0.8292682926829269,
                 "support": 20
             },
             "Kill": {
-                "precision": 1.0,
-                "recall": 1.0,
-                "f1-score": 1.0,
+                "precision": 0.9523809523809523,
+                "recall": 0.9523809523809523,
+                "f1-score": 0.9523809523809523,
                 "support": 21
             },
-            "accuracy": 0.9642857142857143,
+            "accuracy": 0.8890675241157556,
             "macro avg": {
-                "precision": 0.9702253573221317,
-                "recall": 0.9615686274509804,
-                "f1-score": 0.9651268392006033,
-                "support": 140
+                "precision": 0.7880625203944539,
+                "recall": 0.8704283234732344,
+                "f1-score": 0.8145777121439443,
+                "support": 622
             },
             "weighted avg": {
-                "precision": 0.9653022943345523,
-                "recall": 0.9642857142857143,
-                "f1-score": 0.9641239164504524,
-                "support": 140
+                "precision": 0.9179034829470487,
+                "recall": 0.8890675241157556,
+                "f1-score": 0.8981635124142879,
+                "support": 622
             }
         }
     ]

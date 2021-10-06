@@ -81,6 +81,8 @@ class Stat(object):
         print('EXAMPLES AVAILABLE')
         kb_ex = [i for i in self.stat['train']['kb_entities'].items() if i[1]>=th]
         print('> {} KB entities ({}%) appear a number of times >= {}.'.format(len(kb_ex), int(100*len(kb_ex)/len(self.stat['train']['kb_entities'])), th))
+        plt.hist(list(self.stat['train']['kb_entities'].values()), bins='auto')
+        plt.show()
         ent_ex = [i for i in self.stat['train']['entities'].items() if i[1]>=th]
         print('> {} text entities ({}%) appear a number of times >= {}.'.format(len(ent_ex), int(100*len(ent_ex)/len(self.stat['train']['entities'])), th))
         return ent_ex, kb_ex

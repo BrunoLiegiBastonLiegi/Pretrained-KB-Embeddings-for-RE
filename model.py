@@ -1,4 +1,4 @@
-import torch, faiss, numpy
+import torch, faiss, numpy, time
 from transformers import AutoTokenizer, AutoModel
 from itertools import product, repeat
 from torch.nn.utils.rnn import pad_sequence
@@ -127,16 +127,15 @@ class REModule(torch.nn.Module):
         super().__init__()
         
         # Head - Tail decomposition
-        drop = torch.nn.Dropout(dropout)
         self.head = torch.nn.Sequential(
             torch.nn.Linear(in_dim, h_dim),
-            drop,
+            torch.nn.Dropout(dropout),
             activation,
             torch.nn.Linear(h_dim, h_dim),
         )
         self.tail = torch.nn.Sequential(
             torch.nn.Linear(in_dim, h_dim),
-            drop,
+            torch.nn.Dropout(dropout),
             activation,
             torch.nn.Linear(h_dim, h_dim),
         )

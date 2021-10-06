@@ -1,4 +1,4 @@
-import torch, argparse, pickle, re, json, random
+import torch, argparse, pickle, re, json, random, time
 from trainer import Trainer
 from ner_schemes import BIOES
 from dataset import IEData, Stat
@@ -14,6 +14,7 @@ parser.add_argument('test_data', help='Path to test data file.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
 parser.add_argument('--out_file', default='results.json', type=str)
 parser.add_argument('--n_epochs', default=6, type=int)
+parser.add_argument('--n_exp', default=1, type=int)
 args = parser.parse_args()
 
 # Input/Output directory
@@ -27,55 +28,27 @@ with open(args.train_data, 'rb') as f:
 with open(args.test_data, 'rb') as f:               
     pkl['test'] = pickle.load(f)
 
-# Do some statistics
+# Do some statistics and reorganize the data
 stat = Stat(pkl['train'], pkl['test'])
-stat.gen()
+data = stat.scan()
+rels, data = stat.filter_rels(10, random=True)
+#stat.gen()
 
-# Organize usable data in a suitable way
-kb, data, e_types, r_types = {}, {}, {}, {}
-discarded_sents = []
-for s, d in pkl.items():
-    data[s] = {
-        'sent': [],
-        'ents': [],
-        'rels': []
-    }
-    #sample_dim = 10000 if s == 'train' else 1000
-    #sample = random.choices(d, k=sample_dim)
-    for v in d: #sample:
-        discard = False
-        for e in v['entities'].values():
-            try:
-                emb_flag = e['embedding'].any() != None
-            except:
-                emb_flag = False
-            if e['type'] != None and emb_flag:
-                kb[e['id']] = torch.tensor(e['embedding']).mean(0).float().view(1, -1).clone()
-                e['embedding'] = torch.tensor(e['embedding']).mean(0).float().view(1, -1).clone()
-                e_types[e['type']] = 0
-            else:
-               discard = True 
-        for r in v['relations'].values():
-            r_types[r] = 0
-        if discard:
-            discarded_sents.append((v['sentence'], v['entities'], v['relations']))
-        else:
-            data[s]['sent'].append(v['sentence'][0])
-            data[s]['ents'].append(v['entities'])
-            data[s]['rels'].append(v['relations'])
-print('> Discarded {} sentences, due to incomplete annotations.'.format(len(discarded_sents)))
-
+# Visualize pretrained embedding space
+from utils import plot_embedding
+colors = dict(zip(stat.id2type.values(), range(len(stat.id2type)))) # setting colors associated to entity types
+colors = dict(zip(colors.keys(), range(len(colors))))
+#plot_embedding(torch.vstack(list(stat.kb.values())), [colors[stat.id2type[k]] for k in stat.kb.keys()])
 
 # Define the tagging scheme
-bioes = BIOES(list(e_types.keys()))
+bioes = BIOES(list(stat.entity_types.keys()))
 # Define the relation scheme
-rel2index = dict(zip(r_types.keys(), range(len(r_types))))
+rel2index = dict(zip(stat.relation_types.keys(), range(len(stat.relation_types))))
 print(rel2index)
 # Define the pretrained model
 bert = 'bert-base-cased'
 #bert = 'dmis-lab/biobert-v1.1'
 tokenizer = AutoTokenizer.from_pretrained(bert)
-
 
 # Prepare data for training
 train_data = IEData(
@@ -104,103 +77,123 @@ test_data = IEData(
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('> Found device:', device, ', setting it as the principal device.')
 
-"""
-model = BaseIEModel(
-    language_model = bert,
-    ner_dim = bioes.space_dim,
-    ner_scheme = bioes,
-    re_dim = len(r_types),
-    device = device
-)
-"""
+runs = {}
+for i in range(args.n_exp):
+    runs['run_'+str(i+1)] = experiment(
+        model = 'BaseIEModelGoldEntities',
+        train_data = train_data,
+        test_data = test_data,
+        lang_model = bert,
+        ner_dim = bioes.space_dim,
+        ner_scheme = bioes,
+        ned_dim = list(stat.kb.values())[0].shape[-1],
+        kb = stat.kb,
+        re_dim = len(stat.relation_types),
+        dev = device,
+        rel2index = rel2index,
+        tokenizer = tokenizer,
+        n_epochs = args.n_epochs
+    )
+    
+with open(dir + '/' + args.out_file, 'w') as f:
+    json.dump(runs, f, indent=4)
 
-model = BaseIEModelGoldEntities(
-    language_model = bert,
-    re_dim = len(r_types),
-    device = device
-)
+    
+# ------------------------------------------------------------------------------------------------
 
-"""
-model = IEModel(
-    language_model = bert,
-    ner_dim = bioes.space_dim,
-    ner_scheme = bioes,
-    ned_dim = list(kb.values())[0].shape[-1],
-    KB = kb,
-    re_dim = len(r_types),
-    device = device
-)
-"""
-"""
-model = IEModelGoldEntities(
-    language_model = bert,
-    ned_dim = list(kb.values())[0].shape[-1],
-    KB = kb,
-    re_dim = len(r_types),
-    device = device
-)
-"""
-"""
-model = IEModelGoldKG(
-    language_model = bert,
-    ned_dim = list(kb.values())[0].shape[-1],
-    re_dim = len(r_types),
-    device = device
-)
-"""
-# move model to device
-#if device == torch.device("cuda:0"):
-#    model.to(device)
 
-# define the optimizer
-lr = 2e-5
-#optimizer = torch.optim.SGD(model.parameters(), lr=3e-5, momentum=0.9)
-optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+def experiment(model, train_data, test_data, **kwargs):
+        
+    models = {
+        'BaseIEModel': BaseIEModel(
+            language_model = kwargs['lang_model'],
+            ner_dim = kwargs['ner_dim'],
+            ner_scheme = kwargs['ner_scheme'],
+            re_dim = kwargs['re_dim'],
+            device = kwargs['dev']
+        ),
+        'BaseIEModelGoldEntities': BaseIEModelGoldEntities(
+            language_model = kwargs['lang_model'],
+            re_dim = kwargs['re_dim'],
+            device = kwargs['dev']
+        ),
+        'IEModel': IEModel(
+            language_model = kwargs['lang_model'],
+            ner_dim = kwargs['ner_dim'],
+            ner_scheme = kwargs['ner_scheme'],
+            ned_dim = kwargs['ned_dim'],
+            KB = kwargs['kb'],
+            re_dim = kwargs['re_dim'],
+            device = kwargs['dev']
+        ),
+        'IEModelGoldEntities': IEModelGoldEntities(
+            language_model = kwargs['lang_model'],
+            ned_dim = kwargs['ned_dim'],
+            KB = kwargs['kb'],
+            re_dim = kwargs['re_dim'],
+            device = kwargs['dev']
+        ),
+        'IEModelGoldKG': IEModelGoldKG(
+            language_model = kwargs['lang_model'],
+            ned_dim = kwargs['ned_dim'],
+            re_dim = kwargs['re_dim'],
+            device = kwargs['dev']
+        )
+    }
+    
+    model = models[model]
+    
+    # move model to device
+    #if device == torch.device("cuda:0"):
+    #    model.to(device)
 
-# set up the trainer
-batchsize = 8
-trainer = Trainer(
-    train_data=train_data,
-    test_data=test_data,
-    model=model,
-    optim=optimizer,
-    device=device,
-    rel2index=rel2index,
-    save=False,
-    batchsize=batchsize,
-    tokenizer=tokenizer,
-)
+    # define the optimizer
+    lr = 2e-5
+    #optimizer = torch.optim.SGD(model.parameters(), lr=3e-5, momentum=0.9)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
-n_epochs = args.n_epochs
-# load pretrained model or train
-if args.load_model != None:
-    model.load_state_dict(torch.load(args.load_model))
-else:
-    plots = trainer.train(n_epochs)
+    # set up the trainer
+    batchsize = 8
+    trainer = Trainer(
+        train_data=train_data,
+        test_data=test_data,
+        model=model,
+        optim=optimizer,
+        device=kwargs['dev'],
+        rel2index=kwargs['rel2index'],
+        save=False,
+        batchsize=batchsize,
+        tokenizer=kwargs['tokenizer'],
+    )
+
+    # load pretrained model or train
+    #if args.load_model != None:
+    #    model.load_state_dict(torch.load(args.load_model))
+    #else:
+    plots = trainer.train(kwargs['n_epochs'])
     #yn = input('Save loss plots? (y/n)')
     yn = 'n'
     if yn == 'y':
         with open(dir + '/loss_plots.pkl', 'wb') as f:
             pickle.dump(plots, f)
 
-# Evaluation
-results = {}
-ev = Evaluator(
-    model=model,
-    ner_scheme=bioes,
-    kb_embeddings=kb,
-    re_classes=dict(zip(rel2index.values(),rel2index.keys())),
-)
+    # Evaluation
+    results = {}
+    ev = Evaluator(
+        model=model,
+        ner_scheme=kwargs['ner_scheme'],
+        kb_embeddings=kwargs['kb'],
+        re_classes=dict(zip(kwargs['rel2index'].values(), kwargs['rel2index'].keys())),
+    )
 
-results = {
-    'model': re.search('model\.(.+?)\'\>', str(type(model))).group(1),
-    'learning_rate': lr,
-    'epochs': n_epochs,
-    'batchsize': batchsize,
-    'scores': ev.classification_report(test_data)
-}
-                                       
-with open(dir + '/' + args.out_file, 'a') as f:
-    json.dump(results, f, indent=4)
+    results = {
+        'model': re.search('model\.(.+?)\'\>', str(type(model))).group(1),
+        'learning_rate': lr,
+        'epochs': kwargs['n_epochs'],
+        'batchsize': batchsize,
+        'scores': ev.classification_report(test_data)
+    }
+
+    return results
 
 
