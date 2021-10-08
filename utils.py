@@ -65,6 +65,8 @@ def violin_plot(*results, ax=plt.subplots()[1], legend=['no graph embeddings', '
     for r,l in zip(results, legend):
         col, score = list(zip(*r.items()))
         ax.scatter(range(1,len(col)+1), numpy.array(score).mean(-1), label=l)
+        for s,x,y in zip(support.values(), range(1,len(col)+1), numpy.array(score).mean(-1)):
+            ax.annotate(s, (x, y))
         ax.violinplot(score)
         ax.set_xticks(range(1,len(col)+1))
         ax.set_xticklabels(col, rotation=45)

@@ -6,6 +6,7 @@ from pipeline import Pipeline, GoldEntities
 from model import BaseIEModel, BaseIEModelGoldEntities, IEModel, IEModelGoldEntities, IEModelGoldKG
 from transformers import AutoTokenizer
 from evaluation import Evaluator
+from graph import KnowledgeGraph
 
 # Arguments parser
 parser = argparse.ArgumentParser(description='Train a model and evaluate on a dataset.')
@@ -31,7 +32,10 @@ with open(args.test_data, 'rb') as f:
 # Do some statistics and reorganize the data
 stat = Stat(pkl['train'], pkl['test'])
 data = stat.scan()
-rels, data = stat.filter_rels(10, random=True)
+kg = KnowledgeGraph(stat.edges)
+kg.draw()
+rels = {'per:spouse': 0, 'per:age': 1, 'per:stateorprovinces_of_residence': 2, 'per:siblings': 3, 'per:parents': 4, 'org:member_of': 5, 'org:stateorprovince_of_headquarters': 6, 'org:political/religious_affiliation': 7, 'per:other_family': 8, 'per:alternate_names': 9}
+rels, data = stat.filter_rels(10, rels=list(rels.keys()) ,random=True)
 #stat.gen()
 
 # Visualize pretrained embedding space
@@ -77,31 +81,7 @@ test_data = IEData(
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('> Found device:', device, ', setting it as the principal device.')
 
-runs = {}
-for i in range(args.n_exp):
-    runs['run_'+str(i+1)] = experiment(
-        model = 'BaseIEModelGoldEntities',
-        train_data = train_data,
-        test_data = test_data,
-        lang_model = bert,
-        ner_dim = bioes.space_dim,
-        ner_scheme = bioes,
-        ned_dim = list(stat.kb.values())[0].shape[-1],
-        kb = stat.kb,
-        re_dim = len(stat.relation_types),
-        dev = device,
-        rel2index = rel2index,
-        tokenizer = tokenizer,
-        n_epochs = args.n_epochs
-    )
-    
-with open(dir + '/' + args.out_file, 'w') as f:
-    json.dump(runs, f, indent=4)
-
-    
-# ------------------------------------------------------------------------------------------------
-
-
+# -------------------------------------------------------------------------------------------------
 def experiment(model, train_data, test_data, **kwargs):
         
     models = {
@@ -195,5 +175,30 @@ def experiment(model, train_data, test_data, **kwargs):
     }
 
     return results
+
+# ---------------------------------------------------------------------------------------------------------
+
+runs = {}
+for i in range(args.n_exp):
+    runs['run_'+str(i+1)] = experiment(
+        model = 'IEModelGoldKG',
+        train_data = train_data,
+        test_data = test_data,
+        lang_model = bert,
+        ner_dim = bioes.space_dim,
+        ner_scheme = bioes,
+        ned_dim = list(stat.kb.values())[0].shape[-1],
+        kb = stat.kb,
+        re_dim = len(stat.relation_types),
+        dev = device,
+        rel2index = rel2index,
+        tokenizer = tokenizer,
+        n_epochs = args.n_epochs
+    )
+    
+with open(dir + '/' + args.out_file, 'w') as f:
+    json.dump(runs, f, indent=4)
+
+    
 
 

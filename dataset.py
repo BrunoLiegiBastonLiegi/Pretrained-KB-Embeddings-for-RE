@@ -7,6 +7,7 @@ from torch.multiprocessing import Pool, cpu_count, set_start_method, set_sharing
 import matplotlib.pyplot as plt
 from itertools import repeat
 
+
 class IEData(torch.utils.data.Dataset):
 
     def __init__(self, sentences, ner_labels, re_labels, preprocess=False, ned_labels=None, tokenizer=None, ner_scheme=None, rel2index=None, save_to=None):
@@ -177,7 +178,7 @@ class Stat(object):
     
     def scan(self):
         self.stat, self.kb, self.split, common = {}, {}, {}, {'kb2txt':{}, 'txt2kb':{}}
-        self.id2type = {}
+        self.id2type, self.edges = {}, []
         discarded_sents = []
         for s,d in zip(('train', 'test'), (self.train, self.test)):
             self.stat[s] = {
@@ -232,14 +233,15 @@ class Stat(object):
                                         common[k][normalize(e[l[0]])] = {e[l[1]]: 1}
                     else:
                         discard = True 
-                for r in v['relations'].values():
-                    try:
-                        self.stat[s]['relation_types'][r] += 1
-                    except:
-                        self.stat[s]['relation_types'][r] = 1
                 if discard:
                     discarded_sents.append((v['sentence'], v['entities'], v['relations']))
                 else:
+                    for k,r in v['relations'].items():
+                        self.edges.append((v['entities'][k[0]]['id'], v['entities'][k[1]]['id'], r))
+                        try:
+                            self.stat[s]['relation_types'][r] += 1
+                        except:
+                            self.stat[s]['relation_types'][r] = 1
                     self.split[s]['sent'].append(v['sentence'][0])
                     self.split[s]['ents'].append(v['entities'])
                     self.split[s]['rels'].append(v['relations'])
@@ -307,20 +309,24 @@ class Stat(object):
         self.ambiguity(axs[0,2], axs[1,2])
         plt.show()
 
-    def filter_rels(self, n, total_support=False, random=False, support_range=None):
+    def filter_rels(self, n, rels=None, total_support=False, random=False, support_range=None):
         assert self.stat != None
-        if total_support:
-            r_supp = { k: v + self.stat['train']['relation_types'][k] for k,v in self.stat['test']['relation_types'].items() }
+        if rels != None:
+            assert n == len(rels)
+            rels = dict(zip(rels, range(len(rels))))
         else:
-            r_supp = { k: self.stat['train']['relation_types'][k] for k in self.stat['test']['relation_types'].keys() }
-        if random:
-            rels = dict(rand.sample(r_supp.items(), n))
-        elif support_range != None:
-            rels = { k: v for k,v in r_supp.items() if v >= support_range[0] and v <= support_range[1] }
-            if len(rels) > n:
-                rels = dict(sorted(rels.items(), key=lambda x: x[1], reverse=True)[:n])
-        else:
-            rels = dict(sorted(r_supp.items(), key=lambda x: x[1], reverse=True)[:n])
+            if total_support:
+                r_supp = { k: v + self.stat['train']['relation_types'][k] for k,v in self.stat['test']['relation_types'].items() }
+            else:
+                r_supp = { k: self.stat['train']['relation_types'][k] for k in self.stat['test']['relation_types'].keys() }
+            if random:
+                rels = dict(rand.sample(r_supp.items(), n))
+            elif support_range != None:
+                rels = { k: v for k,v in r_supp.items() if v >= support_range[0] and v <= support_range[1] }
+                if len(rels) > n:
+                    rels = dict(sorted(rels.items(), key=lambda x: x[1], reverse=True)[:n])
+            else:
+                rels = dict(sorted(r_supp.items(), key=lambda x: x[1], reverse=True)[:n])
         for t in (self.train, self.test):
             for s in t:
                 new_rel = {}
