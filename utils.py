@@ -54,6 +54,7 @@ def violin_plot(*results, ax=plt.subplots()[1], legend=['no graph embeddings', '
     graph embeddings enabled.
     """
     assert len(legend) == len(results)
+    results = list(results)
     if len(classes) > 0:
         for i,r in enumerate(results):
             results[i] = { c: r[c] for c in classes }
@@ -61,14 +62,18 @@ def violin_plot(*results, ax=plt.subplots()[1], legend=['no graph embeddings', '
         support['micro avg'] = -1
         support['macro avg'] = -2
         support = dict(sorted(support.items(), key=lambda x: x[1], reverse=True))
-        results = [ { k: r[k] for k in support.keys() } for i,r in enumerate(results) ] 
+        results = [ { k: r[k] for k in support.keys() } for i,r in enumerate(results) ]
+    i = 0
     for r,l in zip(results, legend):
         col, score = list(zip(*r.items()))
         ax.scatter(range(1,len(col)+1), numpy.array(score).mean(-1), label=l)
-        for s,x,y in zip(support.values(), range(1,len(col)+1), numpy.array(score).mean(-1)):
-            ax.annotate(s, (x, y))
+        if support != None and i < 1:
+            for s,x,y in zip(list(support.values())[:-2], range(1,len(col)-1), numpy.array(score[:-2]).mean(-1)): # [-2:] to avoid annotation of micro/macro avg, they don't have a support value!
+                ax.annotate(s, xy=(x, y), xytext=(x+0.1,y))
+            i += 1
         ax.violinplot(score)
         ax.set_xticks(range(1,len(col)+1))
         ax.set_xticklabels(col, rotation=45)
     ax.legend()
+    
 

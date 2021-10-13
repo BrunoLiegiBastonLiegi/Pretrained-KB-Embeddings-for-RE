@@ -1,22 +1,13 @@
-from dataset import Stat
-from utils import collect_results, violin_plot
-import pickle
-import matplotlib.pyplot as plt
+import argparse, json
 
-with open('TACRED/test_no-relation_cut.pkl', 'rb') as f:
-    test = pickle.load(f)
+parser = argparse.ArgumentParser(description='.')
+parser.add_argument('-l',nargs='+')
+args = parser.parse_args()
 
-with open('TACRED/train_dev_no-relation_cut.pkl', 'rb') as f:
-    train = pickle.load(f)
+with open(args.l[0],'r') as f:
+    a = json.load(f)
 
-print(len(train), len(test))
+with open(args.l[1],'r') as f:
+    b = json.load(f)
 
-st = Stat(train, test)
-st.scan()
-rels, train, test = st.filter_rels(10)
-
-print(len(train), len(test))
-
-res = [ collect_results(i) for i in ('TACRED/results_top_10_rels.json', 'TACRED/results_kg_top_10_rels.json') ]
-violin_plot(*res, support=rels)
-plt.show()
+print(a,b)

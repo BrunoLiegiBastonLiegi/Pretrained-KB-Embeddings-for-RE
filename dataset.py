@@ -198,7 +198,8 @@ class Stat(object):
                         self.stat['train'][k].keys(),
                         repeat(0, len(self.stat['train'][k].keys()))
                     ))
-            for v in d:
+            for i,v in enumerate(d):
+                print(' Scanning {} set. ({}/{})'.format(s, i, len(d)), end='\r')
                 discard = False
                 for e in v['entities'].values():
                     try:
@@ -245,6 +246,7 @@ class Stat(object):
                     self.split[s]['sent'].append(v['sentence'][0])
                     self.split[s]['ents'].append(v['entities'])
                     self.split[s]['rels'].append(v['relations'])
+            print('\n')
         # This is done to complete the train dict with elements only present in the test dict
         tot = {}
         for k in self.stat['train'].keys():

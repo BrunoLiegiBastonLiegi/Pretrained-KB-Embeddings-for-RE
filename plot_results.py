@@ -1,49 +1,51 @@
 import matplotlib.pyplot as plt
-from matplotlib.patches import Patch
-import json, numpy, sys
+import json, numpy, sys, pickle, argparse, re
+from utils import collect_results, violin_plot
+from dataset import Stat
 
-with open(sys.argv[1], 'r') as f:
-    res = json.load(f)
-with open(sys.argv[2], 'r') as f:
-    res_kg = json.load(f)
+parser = argparse.ArgumentParser(description='Plot results.')
+parser.add_argument('--res', nargs='+')
+parser.add_argument('--compare', nargs='+')
+parser.add_argument('--stat', nargs='+')
+args = parser.parse_args()
 
-fig, ax = plt.subplots(figsize=(16,9))
-f1, f1_kg = {}, {}
-for r,f in zip((res, res_kg), (f1, f1_kg)):
-    for v in r.values():
-        for k,c in v['scores'][0].items():
-            if k == 'accuracy':
-                try:
-                    f[k].append(c)
-                except:
-                    f[k] = [c]
-            elif k != 'weighted avg':
-                try:
-                    f[k].append(c['f1-score'])
-                except:
-                    f[k] = [c['f1-score']]
-    try:
-        f['micro avg'] += f['accuracy']
-        f.pop('accuracy')
-    except:
-        try:
-            f['micro avg'] = f['accuracy']
-            f.pop('accuracy')
-        except:
-            pass
-    #print(list(f.keys()))
-    print('micro avg: {}\n macro avg: {}'.format(numpy.mean(f['micro avg']), numpy.mean(f['macro avg'])))
-    classes, scores = list(zip(*f.items()))
-    #errs = numpy.array(scores).std(-1)
-    #scores = numpy.array(scores).mean(-1)
-    #plt.plot(classes, scores)
-    #lab = 'no graph embeddings' if f == f1 else 'graph embeddings'
-    #plt.errorbar(classes, scores, yerr=errs, label=lab)
-    #plt.xticks(rotation=90)
-    ax.scatter(range(1,len(classes)+1), numpy.array(scores).mean(-1))
-    ax.violinplot(scores)
-    ax.set_xticks(range(1,len(classes)+1))
-    ax.set_xticklabels(classes, rotation=45)
-ax.legend([Patch(color='cornflowerblue'), Patch(color='orange')] ,['no graph embeddings', 'graph embeddings'])
-fig.tight_layout()
-plt.show()
+supp = None
+if args.stat != None:
+    assert len(args.stat) == 2
+    with open(args.stat[0], 'rb') as f:
+        train = pickle.load(f)
+    with open(args.stat[1], 'rb') as f:
+        test = pickle.load(f)
+    stat = Stat(train, test)
+    stat.scan()
+    supp = { k: stat.stat['train']['relation_types'][k] 
+             for k in stat.stat['test']['relation_types'].keys() }
+
+if args.res != None:
+    res, res_kg = (args.res[0::2], args.res[1::2]) if args.res != None else ([], [])
+    for r, rkg in zip(res, res_kg):
+        fig, ax = plt.subplots(1, 1, figsize=(16,9))
+        rr, rrkg = collect_results(r), collect_results(rkg)
+        sp = { k: supp[k] for k in rr.keys() if k not in {'micro avg', 'macro avg'}} if supp != None else None
+        violin_plot(rr, rrkg, support=sp)
+        plt.show()
+
+if args.compare != None:
+    res, res_kg = (args.compare[0::2], args.compare[1::2]) if args.compare != None else ([], [])
+    rr, c = [], []
+    for r, rkg in zip(res, res_kg):
+        rr.append((collect_results(r), collect_results(rkg)))
+        c.append(set(rr[-1][0].keys()))
+    c = c[0].intersection(*c[1:])
+    c.remove('micro avg')
+    c.remove('macro avg')
+    c = list(c)
+    c.append('micro avg')
+    c.append('macro avg')
+    supp = { k: supp[k] for k in c if k not in {'micro avg', 'macro avg'}} if supp != None else None
+    fig, axes = plt.subplots(1,len(rr), figsize=(21,9))
+    for i, r in enumerate(rr):
+        violin_plot(*r, ax=axes[i], classes=c, support=supp)
+        axes[i].set_title(res[i].replace('results_','').replace('.json',''))
+    plt.show()
+

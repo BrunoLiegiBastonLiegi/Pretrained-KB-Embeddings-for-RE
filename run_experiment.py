@@ -33,9 +33,10 @@ with open(args.test_data, 'rb') as f:
 stat = Stat(pkl['train'], pkl['test'])
 data = stat.scan()
 kg = KnowledgeGraph(stat.edges)
-kg.draw()
-rels = {'per:spouse': 0, 'per:age': 1, 'per:stateorprovinces_of_residence': 2, 'per:siblings': 3, 'per:parents': 4, 'org:member_of': 5, 'org:stateorprovince_of_headquarters': 6, 'org:political/religious_affiliation': 7, 'per:other_family': 8, 'per:alternate_names': 9}
-rels, data = stat.filter_rels(10, rels=list(rels.keys()) ,random=True)
+#kg.draw()
+#rels = {'per:spouse': 0, 'per:age': 1, 'per:stateorprovinces_of_residence': 2, 'per:siblings': 3, 'per:parents': 4, 'org:member_of': 5, 'org:stateorprovince_of_headquarters': 6, 'org:political/religious_affiliation': 7, 'per:other_family': 8, 'per:alternate_names': 9}
+#rels, data = stat.filter_rels(10, rels=list(rels.keys()) ,random=True)
+rels, data = stat.filter_rels(5 ,random=True)
 #stat.gen()
 
 # Visualize pretrained embedding space
@@ -47,7 +48,7 @@ colors = dict(zip(colors.keys(), range(len(colors))))
 # Define the tagging scheme
 bioes = BIOES(list(stat.entity_types.keys()))
 # Define the relation scheme
-rel2index = dict(zip(stat.relation_types.keys(), range(len(stat.relation_types))))
+rel2index = dict(zip(rels.keys(), range(len(rels))))
 print(rel2index)
 # Define the pretrained model
 bert = 'bert-base-cased'
@@ -84,20 +85,22 @@ print('> Found device:', device, ', setting it as the principal device.')
 # -------------------------------------------------------------------------------------------------
 def experiment(model, train_data, test_data, **kwargs):
         
-    models = {
-        'BaseIEModel': BaseIEModel(
+    if model == 'BaseIEModel':
+        model = BaseIEModel(
             language_model = kwargs['lang_model'],
             ner_dim = kwargs['ner_dim'],
             ner_scheme = kwargs['ner_scheme'],
             re_dim = kwargs['re_dim'],
             device = kwargs['dev']
-        ),
-        'BaseIEModelGoldEntities': BaseIEModelGoldEntities(
+        )
+    elif model == 'BaseIEModelGoldEntities':
+        model = BaseIEModelGoldEntities(
             language_model = kwargs['lang_model'],
             re_dim = kwargs['re_dim'],
             device = kwargs['dev']
-        ),
-        'IEModel': IEModel(
+        )
+    elif model == 'IEModel':
+        model = IEModel(
             language_model = kwargs['lang_model'],
             ner_dim = kwargs['ner_dim'],
             ner_scheme = kwargs['ner_scheme'],
@@ -105,24 +108,23 @@ def experiment(model, train_data, test_data, **kwargs):
             KB = kwargs['kb'],
             re_dim = kwargs['re_dim'],
             device = kwargs['dev']
-        ),
-        'IEModelGoldEntities': IEModelGoldEntities(
+        )
+    elif model == 'IEModelGoldEntities':
+        model = IEModelGoldEntities(
             language_model = kwargs['lang_model'],
             ned_dim = kwargs['ned_dim'],
             KB = kwargs['kb'],
             re_dim = kwargs['re_dim'],
             device = kwargs['dev']
-        ),
-        'IEModelGoldKG': IEModelGoldKG(
+        )
+    elif model == 'IEModelGoldKG':
+        model = IEModelGoldKG(
             language_model = kwargs['lang_model'],
             ned_dim = kwargs['ned_dim'],
             re_dim = kwargs['re_dim'],
             device = kwargs['dev']
         )
-    }
-    
-    model = models[model]
-    
+        
     # move model to device
     #if device == torch.device("cuda:0"):
     #    model.to(device)
@@ -165,13 +167,14 @@ def experiment(model, train_data, test_data, **kwargs):
         kb_embeddings=kwargs['kb'],
         re_classes=dict(zip(kwargs['rel2index'].values(), kwargs['rel2index'].keys())),
     )
-
+    scores, matrix = ev.classification_report(test_data)[-1]
     results = {
         'model': re.search('model\.(.+?)\'\>', str(type(model))).group(1),
         'learning_rate': lr,
         'epochs': kwargs['n_epochs'],
         'batchsize': batchsize,
-        'scores': ev.classification_report(test_data)
+        'scores': scores,
+        'confusion matrix': matrix
     }
 
     return results
@@ -179,25 +182,28 @@ def experiment(model, train_data, test_data, **kwargs):
 # ---------------------------------------------------------------------------------------------------------
 
 runs = {}
-for i in range(args.n_exp):
-    runs['run_'+str(i+1)] = experiment(
-        model = 'IEModelGoldKG',
-        train_data = train_data,
-        test_data = test_data,
-        lang_model = bert,
-        ner_dim = bioes.space_dim,
-        ner_scheme = bioes,
-        ned_dim = list(stat.kb.values())[0].shape[-1],
-        kb = stat.kb,
-        re_dim = len(stat.relation_types),
-        dev = device,
-        rel2index = rel2index,
-        tokenizer = tokenizer,
-        n_epochs = args.n_epochs
-    )
-    
-with open(dir + '/' + args.out_file, 'w') as f:
-    json.dump(runs, f, indent=4)
+#key = {'BaseIEModelGoldEntities': 'without graph embeddings', 'IEModelGoldKG': 'with graph embeddings'}
+for n,m in enumerate(['BaseIEModelGoldEntities', 'IEModelGoldKG']):
+    for i in range(args.n_exp):
+        print('\n################################## RUN {} OF {} #################################\n'.format(i, args.n_exp))
+        runs['run_'+str(i+1)] = experiment(
+            model = m,
+            train_data = train_data,
+            test_data = test_data,
+            lang_model = bert,
+            ner_dim = bioes.space_dim,
+            ner_scheme = bioes,
+            ned_dim = list(stat.kb.values())[0].shape[-1],
+            kb = stat.kb,
+            re_dim = len(rels),
+            dev = device,
+            rel2index = rel2index,
+            tokenizer = tokenizer,
+            n_epochs = args.n_epochs
+        )
+    out_file = dir + '/' + args.out_file if n == 0 else dir + '/' + args.out_file.replace('results', 'results_kg')
+    with open(out_file, 'w') as f:
+        json.dump(runs, f, indent=4)
 
     
 
