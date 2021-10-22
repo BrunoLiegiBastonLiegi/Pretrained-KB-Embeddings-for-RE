@@ -25,7 +25,7 @@ def plot_embedding(embeddings, colors='blue', method='TSNE'):
         plt.show()
 
 
-def collect_results(res_file):
+def collect_scores(res_file):
     """
     Collect the final scores for each class for each experiment from the results file.
     """
@@ -33,7 +33,7 @@ def collect_results(res_file):
         res = json.load(f)
     f1 = {}
     for v in res.values():
-        for k,c in v['scores'][0].items(): # [0] because in principle we could have the results also for the NER and
+        for k,c in v['scores'].items(): # [0] because in principle we could have the results also for the NER and
             if k == 'accuracy':            # NED task, however at the moment we are just considering RE
                 try:
                     f1['micro avg'].append(c)
@@ -46,6 +46,16 @@ def collect_results(res_file):
                     f1[k] = [c['f1-score']]
     return f1
 
+def collect_confusion_m(res_file: str) -> list:
+    """
+    Collect the confusion matrices for each experiment from the results file.
+    """
+    with open(res_file, 'r') as f:
+        res = json.load(f)
+    #for v in res.values():
+    #    print(len(v['scores']), list(v['scores'].keys()))
+    #    print(numpy.array(v['confusion matrix']).shape)
+    return [ v['confusion matrix'] for v in res.values() ]
 
 def violin_plot(*results, ax=plt.subplots()[1], legend=['no graph embeddings', 'graph embeddings'], classes=[], support=None):
     """
@@ -77,3 +87,23 @@ def violin_plot(*results, ax=plt.subplots()[1], legend=['no graph embeddings', '
     ax.legend()
     
 
+def confusion_m_heat_plot(m, rels, ax=plt.subplots()[1], **kwargs):
+    ax.imshow(m, **kwargs)
+    
+    # We want to show all ticks...
+    ax.set_xticks(numpy.arange(len(rels)))
+    ax.set_yticks(numpy.arange(len(rels)))
+    # ... and label them with the respective list entries
+    ax.set_xticklabels(rels)
+    ax.set_yticklabels(rels)
+    
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    
+    # Loop over data dimensions and create text annotations.
+    for i in range(len(rels)):
+        for j in range(len(rels)):
+            text = ax.text(j, i, m[i, j],
+                           ha="center", va="center", color="w")
+    

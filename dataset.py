@@ -19,9 +19,10 @@ class IEData(torch.utils.data.Dataset):
         if preprocess:
             print('> Preprocessing labels.')
             assert ner_scheme != None, 'Missing NER scheme for preprocessing.'
-            #with Pool(1) as p:
-            #    self.samples = list(tqdm(p.starmap(self.generate_labels, zip(sentences, ner_labels, re_labels)), total=len(sentences)))
+            #with Pool(12) as p:
+                #self.samples = list(p.starmap(self.generate_labels, tqdm(zip(sentences, ner_labels, re_labels))))
             self.samples = list(tqdm(map(self.generate_labels, sentences, ner_labels, re_labels), total=len(sentences)))
+            self.samples = list(filter(lambda x: x != {}, self.samples))
         else:
             assert ned_labels != None, 'Missing NED labels.'
             for s, ner, ned, re in zip(sentences, ner_labels, ned_labels, re_labels):
@@ -39,15 +40,21 @@ class IEData(torch.utils.data.Dataset):
 
     def generate_labels(self, s, ner, re):
         s_tk = self.tokenizer(s, return_tensors='pt', add_special_tokens=False)['input_ids']
+        if s_tk.shape[1] > self.tokenizer.model_max_length:
+            print(f'> Discarding the sentence \n{s}\n > exceeding maximum sequence length of the pretrained language model.')
+            return {}
         names, span2span, spans, types = {}, {}, [], []
         for k, e in ner.items():
             try:
                 names[e['name']] += 1
             except:
                 names[e['name']] = 0
+            #print('-------------------------------------------------------------------------------')
+            #print(k,e)
             tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids']
             #print(s_tk)
             #print(tk)
+            #print('-------------------------------------------------------------------------------')
             span = self.find_span(s_tk.flatten().tolist(), tk, names[e['name']]) 
             span2span[k] = span
             spans.append(span)
@@ -208,8 +215,8 @@ class Stat(object):
                         emb_flag = False
                     if e['type'] != None and emb_flag:
                         self.id2type[e['id']] = e['type']
-                        self.kb[e['id']] = torch.tensor(e['embedding']).float().view(1, -1).mean(0)
-                        e['embedding'] = torch.tensor(e['embedding']).float().view(1, -1).mean(0)
+                        self.kb[e['id']] = torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
+                        e['embedding'] = torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
                         for k, l in zip(('entities', 'kb_entities', 'entity_types'), ('name', 'id', 'type')):
                             try:
                                 self.stat[s][k][e[l]] += 1
@@ -263,43 +270,23 @@ class Stat(object):
 
     def examples(self, ax1, ax2):
         print('EXAMPLES AVAILABLE')
-        #kb_ex = [i for i in self.stat['train']['kb_entities'].items() if i[1]>=th]
-        #print('> {} KB entities ({}%) appear a number of times >= {} in the train set.'.format(len(kb_ex), int(100*len(kb_ex)/len(self.stat['train']['kb_entities'])), th))
         ax1.hist(self.stat['train']['kb_entities'].values(), bins='auto')
         ax1.set_ylabel('Text Entities')
         ax1.set_title('Examples')
-        #ent_ex = [i for i in self.stat['train']['entities'].items() if i[1]>=th]
-        #print('> {} text entities ({}%) appear a number of times >= {} in the train set.'.format(len(ent_ex), int(100*len(ent_ex)/len(self.stat['train']['entities'])), th))
         ax2.hist(self.stat['train']['entities'].values(), bins='auto')
         ax2.set_ylabel('KB Entities')
-        #return ent_ex, kb_ex
 
     def support(self, ax1, ax2):
         print('TEST SET SUPPORT')
-        #kb_supp_tot = {k:self.stat['train']['kb_entities'][k] for k in self.stat['test']['kb_entities'].keys()}
-        #kb_supp = {k:self.stat['train']['kb_entities'][k] for k in self.stat['test']['kb_entities'].keys() if self.stat['train']['kb_entities'][k] >= th}
-        #kb_supp_idx = numpy.mean(list(kb_supp_tot.values()))
-        #print('> {} KB entities ({}%) in the test set have support >= {} in the train set.\n>> Average support: {:.2f}'.format(len(kb_supp), int(100*len(kb_supp)/len(self.stat['test']['kb_entities'])), th, kb_supp_idx))
         ax1.hist(self.stat['test']['kb_entities'].values(), bins='auto')
         ax1.set_title('Support')
-        #ent_supp = {k:self.stat['train']['entities'][k] for k in self.stat['test']['entities'].keys() if self.stat['train']['entities'][k] >= th}
-        #ent_supp_tot = {k:self.stat['train']['entities'][k] for k in self.stat['test']['entities'].keys()}
-        #ent_supp_idx = numpy.mean(list(ent_supp_tot.values()))
-        #print('> {} text entities ({}%) in the test set have support >= {} in the train set.\n>> Average support: {:.2f}'.format(len(ent_supp), int(100*len(ent_supp)/len(self.stat['test']['entities'])), th, ent_supp_idx))
-        #kb_supp_idx /= len(kb_supp_tot)
-        #ent_supp_idx /= len(ent_supp_tot)
         ax2.hist(self.stat['test']['entities'].values(), bins='auto')
-        #return ent_supp_idx, kb_supp_idx
 
     def ambiguity(self, ax1, ax2):
         print('KB TO TEXT MAPPING')
-        #kb2txt = { k:v for k,v in self.stat['common']['kb2txt'].items() if len(v) > 1 }
-        #print('> {} KB entities ({}%) have multiple text representations.\n>> Average ambiguity: {:.2f}'.format(len(kb2txt), int(100*len(kb2txt)/len(self.stat['common']['kb2txt'])), numpy.mean(list(map(len,self.stat['common']['kb2txt'].values())))))
         ax1.hist([len(i) for i in self.stat['common']['kb2txt'].values()], bins='auto')
         ax1.set_title('Ambiguity')
         print('TEXT TO KB MAPPING')
-        #txt2kb = { k:v for k,v in self.stat['common']['txt2kb'].items() if len(v) > 1 }
-        #print('> {} text entities ({}%) are ambiguous and refer to different concepts.\n>> Average ambiguity: {:.2f}'.format(len(txt2kb), int(100*len(txt2kb)/len(self.stat['common']['txt2kb'])), numpy.mean(list(map(len,self.stat['common']['txt2kb'].values())))))
         ax2.hist([len(i) for i in self.stat['common']['txt2kb'].values()], bins='auto')
     
     def gen(self):

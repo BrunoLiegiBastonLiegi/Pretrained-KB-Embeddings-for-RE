@@ -5,7 +5,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 0.9787985865724381,
@@ -51,7 +51,7 @@
                 "support": 708
             }
         }
-    ]
+    
 },
 "run_2":
 {
@@ -59,7 +59,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 0.9963898916967509,
@@ -105,7 +105,7 @@
                 "support": 708
             }
         }
-    ]
+    
 },
 "run_3":
 {
@@ -113,7 +113,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 0.9857142857142858,
@@ -159,7 +159,7 @@
                 "support": 708
             }
         }
-    ]
+    
 },
 "run_4":
 {
@@ -167,7 +167,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 1.0,
@@ -213,7 +213,7 @@
                 "support": 708
             }
         }
-    ]
+    
 },
 "run_5":
 {
@@ -221,7 +221,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 1.0,
@@ -267,7 +267,7 @@
                 "support": 708
             }
         }
-    ]
+    
 },
 "run_6":
 {
@@ -275,7 +275,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 1.0,
@@ -321,7 +321,7 @@
                 "support": 708
             }
         }
-    ]
+    
 },
 "run_7":
 {
@@ -329,7 +329,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 0.9584775086505191,
@@ -375,7 +375,7 @@
                 "support": 708
             }
         }
-    ]
+    
 },
 "run_8":
 {
@@ -383,7 +383,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 1.0,
@@ -429,7 +429,7 @@
                 "support": 708
             }
         }
-    ]
+    
 },
 "run_9":
 {
@@ -437,7 +437,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 0.9963503649635036,
@@ -483,7 +483,7 @@
                 "support": 708
             }
         }
-    ]
+    
 },
 "run_10":
 {
@@ -491,7 +491,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "per:title": {
                 "precision": 0.9787985865724381,
@@ -537,5 +537,5 @@
                 "support": 708
             }
         }
-    ]
+    
 }}

@@ -5,8 +5,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores": {
             "per:cities_of_residence": {
                 "precision": 0.8962264150943396,
                 "recall": 0.8636363636363636,
@@ -81,7 +80,6 @@
                 "support": 1063
             }
         }
-    ]
 },
 "run_2":
 {
@@ -89,8 +87,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores": {
             "per:cities_of_residence": {
                 "precision": 0.8859649122807017,
                 "recall": 0.9181818181818182,
@@ -165,7 +162,6 @@
                 "support": 1063
             }
         }
-    ]
 },
 "run_3":
 {
@@ -173,8 +169,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores": {
             "per:cities_of_residence": {
                 "precision": 0.9,
                 "recall": 0.9,
@@ -249,7 +244,6 @@
                 "support": 1063
             }
         }
-    ]
 },
 "run_4":
 {
@@ -257,8 +251,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores": {
             "per:cities_of_residence": {
                 "precision": 0.9017857142857143,
                 "recall": 0.9181818181818182,
@@ -333,7 +326,6 @@
                 "support": 1063
             }
         }
-    ]
 },
 "run_5":
 {
@@ -341,8 +333,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores": {
             "per:cities_of_residence": {
                 "precision": 0.875,
                 "recall": 0.9545454545454546,
@@ -417,7 +408,6 @@
                 "support": 1063
             }
         }
-    ]
 },
 "run_6":
 {
@@ -425,8 +415,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores":  {
             "per:cities_of_residence": {
                 "precision": 0.8990825688073395,
                 "recall": 0.8909090909090909,
@@ -501,7 +490,6 @@
                 "support": 1063
             }
         }
-    ]
 },
 "run_7":
 {
@@ -509,8 +497,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores": {
             "per:cities_of_residence": {
                 "precision": 0.8859649122807017,
                 "recall": 0.9181818181818182,
@@ -585,7 +572,6 @@
                 "support": 1063
             }
         }
-    ]
 },
 "run_8":
 {
@@ -593,8 +579,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores": {
             "per:cities_of_residence": {
                 "precision": 0.9074074074074074,
                 "recall": 0.8909090909090909,
@@ -669,7 +654,6 @@
                 "support": 1063
             }
         }
-    ]
 },
 "run_9":
 {
@@ -677,8 +661,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores": {
             "per:cities_of_residence": {
                 "precision": 0.8928571428571429,
                 "recall": 0.9090909090909091,
@@ -753,7 +736,6 @@
                 "support": 1063
             }
         }
-    ]
 },
 "run_10":
 {
@@ -761,8 +743,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
-        {
+    "scores": {
             "per:cities_of_residence": {
                 "precision": 0.8706896551724138,
                 "recall": 0.9181818181818182,
@@ -837,5 +818,4 @@
                 "support": 1063
             }
         }
-    ]
 }}

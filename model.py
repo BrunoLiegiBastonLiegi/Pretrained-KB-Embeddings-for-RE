@@ -622,7 +622,7 @@ class IEModelGoldKG(BaseIEModelGoldEntities):
             out_dim = re_dim,
             h_dim = 512
         )
-
+        
         # Move itself to device
         self.to(device)
 

@@ -5,7 +5,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.9384340297383775,
@@ -86,7 +86,7 @@
                 "support": 142431
             }
         }
-    ]
+    
 },
 "run_2":
 {
@@ -94,7 +94,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.9348081989573797,
@@ -175,7 +175,7 @@
                 "support": 142431
             }
         }
-    ]
+    
 },
 "run_3":
 {
@@ -183,7 +183,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.93733656903136,
@@ -264,7 +264,7 @@
                 "support": 142431
             }
         }
-    ]
+    
 },
 "run_4":
 {
@@ -272,7 +272,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.9348812881773859,
@@ -353,7 +353,7 @@
                 "support": 142431
             }
         }
-    ]
+    
 },
 "run_5":
 {
@@ -361,7 +361,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.9327772141434637,
@@ -442,7 +442,7 @@
                 "support": 142431
             }
         }
-    ]
+    
 },
 "run_6":
 {
@@ -450,7 +450,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.9433400740203747,
@@ -531,7 +531,7 @@
                 "support": 142431
             }
         }
-    ]
+    
 },
 "run_7":
 {
@@ -539,7 +539,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.9504536610737608,
@@ -620,7 +620,7 @@
                 "support": 142431
             }
         }
-    ]
+    
 },
 "run_8":
 {
@@ -628,7 +628,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.9272284443788401,
@@ -709,7 +709,7 @@
                 "support": 142431
             }
         }
-    ]
+    
 },
 "run_9":
 {
@@ -717,7 +717,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.9382102807255212,
@@ -798,7 +798,7 @@
                 "support": 142431
             }
         }
-    ]
+    
 },
 "run_10":
 {
@@ -806,7 +806,7 @@
     "learning_rate": 2e-05,
     "epochs": 6,
     "batchsize": 8,
-    "scores": [
+    "scores": 
         {
             "P0": {
                 "precision": 0.9449464333371459,
@@ -887,5 +887,5 @@
                 "support": 142431
             }
         }
-    ]
+    
 }}

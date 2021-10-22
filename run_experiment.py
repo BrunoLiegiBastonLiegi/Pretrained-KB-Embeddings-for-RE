@@ -32,12 +32,13 @@ with open(args.test_data, 'rb') as f:
 # Do some statistics and reorganize the data
 stat = Stat(pkl['train'], pkl['test'])
 data = stat.scan()
+rels = {**stat.stat['train']['relation_types'], **stat.stat['test']['relation_types']}
+#rels = ['P1056','P286','P6','P748','P180','P113','P119','P157','P282','P103']
+#rels, data = stat.filter_rels(len(rels), rels=rels, random=False)
+rels, data = stat.filter_rels(25, random=False, support_range=(10,100))
+#stat.gen()
 kg = KnowledgeGraph(stat.edges)
 #kg.draw()
-#rels = {'per:spouse': 0, 'per:age': 1, 'per:stateorprovinces_of_residence': 2, 'per:siblings': 3, 'per:parents': 4, 'org:member_of': 5, 'org:stateorprovince_of_headquarters': 6, 'org:political/religious_affiliation': 7, 'per:other_family': 8, 'per:alternate_names': 9}
-#rels, data = stat.filter_rels(10, rels=list(rels.keys()) ,random=True)
-rels, data = stat.filter_rels(5 ,random=True)
-#stat.gen()
 
 # Visualize pretrained embedding space
 from utils import plot_embedding
@@ -185,7 +186,7 @@ runs = {}
 #key = {'BaseIEModelGoldEntities': 'without graph embeddings', 'IEModelGoldKG': 'with graph embeddings'}
 for n,m in enumerate(['BaseIEModelGoldEntities', 'IEModelGoldKG']):
     for i in range(args.n_exp):
-        print('\n################################## RUN {} OF {} #################################\n'.format(i, args.n_exp))
+        print('\n################################## RUN {} OF {} ({}) #################################\n'.format(i+1, args.n_exp, m))
         runs['run_'+str(i+1)] = experiment(
             model = m,
             train_data = train_data,
