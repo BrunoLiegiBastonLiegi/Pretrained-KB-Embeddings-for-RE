@@ -208,7 +208,9 @@ class Trainer(object):
         #ned_target = batch['ned']
         #re_target = batch['re']
         inputs, targets = self.model.prepare_inputs_targets(batch)
-
+        #print('INPUTS:\n', inputs[-1][0])
+        #print('TARGETS:\n', targets)
+        
         # move inputs and labels to device
         #if self.device != torch.device("cpu"):
         #    inputs = inputs.to(self.device)

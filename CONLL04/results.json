@@ -3,118 +3,88 @@
         "model": "BaseIEModelGoldEntities",
         "learning_rate": 2e-05,
         "epochs": 6,
-        "batchsize": 8,
-        "scores": [
-            {
-                "Located_In": {
-                    "precision": 0.76,
-                    "recall": 0.6333333333333333,
-                    "f1-score": 0.6909090909090909,
-                    "support": 30
-                },
-                "NO_RELATION": {
-                    "precision": 0.9479166666666666,
-                    "recall": 0.9439834024896265,
-                    "f1-score": 0.9459459459459459,
-                    "support": 482
-                },
-                "OrgBased_In": {
-                    "precision": 0.7941176470588235,
-                    "recall": 0.7941176470588235,
-                    "f1-score": 0.7941176470588235,
-                    "support": 34
-                },
-                "Live_In": {
-                    "precision": 0.6976744186046512,
-                    "recall": 0.8571428571428571,
-                    "f1-score": 0.7692307692307693,
-                    "support": 35
-                },
-                "Work_For": {
-                    "precision": 0.8181818181818182,
-                    "recall": 0.9,
-                    "f1-score": 0.8571428571428572,
-                    "support": 20
-                },
-                "Kill": {
-                    "precision": 1.0,
-                    "recall": 0.8571428571428571,
-                    "f1-score": 0.923076923076923,
-                    "support": 21
-                },
-                "accuracy": 0.9115755627009646,
-                "macro avg": {
-                    "precision": 0.8363150917519931,
-                    "recall": 0.8309533495279163,
-                    "f1-score": 0.8300705388940685,
-                    "support": 622
-                },
-                "weighted avg": {
-                    "precision": 0.9139518880195057,
-                    "recall": 0.9115755627009646,
-                    "f1-score": 0.9117745468227783,
-                    "support": 622
-                }
+        "batchsize": 12,
+        "scores": {
+            "Located_In": {
+                "precision": 0.9655172413793104,
+                "recall": 0.9333333333333333,
+                "f1-score": 0.9491525423728815,
+                "support": 30
+            },
+            "OrgBased_In": {
+                "precision": 0.9428571428571428,
+                "recall": 0.9705882352941176,
+                "f1-score": 0.9565217391304348,
+                "support": 34
+            },
+            "Live_In": {
+                "precision": 0.9444444444444444,
+                "recall": 0.9714285714285714,
+                "f1-score": 0.9577464788732395,
+                "support": 35
+            },
+            "Work_For": {
+                "precision": 0.9473684210526315,
+                "recall": 0.9,
+                "f1-score": 0.9230769230769231,
+                "support": 20
+            },
+            "Kill": {
+                "precision": 1.0,
+                "recall": 1.0,
+                "f1-score": 1.0,
+                "support": 21
+            },
+            "accuracy": 0.9571428571428572,
+            "macro avg": {
+                "precision": 0.9600374499467058,
+                "recall": 0.9550700280112044,
+                "f1-score": 0.9572995366906959,
+                "support": 140
+            },
+            "weighted avg": {
+                "precision": 0.9573256005366454,
+                "recall": 0.9571428571428572,
+                "f1-score": 0.9569927187408792,
+                "support": 140
             }
-        ]
-    },
-    "run_2": {
-        "model": "BaseIEModelGoldEntities",
-        "learning_rate": 2e-05,
-        "epochs": 6,
-        "batchsize": 8,
-        "scores": [
-            {
-                "Located_In": {
-                    "precision": 0.4909090909090909,
-                    "recall": 0.9,
-                    "f1-score": 0.6352941176470589,
-                    "support": 30
-                },
-                "NO_RELATION": {
-                    "precision": 0.9615384615384616,
-                    "recall": 0.8817427385892116,
-                    "f1-score": 0.9199134199134198,
-                    "support": 482
-                },
-                "OrgBased_In": {
-                    "precision": 0.7297297297297297,
-                    "recall": 0.7941176470588235,
-                    "f1-score": 0.7605633802816901,
-                    "support": 34
-                },
-                "Live_In": {
-                    "precision": 0.6363636363636364,
-                    "recall": 0.8,
-                    "f1-score": 0.7088607594936709,
-                    "support": 35
-                },
-                "Work_For": {
-                    "precision": 0.7727272727272727,
-                    "recall": 0.85,
-                    "f1-score": 0.8095238095238095,
-                    "support": 20
-                },
-                "Kill": {
-                    "precision": 0.9090909090909091,
-                    "recall": 0.9523809523809523,
-                    "f1-score": 0.9302325581395349,
-                    "support": 21
-                },
-                "accuracy": 0.8745980707395499,
-                "macro avg": {
-                    "precision": 0.75005985005985,
-                    "recall": 0.8630402230048312,
-                    "f1-score": 0.7940646741665306,
-                    "support": 622
-                },
-                "weighted avg": {
-                    "precision": 0.9000286235012924,
-                    "recall": 0.8745980707395499,
-                    "f1-score": 0.8823982851301324,
-                    "support": 622
-                }
-            }
+        },
+        "confusion matrix": [
+            [
+                21,
+                0,
+                0,
+                0,
+                0
+            ],
+            [
+                0,
+                34,
+                0,
+                0,
+                1
+            ],
+            [
+                0,
+                0,
+                28,
+                2,
+                0
+            ],
+            [
+                0,
+                0,
+                1,
+                33,
+                0
+            ],
+            [
+                0,
+                2,
+                0,
+                0,
+                18
+            ]
         ]
     }
 }

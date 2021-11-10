@@ -1,4 +1,4 @@
-import json, numpy
+import json, numpy, torch
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -104,6 +104,29 @@ def confusion_m_heat_plot(m, rels, ax=plt.subplots()[1], **kwargs):
     # Loop over data dimensions and create text annotations.
     for i in range(len(rels)):
         for j in range(len(rels)):
-            text = ax.text(j, i, m[i, j],
+            text = ax.text(j, i, "{:.1f}".format(m[i, j]),
                            ha="center", va="center", color="w")
     
+
+def rel_embedding_plot(triplets: list, head_tail_diff: bool = False, proj=TSNE(n_components=2), ax=plt.subplots()[1], **kwargs) -> None:
+    rel_emb = {}
+    for t in triplets:
+        try:
+            if head_tail_diff:
+                rel_emb[t[2]].append(t[1]-t[0])
+            else:
+                rel_emb[t[2]].append(t[0])
+                rel_emb[t[2]].append(t[1])
+        except:
+            if head_tail_diff:
+                rel_emb[t[2]] = [t[1]-t[0]]
+            else:
+                rel_emb[t[2]] = [t[0], t[1]]
+
+    p = proj.fit_transform(torch.vstack(list(map(
+        lambda x: torch.vstack(x).mean(0),
+        rel_emb.values()
+    ))))
+    ax.scatter(x=p[:,0], y=p[:,1], c=range(len(rel_emb)), cmap='Accent')
+    for (x,y),t in zip(p, rel_emb.keys()):
+        ax.annotate(t, xy=(x, y), xytext=(x+0.1,y))

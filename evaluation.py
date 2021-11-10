@@ -141,6 +141,7 @@ class Evaluator(object):
                     pred.append(self.re_classes[p[k]])
                 except:
                     pred.append('***ERR***')
+        print(list(zip(pred, target)))
         print(skm.classification_report(target, pred, labels=list(classes.keys())))
         return (skm.classification_report(target, pred, labels=list(classes.keys()), output_dict=True), skm.confusion_matrix(target, pred).tolist())
 

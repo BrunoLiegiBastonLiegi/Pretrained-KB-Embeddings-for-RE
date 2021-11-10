@@ -33,9 +33,9 @@ with open(args.test_data, 'rb') as f:
 stat = Stat(pkl['train'], pkl['test'])
 data = stat.scan()
 rels = {**stat.stat['train']['relation_types'], **stat.stat['test']['relation_types']}
-#rels = ['P1056','P286','P6','P748','P180','P113','P119','P157','P282','P103']
+#rels = ['P37','P407','P134','P364','P1018','P282','P103']
 #rels, data = stat.filter_rels(len(rels), rels=rels, random=False)
-rels, data = stat.filter_rels(25, random=False, support_range=(10,100))
+#rels, data = stat.filter_rels(10, random=False, support_range=(100,10000))
 #stat.gen()
 kg = KnowledgeGraph(stat.edges)
 #kg.draw()
@@ -136,7 +136,7 @@ def experiment(model, train_data, test_data, **kwargs):
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     # set up the trainer
-    batchsize = 8
+    batchsize = 12
     trainer = Trainer(
         train_data=train_data,
         test_data=test_data,
@@ -150,15 +150,15 @@ def experiment(model, train_data, test_data, **kwargs):
     )
 
     # load pretrained model or train
-    #if args.load_model != None:
-    #    model.load_state_dict(torch.load(args.load_model))
-    #else:
-    plots = trainer.train(kwargs['n_epochs'])
-    #yn = input('Save loss plots? (y/n)')
-    yn = 'n'
-    if yn == 'y':
-        with open(dir + '/loss_plots.pkl', 'wb') as f:
-            pickle.dump(plots, f)
+    if args.load_model != None:
+        model.load_state_dict(torch.load(args.load_model))
+    else:
+        plots = trainer.train(kwargs['n_epochs'])
+        #yn = input('Save loss plots? (y/n)')
+        yn = 'n'
+        if yn == 'y':
+            with open(dir + '/loss_plots.pkl', 'wb') as f:
+                pickle.dump(plots, f)
 
     # Evaluation
     results = {}
@@ -187,21 +187,23 @@ runs = {}
 for n,m in enumerate(['BaseIEModelGoldEntities', 'IEModelGoldKG']):
     for i in range(args.n_exp):
         print('\n################################## RUN {} OF {} ({}) #################################\n'.format(i+1, args.n_exp, m))
-        runs['run_'+str(i+1)] = experiment(
-            model = m,
-            train_data = train_data,
-            test_data = test_data,
-            lang_model = bert,
-            ner_dim = bioes.space_dim,
-            ner_scheme = bioes,
-            ned_dim = list(stat.kb.values())[0].shape[-1],
-            kb = stat.kb,
-            re_dim = len(rels),
-            dev = device,
-            rel2index = rel2index,
-            tokenizer = tokenizer,
-            n_epochs = args.n_epochs
-        )
+        if __name__ == '__main__':
+            torch.multiprocessing.set_start_method('spawn', force=True)
+            runs['run_'+str(i+1)] = experiment(
+                model = m,
+                train_data = train_data,
+                test_data = test_data,
+                lang_model = bert,
+                ner_dim = bioes.space_dim,
+                ner_scheme = bioes,
+                ned_dim = list(stat.kb.values())[0].shape[-1],
+                kb = stat.kb,
+                re_dim = len(rels),
+                dev = device,
+                rel2index = rel2index,
+                tokenizer = tokenizer,
+                n_epochs = args.n_epochs
+            )
     out_file = dir + '/' + args.out_file if n == 0 else dir + '/' + args.out_file.replace('results', 'results_kg')
     with open(out_file, 'w') as f:
         json.dump(runs, f, indent=4)

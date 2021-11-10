@@ -27,15 +27,19 @@ if args.res != None:
         fig.tight_layout()
         plt.show()
     for r, rkg, rel in zip(res, res_kg, rels):
-        fig, ax = plt.subplots(1, 2, figsize=(16,9))
+        fig, ax = plt.subplots(1, 3, figsize=(16,9))
+        [ print(numpy.asarray(i).shape) for i in collect_confusion_m(rkg)]
+        print('MEAN:\n',numpy.mean(collect_confusion_m(r), axis=0))
+        print('MEAN:\n',numpy.mean(collect_confusion_m(rkg), axis=0))
         m, mkg = numpy.mean(collect_confusion_m(r), axis=0), numpy.mean(collect_confusion_m(rkg), axis=0)
+        confusion_m_heat_plot(m-mkg, rel, ax=ax[2])
         numpy.fill_diagonal(m, 0.) # manually set diagonal to zero to better see off-diagonal elements
         numpy.fill_diagonal(mkg, 0.) # manually set diagonal to zero to better see off-diagonal elements
         print(m.shape, mkg.shape)
         print(len(rel), rel)
         confusion_m_heat_plot(m, rel, ax=ax[0])
         confusion_m_heat_plot(mkg, rel, ax=ax[1])
-        #fig.tight_layout()
+        fig.tight_layout()
         plt.show()
         
 if args.compare != None:

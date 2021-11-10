@@ -59,9 +59,11 @@ class IEData(torch.utils.data.Dataset):
             span2span[k] = span
             spans.append(span)
             types.append(e['type'])
+        #print('SPANS:\n', spans)
+        #print('SPANS2MATRIX:\n', self.spans2matrix(spans, s_tk.shape[1]))
         lab = {
             'sent': self.tokenizer(s, return_tensors='pt')['input_ids'],
-            'pos': torch.tensor(spans),
+            'pos': (torch.tensor(spans), self.spans2matrix(spans, s_tk.shape[1])),
             'emb': torch.vstack([torch.mean(e['embedding'], dim=0) for e in ner.values()]),
             'ner': self.tag_sentence(s_tk.flatten().tolist(), types, spans),
             'ned': torch.vstack([ # probably it's a good idea to get rid of the initial position now that we specifically 
@@ -81,8 +83,13 @@ class IEData(torch.utils.data.Dataset):
             ])
             }
         return lab
-            
 
+    def spans2matrix(self, spans, dim):
+        m = torch.zeros(len(spans), dim)
+        for i, s in enumerate(spans):
+            m[i][s[0]:s[1]] = 1 / (s[1]-s[0])
+        return m
+            
     def find_span(self, sent, ent, n=0):
         """
         Find the span of the entity in the tokenization scheme provided by the tokenizer.
@@ -109,19 +116,20 @@ class IEData(torch.utils.data.Dataset):
         return tags.view(1,-1)
                 
     def collate_fn(self, batch):
-        #t1 = time.time()
+        t1 = time.time()
         """
         Function to vertically stack the batches needed by the torch.Dataloader class
         """
         # alternatively I could use the huggingface tokenizer with option pad=True
-        tmp = {'sent':[], 'pos': [], 'emb': [], 'ner':[], 'ned':[], 're':[]} # we need to add padding in order to vstack the sents.
+        tmp = {'sent':[], 'pos': [], 'pos_matrix': [], 'emb': [], 'ner':[], 'ned':[], 're':[]} # we need to add padding in order to vstack the sents.
         max_len = 0
         for item in batch:
             #max_len = max(max_len, item['sent'][:,:-1].shape[1]) # -1 for discarding [SEP]
             max_len = max(max_len, item['sent'].shape[1])
             #tmp['sent'].append(item['sent'][:,:-1])
             tmp['sent'].append(item['sent'])
-            tmp['pos'].append(item['pos'])
+            tmp['pos'].append(item['pos'][0])
+            tmp['pos_matrix'].append(item['pos'][1])
             tmp['emb'].append(item['emb'])
             tmp['ner'].append(item['ner'])
             tmp['ned'].append(item['ned'])
@@ -137,6 +145,19 @@ class IEData(torch.utils.data.Dataset):
             tmp['sent']
         )))
         tmp['sent'] = BatchEncoding(sent)
+        tmp['pos'] = torch.nn.utils.rnn.pad_sequence(tmp['pos'], batch_first=True, padding_value=-1)
+        m = torch.nn.utils.rnn.pad_sequence(
+            list(map(
+                lambda x: torch.nn.functional.pad(x, (0, max_len -2 -x.shape[-1]), "constant", 0),
+                tmp['pos_matrix']
+            )),
+            batch_first=True)
+        #print(tmp['pos_matrix'][0])
+        #print('m:\n',m[0])
+        M = torch.zeros(len(batch), len(batch), m.shape[1], m.shape[2])
+        for i,mm in enumerate(m):
+            M[i,i] = mm
+        tmp['pos_matrix'] = M
         # add the [SEP] at the end
         #tmp['sent'] = torch.hstack((tmp['sent'], self.sep*torch.ones(tmp['sent'].shape[0],1).int()))
         O = self.scheme.to_tensor('O', index=True)
@@ -149,8 +170,8 @@ class IEData(torch.utils.data.Dataset):
             lambda x: torch.hstack((x, O*torch.ones(1, max_len - 2 - x.shape[1]).int())),
             tmp['ner']
         )))
-        #t2 = time.time()
-        #print('> Collate fn:', t2-t1)
+        t2 = time.time()
+        print('> Collate fn:', t2-t1)
         return tmp
             
     def __getitem__(self, idx):
