@@ -16,69 +16,84 @@ parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained mo
 parser.add_argument('--out_file', default='results.json', type=str)
 parser.add_argument('--n_epochs', default=6, type=int)
 parser.add_argument('--n_exp', default=1, type=int)
+parser.add_argument('--preprocess', action='store_true')
 args = parser.parse_args()
 
 # Input/Output directory
 dir = re.search('.+<?\/', args.train_data).group(0)
 assert dir == re.search('.+<?\/', args.test_data).group(0)
 
-pkl = {}
 # Load the data
+print('> Loading train data ...')
 with open(args.train_data, 'rb') as f:               
-    pkl['train'] = pickle.load(f)
+    train = pickle.load(f)
+print('Done.')
+print('> Loading test data ...')
 with open(args.test_data, 'rb') as f:               
-    pkl['test'] = pickle.load(f)
+    test = pickle.load(f)
+print('Done.')
 
-# Do some statistics and reorganize the data
-stat = Stat(pkl['train'], pkl['test'])
-data = stat.scan()
-rels = {**stat.stat['train']['relation_types'], **stat.stat['test']['relation_types']}
-#rels = ['P37','P407','P134','P364','P1018','P282','P103']
-#rels, data = stat.filter_rels(len(rels), rels=rels, random=False)
-#rels, data = stat.filter_rels(10, random=False, support_range=(100,10000))
-#stat.gen()
-kg = KnowledgeGraph(stat.edges)
-#kg.draw()
-
-# Visualize pretrained embedding space
-from utils import plot_embedding
-colors = dict(zip(stat.id2type.values(), range(len(stat.id2type)))) # setting colors associated to entity types
-colors = dict(zip(colors.keys(), range(len(colors))))
-#plot_embedding(torch.vstack(list(stat.kb.values())), [colors[stat.id2type[k]] for k in stat.kb.keys()])
-
-# Define the tagging scheme
-bioes = BIOES(list(stat.entity_types.keys()))
-# Define the relation scheme
-rel2index = dict(zip(rels.keys(), range(len(rels))))
-print(rel2index)
 # Define the pretrained model
 bert = 'bert-base-cased'
 #bert = 'dmis-lab/biobert-v1.1'
 tokenizer = AutoTokenizer.from_pretrained(bert)
 
-# Prepare data for training
-train_data = IEData(
-    sentences=data['train']['sent'],
-    ner_labels=data['train']['ents'],
-    re_labels=data['train']['rels'],
-    preprocess=True,
-    tokenizer=tokenizer,
-    ner_scheme=bioes,
-    rel2index=rel2index#,
-    #save_to=args.train_data.replace('.pkl', '_preprocessed.pkl')
-)
-    
-test_data = IEData(
-    sentences=data['test']['sent'],
-    ner_labels=data['test']['ents'],
-    re_labels=data['test']['rels'],
-    preprocess=True,
-    tokenizer=tokenizer,
-    ner_scheme=bioes,
-    rel2index=rel2index#,
-    #save_to=args.test_data.replace('.pkl', '_preprocessed.pkl')
-)
+if args.preprocess:
+    # Do some statistics and reorganize the data
+    stat = Stat(train, test)
+    data = stat.scan()
+    rels = {**stat.stat['train']['relation_types'], **stat.stat['test']['relation_types']}
+    #rels = ['P37','P407','P134','P364','P1018','P282','P103']
+    #rels, data = stat.filter_rels(len(rels), rels=rels, random=False)
+    #rels, data = stat.filter_rels(10, random=False, support_range=(100,10000))
+    # Define the tagging scheme
+    bioes = BIOES(list(stat.entity_types.keys()))
+    # Define the relation scheme
+    rel2index = dict(zip(rels.keys(), range(len(rels))))
+    print(rel2index)
+    ned_dim = list(stat.kb.values())[0].shape[-1]
+    kb = stat.kb
+    kg = KnowledgeGraph(stat.edges)
+    #kg.draw()
 
+    # Visualize pretrained embedding space
+    from utils import plot_embedding
+    colors = dict(zip(stat.id2type.values(), range(len(stat.id2type)))) # setting colors associated to entity types
+    colors = dict(zip(colors.keys(), range(len(colors))))
+    #plot_embedding(torch.vstack(list(stat.kb.values())), [colors[stat.id2type[k]] for k in stat.kb.keys()])
+
+    # Prepare data for training
+    train_data = IEData(
+        sentences=data['train']['sent'],
+        ner_labels=data['train']['ents'],
+        re_labels=data['train']['rels'],
+        preprocess=True,
+        tokenizer=tokenizer,
+        ner_scheme=bioes,
+        rel2index=rel2index,
+        save_to=dir+'train_IEData.pkl'
+    )
+    
+    test_data = IEData(
+        sentences=data['test']['sent'],
+        ner_labels=data['test']['ents'],
+        re_labels=data['test']['rels'],
+        preprocess=True,
+        tokenizer=tokenizer,
+        ner_scheme=bioes,
+        rel2index=rel2index,
+        save_to=dir+'test_IEData.pkl'
+    )
+else:
+    train_data = train
+    test_data = test
+    bioes = train.scheme
+    rel2index = train.rel2index
+    ned_dim = train.samples[0]['emb'].shape[-1]
+    kb = torch.unique(
+        torch.vstack([ s['emb'] for s in train.samples+test.samples ]),
+        dim=0)
+    
 # check if GPU is avilable
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print('> Found device:', device, ', setting it as the principal device.')
@@ -136,7 +151,7 @@ def experiment(model, train_data, test_data, **kwargs):
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     # set up the trainer
-    batchsize = 12
+    batchsize = 16
     trainer = Trainer(
         train_data=train_data,
         test_data=test_data,
@@ -196,9 +211,9 @@ for n,m in enumerate(['BaseIEModelGoldEntities', 'IEModelGoldKG']):
                 lang_model = bert,
                 ner_dim = bioes.space_dim,
                 ner_scheme = bioes,
-                ned_dim = list(stat.kb.values())[0].shape[-1],
-                kb = stat.kb,
-                re_dim = len(rels),
+                ned_dim = ned_dim,
+                kb = kb,
+                re_dim = len(rel2index),
                 dev = device,
                 rel2index = rel2index,
                 tokenizer = tokenizer,

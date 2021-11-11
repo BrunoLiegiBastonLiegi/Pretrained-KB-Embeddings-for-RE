@@ -20,7 +20,7 @@ class IEData(torch.utils.data.Dataset):
             print('> Preprocessing labels.')
             assert ner_scheme != None, 'Missing NER scheme for preprocessing.'
             #with Pool(12) as p:
-                #self.samples = list(p.starmap(self.generate_labels, tqdm(zip(sentences, ner_labels, re_labels))))
+            #    self.samples = list(p.starmap(self.generate_labels, tqdm(zip(sentences, ner_labels, re_labels))))
             self.samples = list(tqdm(map(self.generate_labels, sentences, ner_labels, re_labels), total=len(sentences)))
             self.samples = list(filter(lambda x: x != {}, self.samples))
         else:
@@ -36,7 +36,7 @@ class IEData(torch.utils.data.Dataset):
         if save_to != None:
             print('> Saving to \'{}\'.'.format(save_to))
             with open(save_to, 'wb') as f:
-                pickle.dump(self.samples, f)
+                pickle.dump(self, f)
 
     def generate_labels(self, s, ner, re):
         s_tk = self.tokenizer(s, return_tensors='pt', add_special_tokens=False)['input_ids']
@@ -59,8 +59,6 @@ class IEData(torch.utils.data.Dataset):
             span2span[k] = span
             spans.append(span)
             types.append(e['type'])
-        #print('SPANS:\n', spans)
-        #print('SPANS2MATRIX:\n', self.spans2matrix(spans, s_tk.shape[1]))
         lab = {
             'sent': self.tokenizer(s, return_tensors='pt')['input_ids'],
             'pos': (torch.tensor(spans), self.spans2matrix(spans, s_tk.shape[1])),
@@ -170,8 +168,9 @@ class IEData(torch.utils.data.Dataset):
             lambda x: torch.hstack((x, O*torch.ones(1, max_len - 2 - x.shape[1]).int())),
             tmp['ner']
         )))
+        tmp['emb'] = torch.nn.utils.rnn.pad_sequence(tmp['emb'], batch_first=True, padding_value=0)
         t2 = time.time()
-        print('> Collate fn:', t2-t1)
+        #print('> Collate fn:', t2-t1)
         return tmp
             
     def __getitem__(self, idx):
@@ -261,7 +260,14 @@ class Stat(object):
                                     elif k == 'txt2kb':
                                         common[k][normalize(e[l[0]])] = {e[l[1]]: 1}
                     else:
-                        discard = True 
+                        if s == 'train':
+                            discard = True
+                        elif s == 'test':
+                            e['embedding'] = torch.zeros(1, list(self.kb.values())[0].shape[-1]) if not emb_flag else torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
+                            if e['type'] == None:
+                                e['type'] = 'NA' 
+                            
+                            
                 if discard:
                     discarded_sents.append((v['sentence'], v['entities'], v['relations']))
                 else:

@@ -2,7 +2,6 @@ import torch, faiss, numpy, time
 from transformers import AutoTokenizer, AutoModel
 from itertools import product, repeat, permutations
 from torch.nn.utils.rnn import pad_sequence
-from torch.multiprocessing import Pool
 
 # --------------------------------------------------------------------------------------------------------------------
 
@@ -159,25 +158,10 @@ class REModule(torch.nn.Module):
                 ))
             ).long()
             self.perm[head.shape[1]] = (perm_h, perm_t)
-        #head, tail = map(
-        #    lambda y: torch.vstack(y).view(head.shape[0], -1, head.shape[-1]),
-        #    tuple(zip(*map(self.pairs, head, tail)))
-        #)
         head, tail = head[:, perm_h], tail[:, perm_t]
-        #positions = torch.cat(tuple(map(
-        #    lambda y: torch.vstack(y).view(positions.shape[0], -1, 1),
-        #    tuple(zip(*map(self.pairs, positions, positions)))
-        #)), dim=-1)
         positions = positions.view(x.shape[0], -1, 1)
         positions = torch.cat((positions[:, perm_h], positions[:, perm_t]), dim=-1)
         return positions, self.Biaffine(head, tail)
-
-    def pairs(self, l1, l2):
-        p = list(product(l1,l2))
-        # removing self-relation pairs
-        for i in range(len(l1)):
-            p.pop(i*len(l1))
-        return tuple(map(torch.stack, zip(*p)))
 
     def Biaffine(self, x, y):
         return self.bil(x,y) + self.lin(torch.cat((x,y), dim=-1))
@@ -368,47 +352,27 @@ class BaseIEModelGoldEntities(BaseIEModel):
     def forward(self, x, entities):
         t = time.time()
         x = self.lang_model(x)
-        print('BERT:', time.time() - t)
+        #print('BERT:', time.time() - t)
         ctx = x[:,0].unsqueeze(1)
         x = x[:,1:]
         # get the entities
         t = time.time()
         x, positions = self.get_entities(x, entities)
-        print('GET ENTITIES:', time.time()-t)
+        #print('GET ENTITIES:', time.time()-t)
         t = time.time()
-        #x, positions = self.PAD(x, positions)
-        #print('PAD:', time.time()-t)
         t = time.time()
         re = self.RE(x, positions)
-        print('RE:', time.time()-t)
+        #print('RE:', time.time()-t)
         return [re]
 
     def get_entities(self, x, entities):
-        #with Pool(6) as p:
-        #    ner = list(p.starmap(
-        #        self.get_entities_worker,
-        #        zip(x, entities)
-        #    ))
-        #ner = list(map(
-        #        lambda r,s:
-        #        torch.vstack(list(map(
-        #            lambda t,u: t[u[0]:u[1]].mean(0),
-        #            repeat(r, len(s)),
-        #            s
-        #        ))),
-        #        x, entities
-        #    ))
-        #positions = list(map(lambda t: t[:,-1], entities))
         ner = torch.tensordot(entities[1], x, dims=[[1,3], [0,1]])
         positions = entities[0][:,:,-1]
-        #print('M:\n', entities[1][0][0])
-        #print('POSITIONS:\n', positions)
         return ner, positions
     
     def prepare_inputs_targets(self, batch):
         inputs = [
             batch['sent'].to(self.dev),
-            #list(map(lambda x: x.to(self.dev), batch['pos']))
             (batch['pos'].to(self.dev), batch['pos_matrix'].to(self.dev))
         ]
         targets = [list(map(lambda x: x.to(self.dev), batch['re']))]
@@ -664,41 +628,42 @@ class IEModelGoldKG(BaseIEModelGoldEntities):
     def forward(self, x, entities, embeddings):
         t = time.time()
         x = self.lang_model(x)
-        print('BERT:', t - time.time())
+        #print('BERT:', t - time.time())
         x = x[:,1:]
         # get the entities
         t = time.time()
         x, positions = self.get_entities(x, entities, embeddings)
-        print('GET ENTITIES:', t - time.time())
-        t = time.time()
-        x, positions = self.PAD(x, positions)
-        print('PAD:', t - time.time())
+        #print('GET ENTITIES:', t - time.time())
         t = time.time()
         #x, embs = x[:,:, :-self.ned_dim], x[:,:, -self.ned_dim:]
         #x = self.bil(x, embs) + self.att(torch.cat((x, embs), -1))
         re = self.RE(x, positions)
-        print('RE:', t - time.time())
+        #print('RE:', t - time.time())
         return [re]
 
     def get_entities(self, x, entities, embeddings):
-        ner_ned = list(map(
-            lambda r,s,p:
-            torch.vstack(list(map(
-                lambda t,u,v: torch.cat((t[u[0]:u[1]].mean(0), v), dim=-1),
-                repeat(r, len(s)),
-                s,
-                p
-            ))),
-            x, entities, embeddings
-        ))
-        positions = list(map(lambda t: t[:,-1], entities))
+        ner = torch.tensordot(entities[1], x, dims=[[1,3], [0,1]])
+        ner_ned = torch.cat((ner, embeddings), dim=-1)
+        positions = entities[0][:,:,-1]
+        #ner_ned = list(map(
+        #    lambda r,s,p:
+        #    torch.vstack(list(map(
+        #        lambda t,u,v: torch.cat((t[u[0]:u[1]].mean(0), v), dim=-1),
+        #        repeat(r, len(s)),
+        #        s,
+        #        p
+        #    ))),
+        #    x, entities, embeddings
+        #))
+        #positions = list(map(lambda t: t[:,-1], entities))
         return ner_ned, positions
 
     def prepare_inputs_targets(self, batch):
         inputs = [
             batch['sent'].to(self.dev),
-            list(map(lambda x: x.to(self.dev), batch['pos'])),
-            list(map(lambda x: x.to(self.dev), batch['emb']))
+            #list(map(lambda x: x.to(self.dev), batch['pos'])),
+            (batch['pos'].to(self.dev), batch['pos_matrix'].to(self.dev)),
+            batch['emb'].to(self.dev)
         ]
         targets = [list(map(lambda x: x.to(self.dev), batch['re']))]
         return inputs, targets
