@@ -127,8 +127,8 @@ class Evaluator(object):
                 classes[pred[i]]
             except:
                 pred[i] = random.choice(list(classes.keys()))
-        print(skm.classification_report(target, pred, labels=list(classes.keys())))
-        return skm.classification_report(target, pred, labels=list(classes.keys()), output_dict=True)
+        print(skm.classification_report(target, pred, labels=list(self.embedding2id.values())))
+        return (skm.classification_report(target, pred, labels=list(self.embedding2id.values()), output_dict=True), skm.confusion_matrix(target, pred, labels=list(self.embedding2id.values())))
 
     def re_report(self):
         target, pred= [], []
@@ -142,8 +142,10 @@ class Evaluator(object):
                 except:
                     pred.append('***ERR***')
         print(list(zip(pred, target)))
-        print(skm.classification_report(target, pred, labels=list(classes.keys())))
-        return (skm.classification_report(target, pred, labels=list(classes.keys()), output_dict=True), skm.confusion_matrix(target, pred).tolist())
+        #print(skm.classification_report(target, pred, labels=list(classes.keys())))
+        print(skm.classification_report(target, pred, labels=list(self.re_classes.values())))
+        #return (skm.classification_report(target, pred, labels=list(classes.keys()), output_dict=True), skm.confusion_matrix(target, pred).tolist())
+        return (skm.classification_report(target, pred, labels=list(self.re_classes.values()), output_dict=True), skm.confusion_matrix(target, pred, labels=list(self.re_classes.values())).tolist())
 
     def classification_report(self, data):
         self.eval(data)

@@ -2,7 +2,6 @@ import torch, argparse, pickle, re, json, random, time
 from trainer import Trainer
 from ner_schemes import BIOES
 from dataset import IEData, Stat
-from pipeline import Pipeline, GoldEntities
 from model import BaseIEModel, BaseIEModelGoldEntities, IEModel, IEModelGoldEntities, IEModelGoldKG
 from transformers import AutoTokenizer
 from evaluation import Evaluator
@@ -13,9 +12,10 @@ parser = argparse.ArgumentParser(description='Train a model and evaluate on a da
 parser.add_argument('train_data', help='Path to train data file.')
 parser.add_argument('test_data', help='Path to test data file.')
 parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
-parser.add_argument('--out_file', default='results.json', type=str)
+parser.add_argument('--res_file', default='results.json', type=str)
 parser.add_argument('--n_epochs', default=6, type=int)
 parser.add_argument('--n_exp', default=1, type=int)
+parser.add_argument('--save_model', action='store_true')
 parser.add_argument('--preprocess', action='store_true')
 args = parser.parse_args()
 
@@ -42,9 +42,14 @@ if args.preprocess:
     # Do some statistics and reorganize the data
     stat = Stat(train, test)
     data = stat.scan()
+    with open(dir+'stat.json', 'w') as f:
+        json.dump(stat.stat, f)
     rels = {**stat.stat['train']['relation_types'], **stat.stat['test']['relation_types']}
     #rels = ['P37','P407','P134','P364','P1018','P282','P103']
+    #rels = ['P37', 'P282', 'P619', 'P620', 'P647', 'P54', 'P2098', 'P1308', 'P2546', 'P1429', 'P59', 'P399', 'P629', 'P655', 'P437', 'P400', 'P140', 'P611', 'P1192', 'P81', 'P684', 'P688', 'P27', 'P17', 'P19', 'P20']
+    #rels = ['P37', 'P282', 'P619', 'P620', 'P647', 'P54', 'P2098', 'P1308', 'P2546', 'P1429', 'P59', 'P399', 'P629', 'P655', 'P437', 'P400', 'P140', 'P611', 'P1192', 'P81', 'P684', 'P688', 'P19', 'P20']
     #rels, data = stat.filter_rels(len(rels), rels=rels, random=False)
+    [print(k, stat.stat['train']['relation_types'][k]) for k in rels.keys()]
     #rels, data = stat.filter_rels(10, random=False, support_range=(100,10000))
     # Define the tagging scheme
     bioes = BIOES(list(stat.entity_types.keys()))
@@ -151,7 +156,7 @@ def experiment(model, train_data, test_data, **kwargs):
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     # set up the trainer
-    batchsize = 16
+    batchsize = 8
     trainer = Trainer(
         train_data=train_data,
         test_data=test_data,
@@ -159,7 +164,7 @@ def experiment(model, train_data, test_data, **kwargs):
         optim=optimizer,
         device=kwargs['dev'],
         rel2index=kwargs['rel2index'],
-        save=False,
+        save=kwargs['save'],
         batchsize=batchsize,
         tokenizer=kwargs['tokenizer'],
     )
@@ -217,7 +222,8 @@ for n,m in enumerate(['BaseIEModelGoldEntities', 'IEModelGoldKG']):
                 dev = device,
                 rel2index = rel2index,
                 tokenizer = tokenizer,
-                n_epochs = args.n_epochs
+                n_epochs = args.n_epochs,
+                save = dir + m + '_{}.pth'.format(i+1)
             )
     out_file = dir + '/' + args.out_file if n == 0 else dir + '/' + args.out_file.replace('results', 'results_kg')
     with open(out_file, 'w') as f:

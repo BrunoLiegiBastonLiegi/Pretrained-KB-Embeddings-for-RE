@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 class Trainer(object):
 
-    def __init__(self, train_data, test_data, model, optim, rel2index, device, save=True, batchsize=32, tokenizer=None):
+    def __init__(self, train_data, test_data, model, optim, rel2index, device, save=None, batchsize=32, tokenizer=None):
         self.model = model
         self.optim = optim
         self.rel2index = rel2index
@@ -194,15 +194,15 @@ class Trainer(object):
                 print('> Test Loss\n Total: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
                       (test_loss[0], test_loss[1], test_loss[2], test_loss[3], test_loss[4]), '\n')
 
-        if self.save:
+        if self.save != None:
             # save the model
-            print('> Save model to PATH (leave blank for not saving): ')
-            PATH = input()
-            if PATH != '':
-                torch.save(self.model.state_dict(), PATH)
-                print('> Model saved to ', PATH)
-            else:
-                print('> Model not saved.')
+            #print('> Save model to PATH (leave blank for not saving): ')
+            #PATH = input()
+            #if PATH != '':
+            torch.save(self.model.state_dict(), self.save)
+            print('> Model saved to ', self.save)
+            #else:
+            #    print('> Model not saved.')
         self.model.eval()
         return plots
 

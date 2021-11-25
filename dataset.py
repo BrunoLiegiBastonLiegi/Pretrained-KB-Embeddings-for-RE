@@ -2,7 +2,7 @@ import pickle, torch, time, numpy, re
 import random as rand
 from tqdm import tqdm
 from transformers.tokenization_utils_base import BatchEncoding
-from torch.multiprocessing import Pool, cpu_count, set_start_method, set_sharing_strategy
+#from torch.multiprocessing import Pool, cpu_count, set_start_method, set_sharing_strategy
 #set_sharing_strategy('file_system')
 import matplotlib.pyplot as plt
 from itertools import repeat
@@ -232,11 +232,15 @@ class Stat(object):
                     try:
                         emb_flag = e['embedding'].any() != None
                     except:
+                        #e['embedding'] = torch.ones(1, 200)
                         emb_flag = False
+                    #e['type'] = e['type'] if e['type'] != None else 'NA'
                     if e['type'] != None and emb_flag:
                         self.id2type[e['id']] = e['type']
                         self.kb[e['id']] = torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
                         e['embedding'] = torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
+                        #self.kb[e['id']] = torch.tensor(e['embedding']).float().mean(0).view(1, -1).view(1, -1)
+                        #e['embedding'] = torch.tensor(e['embedding']).float().mean(0).view(1, -1).view(1, -1)
                         for k, l in zip(('entities', 'kb_entities', 'entity_types'), ('name', 'id', 'type')):
                             try:
                                 self.stat[s][k][e[l]] += 1

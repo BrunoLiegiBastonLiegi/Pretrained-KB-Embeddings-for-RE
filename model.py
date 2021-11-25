@@ -50,7 +50,8 @@ class NEDModule(torch.nn.Module):
         # Stuff for the NN search
         self.KB_embs = torch.vstack(list(KB.values()))
         quantizer = faiss.IndexFlatL2(out_dim) 
-        self.NN = faiss.IndexIVFFlat(quantizer, out_dim, 100)
+        #self.NN = faiss.IndexIVFFlat(quantizer, out_dim, 100)
+        self.NN = faiss.IndexIVFFlat(quantizer, out_dim, 30)
         assert not self.NN.is_trained
         self.NN.train(self.KB_embs.numpy())
         assert self.NN.is_trained
@@ -284,6 +285,8 @@ class BaseIEModel(torch.nn.Module):
         )
 
     def re_loss(self, prediction, target, no_rel_idx=0, random_re_err=1.):
+        #print(prediction)
+        #print(target)
         loss = 0.
         for i in range(len(target)):
             g = dict(zip(
@@ -376,8 +379,8 @@ class BaseIEModelGoldEntities(BaseIEModel):
             (batch['pos'].to(self.dev), batch['pos_matrix'].to(self.dev))
         ]
         targets = [list(map(lambda x: x.to(self.dev), batch['re']))]
-        return inputs, targets
-
+        return inputs, targets        
+    
     def loss(self, predictions, targets, **kwargs):
         args = {'no_rel_idx': None, 'random_re_err': None}
         return {
@@ -562,7 +565,7 @@ class IEModelGoldEntities(BaseIEModelGoldEntities, IEModel):
         x = x[:,1:]
         # get the entities
         x, positions = self.get_entities(x, entities)
-        x, positions = self.PAD(x, positions)
+        #x, positions = self.PAD(x, positions)
         ned = self.NED(x, ctx)
         if x.shape[1] < 2:
             ned = (positions, ned[0], ned[1])
@@ -578,7 +581,7 @@ class IEModelGoldEntities(BaseIEModelGoldEntities, IEModel):
     def prepare_inputs_targets(self, batch):
         inputs = [
             batch['sent'].to(self.dev),
-            list(map(lambda x: x.to(self.dev), batch['pos']))
+            (batch['pos'].to(self.dev), batch['pos_matrix'].to(self.dev))
         ]
         targets = [
             list(map(lambda x: x.to(self.dev), batch['ned'])),
@@ -675,3 +678,15 @@ class IEModelGoldKG(BaseIEModelGoldEntities):
             'ned': torch.tensor([0., 0.], device=self.dev),
             're': self.re_loss(predictions[0], targets[0], **{k: kwargs[k] for k in re_args.keys() & kwargs.keys()})
         }
+
+
+
+# --------------------------------------------------------------------------------------------------------------------
+
+
+class DataParallelWrapper(torch.nn.DataParallel):
+    def __getattr__(self, name):
+        if name == 'module':
+            return super().__getattr__('module')
+        else:
+            return getattr(self.module, name)

@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib import rc
 import json, numpy, sys, pickle, argparse, re
 from utils import collect_scores, violin_plot, collect_confusion_m, confusion_m_heat_plot
 from dataset import Stat
@@ -8,6 +9,10 @@ parser.add_argument('--res', nargs='+')
 parser.add_argument('--compare', nargs='+')
 parser.add_argument('--stat')
 args = parser.parse_args()
+
+font = {'size': 22}
+
+#rc('font', **font)
 
 supp = None
 if args.stat != None:
@@ -19,15 +24,17 @@ if args.stat != None:
 if args.res != None:
     res, res_kg, rels = (args.res[0::2], args.res[1::2], []) if args.res != None else ([], [], [])
     for r, rkg in zip(res, res_kg):
-        fig, ax = plt.subplots(1, 1, figsize=(16,9))
+        fig, ax = plt.subplots(1, 1, figsize=(16,9), dpi=400)
         rr, rrkg = collect_scores(r), collect_scores(rkg)
         rels.append(list(rr.keys())[:-2])
         sp = { k: supp[k] for k in rr.keys() if k not in {'micro avg', 'macro avg'}} if supp != None else None
-        violin_plot(rr, rrkg, support=sp)
-        fig.tight_layout()
+        violin_plot(rr, rrkg, support=sp, ax=ax)
+        plt.tight_layout()
+        if input('> Save figure? (y/n)\n') == 'y':
+            plt.savefig(input('> Save figure to:\n'))
         plt.show()
     for r, rkg, rel in zip(res, res_kg, rels):
-        fig, ax = plt.subplots(1, 3, figsize=(16,9))
+        fig, ax = plt.subplots(1, 3, figsize=(16,9), dpi=400)
         [ print(numpy.asarray(i).shape) for i in collect_confusion_m(rkg)]
         print('MEAN:\n',numpy.mean(collect_confusion_m(r), axis=0))
         print('MEAN:\n',numpy.mean(collect_confusion_m(rkg), axis=0))
@@ -55,13 +62,16 @@ if args.compare != None:
     c.append('micro avg')
     c.append('macro avg')
     supp = { k: supp[k] for k in c if k not in {'micro avg', 'macro avg'}} if supp != None else None
-    fig, axes = plt.subplots(1,len(rr), figsize=(21,9))
+    fig, axes = plt.subplots(1, len(rr), figsize=(16,9))
     ylim = 1
-    for i, r in enumerate(rr):
-        violin_plot(*r, ax=axes[i], classes=c, support=supp)
-        axes[i].set_title(res[i].replace('results_','').replace('.json',''))
-        ylim = min(axes[i].get_ylim()[0], ylim)
-    for i in range(len(rr)):
-        axes[i].set_ylim((ylim,1.))
+    for i, (a, r) in enumerate(zip(axes.flatten(), rr)):
+        violin_plot(*r, ax=a, classes=c, support=supp)
+        #a.set_title(res[i].replace('results_','').replace('.json',''))
+        ylim = min(a.get_ylim()[0], ylim)
+    for a in axes.flatten():
+        a.set_ylim((ylim,1.))
+    fig.tight_layout()
+    if input('> Save figure? (y/n)\n') == 'y':
+        plt.savefig(input('> Save figure to:\n'))
     plt.show()
 

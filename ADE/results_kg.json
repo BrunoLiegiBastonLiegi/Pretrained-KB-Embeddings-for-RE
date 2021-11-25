@@ -1,4 +1,45 @@
 {
-"run_1":
-,
-"run_2":
+    "run_1": {
+        "model": "IEModelGoldKG",
+        "learning_rate": 2e-05,
+        "epochs": 6,
+        "batchsize": 8,
+        "scores": {
+            "ADVERSE_EFFECT_OF": {
+                "precision": 0.9895287958115183,
+                "recall": 0.9982394366197183,
+                "f1-score": 0.9938650306748466,
+                "support": 568
+            },
+            "NO_RELATION": {
+                "precision": 0.9990262901655307,
+                "recall": 0.9941860465116279,
+                "f1-score": 0.9966002914035941,
+                "support": 1032
+            },
+            "accuracy": 0.995625,
+            "macro avg": {
+                "precision": 0.9942775429885244,
+                "recall": 0.9962127415656731,
+                "f1-score": 0.9952326610392204,
+                "support": 1600
+            },
+            "weighted avg": {
+                "precision": 0.9956546796698562,
+                "recall": 0.995625,
+                "f1-score": 0.9956292738448886,
+                "support": 1600
+            }
+        },
+        "confusion matrix": [
+            [
+                567,
+                1
+            ],
+            [
+                6,
+                1026
+            ]
+        ]
+    }
+}

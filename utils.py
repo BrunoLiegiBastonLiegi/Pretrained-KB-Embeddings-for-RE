@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.patches import Patch
 from sklearn.manifold import TSNE
+from sklearn.metrics import ConfusionMatrixDisplay
+from scipy.spatial import distance_matrix
+import seaborn as sns
+from sklearn.cluster import SpectralCoclustering
 
 
 def plot_embedding(embeddings, colors='blue', method='TSNE'):
@@ -57,12 +61,16 @@ def collect_confusion_m(res_file: str) -> list:
     #    print(numpy.array(v['confusion matrix']).shape)
     return [ v['confusion matrix'] for v in res.values() ]
 
-def violin_plot(*results, ax=plt.subplots()[1], legend=['no graph embeddings', 'graph embeddings'], classes=[], support=None):
+def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], classes=[], support=None, **kwargs):
     """
     Prepare the violin plot for comparing *results. 
     By default we want to compare results with and without 
     graph embeddings enabled.
     """
+    try:
+        ax = kwargs['ax']
+    except:
+        fig, ax = plt.subplots()
     assert len(legend) == len(results)
     results = list(results)
     if len(classes) > 0:
@@ -84,10 +92,11 @@ def violin_plot(*results, ax=plt.subplots()[1], legend=['no graph embeddings', '
         ax.violinplot(score)
         ax.set_xticks(range(1,len(col)+1))
         ax.set_xticklabels(col, rotation=45)
-    ax.legend()
+    #ax.legend()
     
 
-def confusion_m_heat_plot(m, rels, ax=plt.subplots()[1], **kwargs):
+def confusion_m_heat_plot(m, rels, **kwargs):
+    """
     ax.imshow(m, **kwargs)
     
     # We want to show all ticks...
@@ -106,27 +115,78 @@ def confusion_m_heat_plot(m, rels, ax=plt.subplots()[1], **kwargs):
         for j in range(len(rels)):
             text = ax.text(j, i, "{:.1f}".format(m[i, j]),
                            ha="center", va="center", color="w")
+    """
+    disp = ConfusionMatrixDisplay(confusion_matrix=m, display_labels=rels)
+    disp.plot(ax=kwargs['ax'])
+    kwargs['ax'].tick_params(axis='x', labelrotation = 45)    
     
 
-def rel_embedding_plot(triplets: list, head_tail_diff: bool = False, proj=TSNE(n_components=2), ax=plt.subplots()[1], **kwargs) -> None:
+def rel_embedding_plot(triplets: list, head_tail_diff: bool = False, proj=TSNE(n_components=2), **kwargs):
+    try:
+        axs = kwargs['ax']
+    except:
+        fig, axs = plt.subplots(1,2)
+        
     rel_emb = {}
+    head, tail = {}, {}
+    X = []
     for t in triplets:
+        X.append(t[0])
+        X.append(t[1])
         try:
             if head_tail_diff:
                 rel_emb[t[2]].append(t[1]-t[0])
             else:
                 rel_emb[t[2]].append(t[0])
                 rel_emb[t[2]].append(t[1])
+                head[t[2]].append(t[0])
+                tail[t[2]].append(t[1])
         except:
             if head_tail_diff:
                 rel_emb[t[2]] = [t[1]-t[0]]
             else:
                 rel_emb[t[2]] = [t[0], t[1]]
+                head[t[2]] = [t[0]]
+                tail[t[2]] = [t[1]]
 
-    p = proj.fit_transform(torch.vstack(list(map(
-        lambda x: torch.vstack(x).mean(0),
-        rel_emb.values()
-    ))))
-    ax.scatter(x=p[:,0], y=p[:,1], c=range(len(rel_emb)), cmap='Accent')
+    proj.fit(torch.vstack(X))
+    colors = ['r' for i in range(len(head['Work_For']))]
+    colors += ['b' for i in range(len(tail['Work_For']))]
+    ht = proj.fit_transform(torch.vstack(head['Work_For'] + tail['Work_For']))
+    plt.scatter(ht[:,0], ht[:,1], c=colors)
+    plt.show()
+    
+    
+    mean_emb = torch.vstack( 
+        list(map( lambda x: torch.vstack(x).mean(0),
+             rel_emb.values() ))
+    )
+    #g = sns.clustermap(mean_emb.numpy(), col_cluster=False)
+    #plt.show()
+    p = proj.fit_transform(mean_emb)
+    axs[0].scatter(x=p[:,0], y=p[:,1], c=range(len(rel_emb)), cmap='Accent')
     for (x,y),t in zip(p, rel_emb.keys()):
-        ax.annotate(t, xy=(x, y), xytext=(x+0.1,y))
+        axs[0].annotate(t, xy=(x, y), xytext=(x+0.1,y))
+
+    dist = distance_matrix( mean_emb, mean_emb )
+    cluster_m = SpectralCoclustering(n_clusters=2, random_state=0)
+    cluster_m.fit(dist)
+    fit_data = dist[numpy.argsort(cluster_m.row_labels_)]
+    fit_data = fit_data[:, numpy.argsort(cluster_m.column_labels_)]
+    #g = sns.clustermap(dist)
+    #plt.show()
+    im = axs[1].imshow(dist)
+    #im = axs[1].imshow(fit_data)
+    cbar = axs[1].figure.colorbar(im, ax=axs[1])
+    axs[1].set_xticks(numpy.arange(dist.shape[0]))
+    axs[1].set_yticks(numpy.arange(dist.shape[1]))
+    axs[1].set_xticklabels(rel_emb.keys())
+    axs[1].set_yticklabels(rel_emb.keys())
+    plt.setp(axs[1].get_xticklabels(), rotation=45, ha="right",
+         rotation_mode="anchor")
+    #for i in range(dist.shape[0]):
+    #    for j in range(dist.shape[1]):
+    #        text = axs[1].text(j, i, "{:.5f}".format(dist[i, j]),
+    #                       ha="center", va="center", color="w")
+    
+    return dist
