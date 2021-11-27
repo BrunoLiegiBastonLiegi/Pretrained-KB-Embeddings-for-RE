@@ -10,9 +10,9 @@ parser.add_argument('--compare', nargs='+')
 parser.add_argument('--stat')
 args = parser.parse_args()
 
-font = {'size': 22}
+font = {'size': 18}
 
-#rc('font', **font)
+rc('font', **font)
 
 supp = None
 if args.stat != None:

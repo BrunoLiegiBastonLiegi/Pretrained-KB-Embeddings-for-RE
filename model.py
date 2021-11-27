@@ -175,7 +175,7 @@ class BaseIEModel(torch.nn.Module):
     End-to-End model for NER and RE.
     """
 
-    def __init__(self, language_model, ner_dim, ner_scheme, re_dim, device=torch.device('cpu')):
+    def __init__(self, language_model, ner_dim, ner_scheme, re_dim, device=torch.device('cpu'), **kwargs):
         super().__init__()
 
         # Misc
@@ -331,7 +331,7 @@ class BaseIEModel(torch.nn.Module):
 
 class BaseIEModelGoldEntities(BaseIEModel):
 
-    def __init__(self, language_model, re_dim, device=torch.device('cpu')):
+    def __init__(self, language_model, re_dim, device=torch.device('cpu'), **kwargs):
         super(BaseIEModel, self).__init__()
 
         # Misc
@@ -529,7 +529,7 @@ class IEModelGoldEntities(BaseIEModelGoldEntities, IEModel):
     """
     End-to-End model for NED and RE, provided gold entities.
     """
-    def __init__(self, language_model, ned_dim, KB, re_dim, device=torch.device('cpu')):
+    def __init__(self, language_model, ned_dim, KB, re_dim, device=torch.device('cpu'), **kwargs):
         super(BaseIEModel, self).__init__()
 
         # Misc
@@ -603,7 +603,7 @@ class IEModelGoldEntities(BaseIEModelGoldEntities, IEModel):
 
 class IEModelGoldKG(BaseIEModelGoldEntities):
 
-    def __init__(self, language_model, ned_dim, re_dim, device=torch.device('cpu')):
+    def __init__(self, language_model, ned_dim, re_dim, device=torch.device('cpu'), **kwargs):
         super(BaseIEModel, self).__init__()
 
         # Misc

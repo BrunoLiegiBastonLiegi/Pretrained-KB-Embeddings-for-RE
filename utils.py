@@ -91,7 +91,7 @@ def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], cl
             i += 1
         ax.violinplot(score)
         ax.set_xticks(range(1,len(col)+1))
-        ax.set_xticklabels(col, rotation=45)
+        ax.set_xticklabels([ c.split('/')[-1] for c in col], rotation=45)
     #ax.legend()
     
 

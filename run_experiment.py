@@ -204,30 +204,53 @@ def experiment(model, train_data, test_data, **kwargs):
 
 runs = {}
 #key = {'BaseIEModelGoldEntities': 'without graph embeddings', 'IEModelGoldKG': 'with graph embeddings'}
-for n,m in enumerate(['BaseIEModelGoldEntities', 'IEModelGoldKG']):
-    for i in range(args.n_exp):
-        print('\n################################## RUN {} OF {} ({}) #################################\n'.format(i+1, args.n_exp, m))
-        if __name__ == '__main__':
-            torch.multiprocessing.set_start_method('spawn', force=True)
-            runs['run_'+str(i+1)] = experiment(
-                model = m,
-                train_data = train_data,
-                test_data = test_data,
-                lang_model = bert,
-                ner_dim = bioes.space_dim,
-                ner_scheme = bioes,
-                ned_dim = ned_dim,
-                kb = kb,
-                re_dim = len(rel2index),
-                dev = device,
-                rel2index = rel2index,
-                tokenizer = tokenizer,
-                n_epochs = args.n_epochs,
-                save = dir + m + '_{}.pth'.format(i+1)
-            )
-    out_file = dir + '/' + args.out_file if n == 0 else dir + '/' + args.out_file.replace('results', 'results_kg')
-    with open(out_file, 'w') as f:
-        json.dump(runs, f, indent=4)
+if args.load_model != None:
+    params = {
+        'language_model' : bert,
+        'ner_dim' : bioes.space_dim,
+        'ner_scheme' : bioes,
+        'ned_dim' : ned_dim,
+        'KB' : kb,
+        're_dim' : len(rel2index),
+        'device' : device,
+    }
+    import model
+    mtypes = ['BaseIEModel', 'BaseIEModelGoldEntities', 'IEModel', 'IEModelGoldEntities', 'IEModelGoldKG']
+    m = re.search('(?<=\/)[a-zA-Z]+(?=_)', args.load_model).group(0)
+    assert m in mtypes
+    m = getattr(model, m)(**params)
+    ev = Evaluator(
+        model=m,
+        ner_scheme=bioes,
+        kb_embeddings=kb,
+        re_classes=dict(zip(rel2index.values(), rel2index.keys()))
+    )
+    ev.classification_report(test_data)[-1]
+else:
+    for n,m in enumerate(['BaseIEModelGoldEntities', 'IEModelGoldKG']):
+        for i in range(args.n_exp):
+            print('\n################################## RUN {} OF {} ({}) #################################\n'.format(i+1, args.n_exp, m))
+            if __name__ == '__main__':
+                #torch.multiprocessing.set_start_method('spawn', force=True)
+                runs['run_'+str(i+1)] = experiment(
+                    model = m,
+                    train_data = train_data,
+                    test_data = test_data,
+                    lang_model = bert,
+                    ner_dim = bioes.space_dim,
+                    ner_scheme = bioes,
+                    ned_dim = ned_dim,
+                    kb = kb,
+                    re_dim = len(rel2index),
+                    dev = device,
+                    rel2index = rel2index,
+                    tokenizer = tokenizer,
+                    n_epochs = args.n_epochs,
+                    save = dir + m + '_{}.pth'.format(i+1)
+                )
+        out_file = dir + '/' + args.res_file if n == 0 else dir + '/' + args.res_file.replace('results', 'results_kg')
+        with open(out_file, 'w') as f:
+            json.dump(runs, f, indent=4)
 
     
 

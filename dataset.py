@@ -234,11 +234,13 @@ class Stat(object):
                     except:
                         #e['embedding'] = torch.ones(1, 200)
                         emb_flag = False
-                    #e['type'] = e['type'] if e['type'] != None else 'NA'
+                    e['type'] = e['type'] if e['type'] != None else 'NA'
                     if e['type'] != None and emb_flag:
                         self.id2type[e['id']] = e['type']
-                        self.kb[e['id']] = torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
-                        e['embedding'] = torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
+                        self.kb[e['id']] = torch.from_numpy(e['embedding']).float().view(1,-1)
+                        e['embedding'] = self.kb[e['id']]
+                        #self.kb[e['id']] = torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
+                        #e['embedding'] = torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
                         #self.kb[e['id']] = torch.tensor(e['embedding']).float().mean(0).view(1, -1).view(1, -1)
                         #e['embedding'] = torch.tensor(e['embedding']).float().mean(0).view(1, -1).view(1, -1)
                         for k, l in zip(('entities', 'kb_entities', 'entity_types'), ('name', 'id', 'type')):
