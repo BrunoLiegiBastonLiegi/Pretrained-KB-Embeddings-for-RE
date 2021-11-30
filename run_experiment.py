@@ -58,13 +58,13 @@ if args.preprocess:
     print(rel2index)
     ned_dim = list(stat.kb.values())[0].shape[-1]
     kb = stat.kb
-    kg = KnowledgeGraph(stat.edges)
+    #kg = KnowledgeGraph(stat.edges)
     #kg.draw()
 
     # Visualize pretrained embedding space
-    from utils import plot_embedding
-    colors = dict(zip(stat.id2type.values(), range(len(stat.id2type)))) # setting colors associated to entity types
-    colors = dict(zip(colors.keys(), range(len(colors))))
+    #from utils import plot_embedding
+    #colors = dict(zip(stat.id2type.values(), range(len(stat.id2type)))) # setting colors associated to entity types
+    #colors = dict(zip(colors.keys(), range(len(colors))))
     #plot_embedding(torch.vstack(list(stat.kb.values())), [colors[stat.id2type[k]] for k in stat.kb.keys()])
 
     # Prepare data for training
@@ -188,14 +188,15 @@ def experiment(model, train_data, test_data, **kwargs):
         kb_embeddings=kwargs['kb'],
         re_classes=dict(zip(kwargs['rel2index'].values(), kwargs['rel2index'].keys())),
     )
-    scores, matrix = ev.classification_report(test_data)[-1]
+    scores, matrix, curve = ev.classification_report(test_data)[-1]
     results = {
         'model': re.search('model\.(.+?)\'\>', str(type(model))).group(1),
         'learning_rate': lr,
         'epochs': kwargs['n_epochs'],
         'batchsize': batchsize,
         'scores': scores,
-        'confusion matrix': matrix
+        'confusion matrix': matrix,
+        'pr_curve': curve
     }
 
     return results
@@ -219,11 +220,13 @@ if args.load_model != None:
     m = re.search('(?<=\/)[a-zA-Z]+(?=_)', args.load_model).group(0)
     assert m in mtypes
     m = getattr(model, m)(**params)
+    m.load_state_dict(torch.load(args.load_model))
     ev = Evaluator(
         model=m,
         ner_scheme=bioes,
-        kb_embeddings=kb,
-        re_classes=dict(zip(rel2index.values(), rel2index.keys()))
+        kb_embeddings=dict(zip(range(kb.shape[0]), kb)),
+        re_classes=dict(zip(rel2index.values(), rel2index.keys())),
+        batchsize=128
     )
     ev.classification_report(test_data)[-1]
 else:

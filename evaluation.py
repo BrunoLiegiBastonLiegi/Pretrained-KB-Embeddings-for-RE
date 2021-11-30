@@ -1,16 +1,18 @@
-import torch, random, json
+import torch, random, json, numpy
 import numpy as np
 import networkx as nx
 from scipy.spatial import distance
 from sklearn.neighbors import NearestNeighbors
+from sklearn.preprocessing import label_binarize
 
 # Performance metrics
 from seqeval.metrics import classification_report
 from seqeval.scheme import IOBES
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, precision_recall_curve, average_precision_score, PrecisionRecallDisplay
 import sklearn.metrics as skm
 
 from torch.utils.data import DataLoader
+import matplotlib.pyplot as plt
 #from bidict import bidict
 
 
@@ -38,7 +40,7 @@ class Evaluator(object):
     def eval(self, data):
         self.ner_groundtruth, self.ner_prediction = [], []
         self.ned_groundtruth, self.ned_prediction = [], []
-        self.re_groundtruth, self.re_prediction = [], []
+        self.re_groundtruth, self.re_prediction, self.re_scores = [], [], []
         
         sm1 = torch.nn.Softmax(dim=1)
         sm0 = torch.nn.Softmax(dim=0)
@@ -99,9 +101,48 @@ class Evaluator(object):
                             ),
                             torch.argmax(sm1(outs[-1][1][i]), dim=1).view(-1).tolist()
                         )))
+                        self.re_scores.append(dict(zip(
+                            zip(
+                                outs[-1][0][i][:,0].tolist(),
+                                outs[-1][0][i][:,1].tolist(),                    
+                            ),
+                            sm1(outs[-1][1][i])
+                        )))
                     else:
                         self.re_prediction.append(None)
-                        
+                        self.re_scores.append(None)
+
+    def PR_curve(self, targets, scores, classes, **kwargs):
+        tg_bin = label_binarize(targets, classes=classes)
+        precision, recall, avg_precision = {}, {}, {}
+        # for each class
+        for i,r in enumerate(classes):
+            precision[r], recall[r], _ = precision_recall_curve(tg_bin[:, i], scores[:, i])
+            avg_precision[r] = average_precision_score(tg_bin[:, i], scores[:, i])
+            precision[r] = precision[r].tolist()
+            recall[r] = recall[r].tolist()
+        # on average
+        precision["micro"], recall["micro"], _ = precision_recall_curve(
+            tg_bin.ravel(), scores.ravel()
+        )
+        avg_precision["micro"] = average_precision_score(tg_bin, scores, average="micro")
+        precision['micro'] = precision['micro'].tolist()
+        recall['micro'] = recall['micro'].tolist()
+        # plot
+        #display = PrecisionRecallDisplay(
+        #    recall=recall["micro"],
+        #    precision=precision["micro"],
+        #    average_precision=avg_precision["micro"],
+        #)
+        #for n in (0.3,0.1):
+            #i = (recall['micro'] == n).nonzero()[0]
+            #i = numpy.argmin(numpy.abs(recall['micro'] - n))
+            #print(i, recall['micro'][i])
+            #print(precision['micro'][i])
+        #display.plot()
+        #plt.show()
+        return {'precision': precision, 'recall': recall, 'avg_precision': avg_precision}
+    
     def ner_report(self):
         print(classification_report(self.ner_groundtruth, self.ner_prediction, mode='strict', scheme=IOBES))
         return classification_report(self.ner_groundtruth, self.ner_prediction, mode='strict', scheme=IOBES, output_dict=True)
@@ -131,21 +172,33 @@ class Evaluator(object):
         return (skm.classification_report(target, pred, labels=list(self.embedding2id.values()), output_dict=True), skm.confusion_matrix(target, pred, labels=list(self.embedding2id.values())))
 
     def re_report(self):
-        target, pred= [], []
+        target, pred, scores = [], [], []
         classes = {}
-        for gt, p in zip(self.re_groundtruth, self.re_prediction):
+        for gt, p, s in zip(self.re_groundtruth, self.re_prediction, self.re_scores):
             for k,v in gt.items():
                 target.append(self.re_classes[gt[k]])
                 classes[self.re_classes[gt[k]]] = 0
                 try:
                     pred.append(self.re_classes[p[k]])
+                    scores.append(s[k])
                 except:
                     pred.append('***ERR***')
-        print(list(zip(pred, target)))
-        #print(skm.classification_report(target, pred, labels=list(classes.keys())))
-        print(skm.classification_report(target, pred, labels=list(self.re_classes.values())))
-        #return (skm.classification_report(target, pred, labels=list(classes.keys()), output_dict=True), skm.confusion_matrix(target, pred).tolist())
-        return (skm.classification_report(target, pred, labels=list(self.re_classes.values()), output_dict=True), skm.confusion_matrix(target, pred, labels=list(self.re_classes.values())).tolist())
+                    scores.append('***ERR***')
+        #print(list(zip(pred, target)))
+        labels = [v for v in self.re_classes.values() if v in classes.keys()]
+        scores = torch.vstack(scores)#.cpu().numpy()
+        scores = torch.hstack([ scores[:,k].view(-1,1) for k,v in self.re_classes.items() if v in classes.keys() ]).cpu().numpy()
+        #sm = torch.nn.Softmax(1)
+        #scores = sm(torch.randn(156292, 30)).numpy()
+        #scores = sm(torch.randn(420, 5)).numpy()
+        #pr_curve = self.PR_curve(target, scores, list(self.re_classes.values()))
+        pr_curve = self.PR_curve(target, scores, labels)
+        print(skm.classification_report(target, pred, labels=labels))
+        #print(skm.classification_report(target, pred, labels=list(self.re_classes.values())))
+        return (skm.classification_report(target, pred, labels=labels, output_dict=True),
+                skm.confusion_matrix(target, pred, labels=labels).tolist(),
+                pr_curve)
+        #return (skm.classification_report(target, pred, labels=list(self.re_classes.values()), output_dict=True), skm.confusion_matrix(target, pred, labels=list(self.re_classes.values())).tolist())
 
     def classification_report(self, data):
         self.eval(data)
