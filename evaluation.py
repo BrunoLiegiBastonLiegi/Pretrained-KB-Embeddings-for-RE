@@ -106,13 +106,15 @@ class Evaluator(object):
                                 outs[-1][0][i][:,0].tolist(),
                                 outs[-1][0][i][:,1].tolist(),                    
                             ),
-                            sm1(outs[-1][1][i])
+                            outs[-1][1][i]
                         )))
                     else:
                         self.re_prediction.append(None)
                         self.re_scores.append(None)
 
     def PR_curve(self, targets, scores, classes, **kwargs):
+        print(scores[0])
+        print(scores[0].sum())
         tg_bin = label_binarize(targets, classes=classes)
         precision, recall, avg_precision = {}, {}, {}
         # for each class
@@ -134,13 +136,12 @@ class Evaluator(object):
         #    precision=precision["micro"],
         #    average_precision=avg_precision["micro"],
         #)
-        #for n in (0.3,0.1):
-            #i = (recall['micro'] == n).nonzero()[0]
-            #i = numpy.argmin(numpy.abs(recall['micro'] - n))
-            #print(i, recall['micro'][i])
-            #print(precision['micro'][i])
         #display.plot()
         #plt.show()
+        for n in numpy.linspace(0,1,11):
+            #i = (recall['micro'] == n).nonzero()[0]
+            i = numpy.argmin(numpy.abs(recall['micro'] - n))
+            print(recall['micro'][i], precision['micro'][i])
         return {'precision': precision, 'recall': recall, 'avg_precision': avg_precision}
     
     def ner_report(self):
@@ -185,10 +186,17 @@ class Evaluator(object):
                     pred.append('***ERR***')
                     scores.append('***ERR***')
         #print(list(zip(pred, target)))
-        labels = [v for v in self.re_classes.values() if v in classes.keys()]
         scores = torch.vstack(scores)#.cpu().numpy()
+        #print(scores.shape)
+        #classes.pop('NA')
+        labels = [v for v in self.re_classes.values() if v in classes.keys()]
+        #tg = list(filter(('NA').__ne__, target))
+        #print(tg)
+        #print(classes)
         scores = torch.hstack([ scores[:,k].view(-1,1) for k,v in self.re_classes.items() if v in classes.keys() ]).cpu().numpy()
+        #print(scores.shape)
         #sm = torch.nn.Softmax(1)
+        #scores = sm(scores).cpu().numpy()
         #scores = sm(torch.randn(156292, 30)).numpy()
         #scores = sm(torch.randn(420, 5)).numpy()
         #pr_curve = self.PR_curve(target, scores, list(self.re_classes.values()))
