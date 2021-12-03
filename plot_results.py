@@ -39,6 +39,7 @@ if args.res != None:
         print('MEAN:\n',numpy.mean(collect_confusion_m(r), axis=0))
         print('MEAN:\n',numpy.mean(collect_confusion_m(rkg), axis=0))
         m, mkg = numpy.mean(collect_confusion_m(r), axis=0), numpy.mean(collect_confusion_m(rkg), axis=0)
+        pr, pr_kg = collect_pr_curve(r), collect_pr_curve(r_kg)
         confusion_m_heat_plot(m-mkg, rel, ax=ax[2])
         numpy.fill_diagonal(m, 0.) # manually set diagonal to zero to better see off-diagonal elements
         numpy.fill_diagonal(mkg, 0.) # manually set diagonal to zero to better see off-diagonal elements

@@ -45,6 +45,7 @@ if args.preprocess:
     with open(dir+'stat.json', 'w') as f:
         json.dump(stat.stat, f)
     rels = {**stat.stat['train']['relation_types'], **stat.stat['test']['relation_types']}
+    print('###\n{}\n###'.format(len(rels)))
     #rels = ['P37','P407','P134','P364','P1018','P282','P103']
     #rels = ['P37', 'P282', 'P619', 'P620', 'P647', 'P54', 'P2098', 'P1308', 'P2546', 'P1429', 'P59', 'P399', 'P629', 'P655', 'P437', 'P400', 'P140', 'P611', 'P1192', 'P81', 'P684', 'P688', 'P27', 'P17', 'P19', 'P20']
     #rels = ['P37', 'P282', 'P619', 'P620', 'P647', 'P54', 'P2098', 'P1308', 'P2546', 'P1429', 'P59', 'P399', 'P629', 'P655', 'P437', 'P400', 'P140', 'P611', 'P1192', 'P81', 'P684', 'P688', 'P19', 'P20']
@@ -230,6 +231,7 @@ if args.load_model != None:
     )
     ev.classification_report(test_data)[-1]
 else:
+    t = time.time()
     for n,m in enumerate(['BaseIEModelGoldEntities', 'IEModelGoldKG']):
         for i in range(args.n_exp):
             print('\n################################## RUN {} OF {} ({}) #################################\n'.format(i+1, args.n_exp, m))
@@ -249,7 +251,7 @@ else:
                     rel2index = rel2index,
                     tokenizer = tokenizer,
                     n_epochs = args.n_epochs,
-                    save = dir + m + '_{}.pth'.format(i+1)
+                    save = dir + m + '_{}_{:.2f}.pth'.format(i+1,t)
                 )
         out_file = dir + '/' + args.res_file if n == 0 else dir + '/' + args.res_file.replace('results', 'results_kg')
         with open(out_file, 'w') as f:

@@ -268,6 +268,7 @@ class Stat(object):
                     else:
                         if s == 'train':
                             discard = True
+                            #e['embedding'] = torch.zeros(1, list(self.kb.values())[0].shape[-1]) if not emb_flag else torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
                         elif s == 'test':
                             e['embedding'] = torch.zeros(1, list(self.kb.values())[0].shape[-1]) if not emb_flag else torch.tensor(e['embedding']).float().view(1, -1).mean(0).view(1, -1)
                             if e['type'] == None:

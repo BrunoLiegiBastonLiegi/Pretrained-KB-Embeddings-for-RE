@@ -61,6 +61,15 @@ def collect_confusion_m(res_file: str) -> list:
     #    print(numpy.array(v['confusion matrix']).shape)
     return [ v['confusion matrix'] for v in res.values() ]
 
+def collect_PR_curve(res_file: str) -> list:
+    with open(res_file, 'r') as f:
+        res = json.load(f)
+    #for run in res.values():
+    #    for metric in ('precision', 'recall'):
+    #        for k,v in run['pr_curve'][metric].items():
+    #            run['pr_curve'][metric][k] = numpy.array(v)
+    return [ r['pr_curve'] for r in res.values() ]
+
 def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], classes=[], support=None, **kwargs):
     """
     Prepare the violin plot for comparing *results. 
@@ -190,3 +199,26 @@ def rel_embedding_plot(triplets: list, head_tail_diff: bool = False, proj=TSNE(n
     #                       ha="center", va="center", color="w")
     
     return dist
+
+def PR_curve_plot(*curves, **kwargs):
+    mean, low, high = {}, {}, {}
+    for metric in ('precision', 'recall'):
+        for k in curves[0][metric].keys():
+            tmp = numpy.vstack([ c[metric][k] for c in curves ])
+            mean[metric][k] = tmp.mean(0)
+            low[metric][k] = tmp.min(0)
+            high[metric][k] = tmp.max(0)
+    for c in (mean, low, high):
+        display = PrecisionRecallDisplay(
+            recall=c['recall']["micro"],
+            precision=c['precision']["micro"],
+        )
+        display.plot()
+    plt.show()
+    try:
+        ax = kwargs['ax']
+    except:
+        fig, ax = plt.subplots()
+    ax.plot(mean['recall']['micro'], mean['precision']['micro'])
+    ax.fill_between(mean['recall']['micro'], low['precision']['micro'], high['precision']['micro'])
+    plt.show()
