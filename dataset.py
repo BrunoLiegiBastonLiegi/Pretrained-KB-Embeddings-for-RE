@@ -40,6 +40,8 @@ class IEData(torch.utils.data.Dataset):
 
     def generate_labels(self, s, ner, re):
         s_tk = self.tokenizer(s, return_tensors='pt', add_special_tokens=False)['input_ids']
+        #print(s)
+        #print(ner)
         if s_tk.shape[1] > self.tokenizer.model_max_length:
             print(f'> Discarding the sentence \n{s}\n > exceeding maximum sequence length of the pretrained language model.')
             return {}
@@ -49,13 +51,16 @@ class IEData(torch.utils.data.Dataset):
                 names[e['name']] += 1
             except:
                 names[e['name']] = 0
-            #print('-------------------------------------------------------------------------------')
-            #print(k,e)
-            tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids']
-            #print(s_tk)
-            #print(tk)
-            #print('-------------------------------------------------------------------------------')
-            span = self.find_span(s_tk.flatten().tolist(), tk, names[e['name']]) 
+            try:
+                tk = self.tokenizer(e['name'], add_special_tokens=False)['input_ids']
+                span = self.find_span(s_tk.flatten().tolist(), tk, names[e['name']])
+            except:
+                try:
+                    names[' ' + e['name']] += 1
+                except:
+                    names[' ' + e['name']] = 0
+                tk = self.tokenizer(' ' + e['name'], add_special_tokens=False)['input_ids']
+                span = self.find_span(s_tk.flatten().tolist(), tk, names[' ' + e['name']])
             span2span[k] = span
             spans.append(span)
             types.append(e['type'])
@@ -94,15 +99,18 @@ class IEData(torch.utils.data.Dataset):
         We consider only the case of the same entity occuring just once for each sentence.
         """
         match = []
+        #print('///////////////////////////////////////////////////')
         #print(sent)
         #print(self.tokenizer.decode(sent))
         #print(ent)
         #print(self.tokenizer.decode(ent))
+        #print('///////////////////////////////////////////////////')
         for i in range(len(sent)):
             if sent[i] == ent[0] and sent[i:i+len(ent)] == ent: 
                 #match = (i, i+len(ent))
                 match.append((i, i+len(ent)))
         return match[n]
+
 
     def tag_sentence(self, sent, types, spans):
         tags = torch.tensor([self.scheme.to_tensor('O', index=True) for i in range(len(sent))])

@@ -10,7 +10,10 @@ class PretrainedLanguageModel(torch.nn.Module):
     def __init__(self, model):
         super().__init__()
         self.model = AutoModel.from_pretrained(model)
-        self.dim = self.model.pooler.dense.out_features      # encoding dimension
+        try:
+            self.dim = self.model.pooler.dense.out_features      # encoding dimension
+        except:
+            self.dim = self.model.wte.embedding_dim # for gpt
         for param in self.model.base_model.parameters():     # freezing the encoder
                 param.requires_grad = False                              
 
@@ -19,7 +22,11 @@ class PretrainedLanguageModel(torch.nn.Module):
 
     def unfreeze_layer(self, i):
         print('> Unfreezing encoder layer ', len(self.model.encoder.layer)-1-i)
-        for param in self.model.encoder.layer[len(self.model.encoder.layer)-1-i].parameters():
+        try:
+            parameters = self.model.encoder.layer[len(self.model.encoder.layer)-1-i].parameters()
+        except:
+            parameters = self.model.h[len(self.h)-1-i].parameters() # this is for gpt
+        for param in parameters:
                 param.requires_grad = True
 
 # --------------------------------------------------------------------------------------------------------------------

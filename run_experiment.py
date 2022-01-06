@@ -11,12 +11,13 @@ from graph import KnowledgeGraph
 parser = argparse.ArgumentParser(description='Train a model and evaluate on a dataset.')
 parser.add_argument('train_data', help='Path to train data file.')
 parser.add_argument('test_data', help='Path to test data file.')
-parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model.')
+parser.add_argument('--load_model', metavar='MODEL', help='Path to pretrained model/s.', nargs='+')
 parser.add_argument('--res_file', default='results.json', type=str)
 parser.add_argument('--n_epochs', default=6, type=int)
 parser.add_argument('--n_exp', default=1, type=int)
 parser.add_argument('--save_model', action='store_true')
 parser.add_argument('--preprocess', action='store_true')
+parser.add_argument('--conf', help='Path to training configuration file.')
 args = parser.parse_args()
 
 # Input/Output directory
@@ -33,13 +34,31 @@ with open(args.test_data, 'rb') as f:
     test = pickle.load(f)
 print('Done.')
 
+try:
+    with open(args.conf, 'r') as f:
+        conf = json.load(f)
+except:
+    conf = {
+        'n_epochs': args.n_epochs,
+        'n_exp': args.n_exp,
+        'batchsize': 8,
+        'lr': 2e-5,
+        'device': 0,
+        'pretrained_lang_model': 'bert-base-cased',
+        'evaluate': True,
+        'negative_rel_class': 'NA'
+    }
+
 # Define the pretrained model
-bert = 'bert-base-cased'
+bert = conf['pretrained_lang_model']
+#bert = 'roberta-base'
+#bert = 'gpt2'
 #bert = 'dmis-lab/biobert-v1.1'
 tokenizer = AutoTokenizer.from_pretrained(bert)
 
 if args.preprocess:
     # Do some statistics and reorganize the data
+    #train = random.sample(train, int(0.8*len(train)))
     stat = Stat(train, test)
     data = stat.scan()
     with open(dir+'stat.json', 'w') as f:
@@ -76,8 +95,8 @@ if args.preprocess:
         preprocess=True,
         tokenizer=tokenizer,
         ner_scheme=bioes,
-        rel2index=rel2index,
-        save_to=dir+'train_IEData.pkl'
+        rel2index=rel2index#,
+        #save_to=dir+'train_IEData_tmp.pkl'
     )
     
     test_data = IEData(
@@ -87,8 +106,8 @@ if args.preprocess:
         preprocess=True,
         tokenizer=tokenizer,
         ner_scheme=bioes,
-        rel2index=rel2index,
-        save_to=dir+'test_IEData.pkl'
+        rel2index=rel2index#,
+        #save_to=dir+'test_IEData_tmp.pkl'
     )
 else:
     train_data = train
@@ -99,9 +118,10 @@ else:
     kb = torch.unique(
         torch.vstack([ s['emb'] for s in train.samples+test.samples ]),
         dim=0)
+    kb = dict(zip(range(kb.shape[0]), kb))
     
 # check if GPU is avilable
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:"+str(conf['device']) if torch.cuda.is_available() else "cpu")
 print('> Found device:', device, ', setting it as the principal device.')
 
 # -------------------------------------------------------------------------------------------------
@@ -152,12 +172,12 @@ def experiment(model, train_data, test_data, **kwargs):
     #    model.to(device)
 
     # define the optimizer
-    lr = 2e-5
+    lr = kwargs['lr']
     #optimizer = torch.optim.SGD(model.parameters(), lr=3e-5, momentum=0.9)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     # set up the trainer
-    batchsize = 8
+    batchsize = kwargs['batchsize']
     trainer = Trainer(
         train_data=train_data,
         test_data=test_data,
@@ -181,26 +201,29 @@ def experiment(model, train_data, test_data, **kwargs):
             with open(dir + '/loss_plots.pkl', 'wb') as f:
                 pickle.dump(plots, f)
 
-    # Evaluation
-    results = {}
-    ev = Evaluator(
-        model=model,
-        ner_scheme=kwargs['ner_scheme'],
-        kb_embeddings=kwargs['kb'],
-        re_classes=dict(zip(kwargs['rel2index'].values(), kwargs['rel2index'].keys())),
-    )
-    scores, matrix, curve = ev.classification_report(test_data)[-1]
-    results = {
-        'model': re.search('model\.(.+?)\'\>', str(type(model))).group(1),
-        'learning_rate': lr,
-        'epochs': kwargs['n_epochs'],
-        'batchsize': batchsize,
-        'scores': scores,
-        'confusion matrix': matrix,
-        'pr_curve': curve
-    }
+    if kwargs['evaluate']:
+        # Evaluation
+        results = {}
+        ev = Evaluator(
+            model=model,
+            ner_scheme=kwargs['ner_scheme'],
+            kb_embeddings=kwargs['kb'],
+            re_classes=dict(zip(kwargs['rel2index'].values(), kwargs['rel2index'].keys())),
+        )
+        scores, matrix, curve = ev.classification_report(test_data, ignore_classes=[kwargs['negative_rel_class']])[-1]
+        results = {
+            'model': re.search('model\.(.+?)\'\>', str(type(model))).group(1),
+            'learning_rate': lr,
+            'epochs': kwargs['n_epochs'],
+            'batchsize': batchsize,
+            'scores': scores,
+            'confusion matrix': matrix,
+            'pr_curve': curve
+        }
 
-    return results
+        return results
+    else:
+        return []
 
 # ---------------------------------------------------------------------------------------------------------
 
@@ -218,18 +241,36 @@ if args.load_model != None:
     }
     import model
     mtypes = ['BaseIEModel', 'BaseIEModelGoldEntities', 'IEModel', 'IEModelGoldEntities', 'IEModelGoldKG']
-    m = re.search('(?<=\/)[a-zA-Z]+(?=_)', args.load_model).group(0)
-    assert m in mtypes
-    m = getattr(model, m)(**params)
-    m.load_state_dict(torch.load(args.load_model))
-    ev = Evaluator(
-        model=m,
-        ner_scheme=bioes,
-        kb_embeddings=dict(zip(range(kb.shape[0]), kb)),
-        re_classes=dict(zip(rel2index.values(), rel2index.keys())),
-        batchsize=128
-    )
-    ev.classification_report(test_data)[-1]
+    results = []
+    for i in args.load_model:
+        print(f"> loading model: {i}")
+        m = re.findall('(?<=\/)[a-zA-Z]+(?=_)', i)[-1]
+        print(f">> inferred Model object: {m}")
+        assert m in mtypes
+        m = getattr(model, m)(**params)
+        m.load_state_dict(torch.load(i))
+        ev = Evaluator(
+            model=m,
+            ner_scheme=bioes,
+            kb_embeddings=kb, #dict(zip(range(kb.shape[0]), kb)),
+            re_classes=dict(zip(rel2index.values(), rel2index.keys())),
+            batchsize=128
+        )
+        scores, matrix, curve = ev.classification_report(test_data, ignore_classes=[conf['negative_rel_class']])[-1]
+        results.append({
+            'model': re.search('model\.(.+?)\'\>', str(type(m))).group(1),
+            'learning_rate': lr,
+            'epochs': kwargs['n_epochs'],
+            'batchsize': batchsize,
+            'scores': scores,
+            'confusion matrix': matrix,
+            'pr_curve': curve
+        })
+    if len(results) > 1:
+        runs = { 'run_{}'.format(i): r for i,r in enumerate(results) }
+        out_file = dir + '/' + args.res_file
+        with open(out_file, 'w') as f:
+            json.dump(runs, f, indent=4)
 else:
     t = time.time()
     for n,m in enumerate(['BaseIEModelGoldEntities', 'IEModelGoldKG']):
@@ -250,8 +291,13 @@ else:
                     dev = device,
                     rel2index = rel2index,
                     tokenizer = tokenizer,
-                    n_epochs = args.n_epochs,
-                    save = dir + m + '_{}_{:.2f}.pth'.format(i+1,t)
+                    n_epochs = conf['n_epochs'],
+                    evaluate = conf['evaluate'],
+                    batchsize = conf['batchsize'],
+                    lr = conf['lr'],
+                    negative_rel_class = conf['negative_rel_class'],
+                    #save = dir + m + '_{}_{:.2f}.pth'.format(i+1,t)
+                    save = dir + m + '_{}.pth'.format(i+1)
                 )
         out_file = dir + '/' + args.res_file if n == 0 else dir + '/' + args.res_file.replace('results', 'results_kg')
         with open(out_file, 'w') as f:

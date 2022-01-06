@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from matplotlib.patches import Patch
 from sklearn.manifold import TSNE
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import ConfusionMatrixDisplay, PrecisionRecallDisplay
 from scipy.spatial import distance_matrix
 import seaborn as sns
 from sklearn.cluster import SpectralCoclustering
@@ -28,15 +28,29 @@ def plot_embedding(embeddings, colors='blue', method='TSNE'):
         axs.scatter(x=proj[:,0], y=proj[:,1], c=colors, cmap='Accent')
         plt.show()
 
+def collect_results(res_file):
+    print(f">> Opening {res_file}")
+    with open(res_file, 'r') as f:
+        res = json.load(f)
+    return collect_scores(res), collect_confusion_m(res), collect_PR_curve(res)
 
-def collect_scores(res_file):
+def collect_scores(res):
     """
     Collect the final scores for each class for each experiment from the results file.
     """
-    with open(res_file, 'r') as f:
-        res = json.load(f)
+    #with open(res_file, 'r') as f:
+    #    res = json.load(f)
     f1 = {}
+    p,r = {'micro avg': [], 'macro avg': []}, {'micro avg': [], 'macro avg': []}
     for v in res.values():
+        p['macro avg'].append(v['scores']['macro avg']['precision'])
+        r['macro avg'].append(v['scores']['macro avg']['recall'])
+        try:
+            p['micro avg'].append(v['scores']['micro avg']['precision'])
+            r['micro avg'].append(v['scores']['micro avg']['recall'])
+        except:
+            p['micro avg'].append(v['scores']['accuracy'])
+            r['micro avg'].append(v['scores']['accuracy'])
         for k,c in v['scores'].items(): # [0] because in principle we could have the results also for the NER and
             if k == 'accuracy':            # NED task, however at the moment we are just considering RE
                 try:
@@ -48,29 +62,30 @@ def collect_scores(res_file):
                     f1[k].append(c['f1-score'])
                 except:
                     f1[k] = [c['f1-score']]
+    print(f">> MICRO AVG\n > PRECISION: {numpy.mean(p['micro avg'])}\t RECALL: {numpy.mean(r['micro avg'])}\t F1: {numpy.mean(f1['micro avg'])}\n>> MACRO AVG\n > PRECISION: {numpy.mean(p['macro avg'])}\t RECALL: {numpy.mean(r['macro avg'])}\t F1: {numpy.mean(f1['macro avg'])}")
     return f1
 
-def collect_confusion_m(res_file: str) -> list:
+def collect_confusion_m(res: str) -> list:
     """
     Collect the confusion matrices for each experiment from the results file.
     """
-    with open(res_file, 'r') as f:
-        res = json.load(f)
+    #with open(res_file, 'r') as f:
+    #    res = json.load(f)
     #for v in res.values():
     #    print(len(v['scores']), list(v['scores'].keys()))
     #    print(numpy.array(v['confusion matrix']).shape)
     return [ v['confusion matrix'] for v in res.values() ]
 
-def collect_PR_curve(res_file: str) -> list:
-    with open(res_file, 'r') as f:
-        res = json.load(f)
+def collect_PR_curve(res: str) -> list:
+    #with open(res_file, 'r') as f:
+    #    res = json.load(f)
     #for run in res.values():
     #    for metric in ('precision', 'recall'):
     #        for k,v in run['pr_curve'][metric].items():
     #            run['pr_curve'][metric][k] = numpy.array(v)
     return [ r['pr_curve'] for r in res.values() ]
 
-def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], classes=[], support=None, **kwargs):
+def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], classes=None, support=None, **kwargs):
     """
     Prepare the violin plot for comparing *results. 
     By default we want to compare results with and without 
@@ -82,25 +97,32 @@ def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], cl
         fig, ax = plt.subplots()
     assert len(legend) == len(results)
     results = list(results)
-    if len(classes) > 0:
-        for i,r in enumerate(results):
-            results[i] = { c: r[c] for c in classes }
     if support != None:
         support['micro avg'] = -1
         support['macro avg'] = -2
         support = dict(sorted(support.items(), key=lambda x: x[1], reverse=True))
         results = [ { k: r[k] for k in support.keys() } for i,r in enumerate(results) ]
-    i = 0
+    #if len(classes) > 0:
+    if classes != None:
+        if type(classes) == list:
+            for i,r in enumerate(results):
+                results[i] = { c: r[c] for c in classes }
+        elif type(classes) == int:
+            for i,r in enumerate(results):
+                results[i] = dict(zip(list(r.keys())[:classes], list(r.values())[:classes]))
+                results[i]['micro avg'] = r['micro avg']
+                results[i]['macro avg'] = r['macro avg']
+    #i = 0
     for r,l in zip(results, legend):
         col, score = list(zip(*r.items()))
         ax.scatter(range(1,len(col)+1), numpy.array(score).mean(-1), label=l)
-        if support != None and i < 1:
-            for s,x,y in zip(list(support.values())[:-2], range(1,len(col)-1), numpy.array(score[:-2]).mean(-1)): # [-2:] to avoid annotation of micro/macro avg, they don't have a support value!
-                ax.annotate(s, xy=(x, y), xytext=(x+0.1,y))
-            i += 1
+        #if support != None and i < 1:
+        #    for s,x,y in zip(list(support.values())[:-2], range(1,len(col)-1), numpy.array(score[:-2]).mean(-1)): # [-2:] to avoid annotation of micro/macro avg, they don't have a support value!
+        #        ax.annotate(s, xy=(x, y), xytext=(x+0.1,y))
+        #    i += 1
         ax.violinplot(score)
         ax.set_xticks(range(1,len(col)+1))
-        ax.set_xticklabels([ c.split('/')[-1] for c in col], rotation=45)
+        ax.set_xticklabels([ c.split('/')[-1] for c in col], rotation=90)
     #ax.legend()
     
 
@@ -197,28 +219,57 @@ def rel_embedding_plot(triplets: list, head_tail_diff: bool = False, proj=TSNE(n
     #    for j in range(dist.shape[1]):
     #        text = axs[1].text(j, i, "{:.5f}".format(dist[i, j]),
     #                       ha="center", va="center", color="w")
-    
     return dist
 
 def PR_curve_plot(*curves, **kwargs):
-    mean, low, high = {}, {}, {}
-    for metric in ('precision', 'recall'):
-        for k in curves[0][metric].keys():
-            tmp = numpy.vstack([ c[metric][k] for c in curves ])
-            mean[metric][k] = tmp.mean(0)
-            low[metric][k] = tmp.min(0)
-            high[metric][k] = tmp.max(0)
-    for c in (mean, low, high):
-        display = PrecisionRecallDisplay(
-            recall=c['recall']["micro"],
-            precision=c['precision']["micro"],
-        )
-        display.plot()
-    plt.show()
+    mean, low, high, var = ({'precision': {}, 'recall':{}} for i in range(4))
+    print(list(curves[0].keys()))
+    bins = numpy.linspace(0,1,1000)
+    for k in curves[0]['recall'].keys():
+        rec, prec = zip(*[ smooth_curve(c['recall'][k], c['precision'][k], bins=bins) for c in curves ])
+        for i in prec:
+            print(len(i))
+        rec, prec = rec[0], numpy.vstack(prec)
+        mean['precision'][k] = prec.mean(0)
+        var['precision'][k] = numpy.sqrt(prec.var(0)) # with or without sqrt?
+        #high['precision'][k] = prec.max(0)
+        #low['precision'][k] = prec.min(0)
+    #for c in (mean, low, high):
+    #display = PrecisionRecallDisplay(
+    #    recall=curves[0]['recall']["micro"],
+    #    precision=curves[0]['precision']["micro"],
+    #)
+    #display.plot()
+    #plt.show()
     try:
         ax = kwargs['ax']
     except:
-        fig, ax = plt.subplots()
-    ax.plot(mean['recall']['micro'], mean['precision']['micro'])
-    ax.fill_between(mean['recall']['micro'], low['precision']['micro'], high['precision']['micro'])
-    plt.show()
+        fig, ax = plt.subplots(2)
+
+    #ax.plot(mean['recall']['micro'], mean['precision']['micro'])
+    zoom = int(0.4*len(rec))
+    ax[0].plot(rec, mean['precision']['micro'])
+    ax[1].plot(rec[:zoom], mean['precision']['micro'][:zoom])
+    #ax.fill_between(mean['recall']['micro'], low['precision']['micro'], high['precision']['micro'], alpha=0.4)
+    #ax.fill_between(rec, low['precision']['micro'], high['precision']['micro'], alpha=0.2)
+    ax[0].fill_between(rec, mean['precision']['micro'] - var['precision']['micro'], mean['precision']['micro'] + var['precision']['micro'], alpha=0.2)
+    ax[1].fill_between(rec[:zoom], mean['precision']['micro'][:zoom] - var['precision']['micro'][:zoom], mean['precision']['micro'][:zoom] + var['precision']['micro'][:zoom], alpha=0.2)
+    #plt.show()
+
+def smooth_curve(x, y, bins=numpy.linspace(0,1,100)):
+    ind = numpy.digitize(x, bins, right=True)
+    curve = {}
+    y = numpy.array(y)
+    for i,j in enumerate(bins):
+        k = (ind == i).nonzero()
+        if len(k[0]) > 0:
+            curve[j] = y[k].mean(0)
+        else:
+            curve[j] = curve[bins[i-1]]
+    #for i,yy in zip(ind, y):
+    #    try:
+    #        curve[bins[i]].append(yy)
+    #    except:
+    #        curve[bins[i]] = [yy]
+    xy = numpy.array([ (k,numpy.mean(v)) for k,v in sorted(curve.items(), key=lambda x: x[0])])
+    return xy[:,0], xy[:,1]

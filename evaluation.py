@@ -106,7 +106,7 @@ class Evaluator(object):
                                 outs[-1][0][i][:,0].tolist(),
                                 outs[-1][0][i][:,1].tolist(),                    
                             ),
-                            outs[-1][1][i]
+                            outs[-1][1][i].cpu()
                         )))
                     else:
                         self.re_prediction.append(None)
@@ -118,11 +118,11 @@ class Evaluator(object):
         tg_bin = label_binarize(targets, classes=classes)
         precision, recall, avg_precision = {}, {}, {}
         # for each class
-        for i,r in enumerate(classes):
-            precision[r], recall[r], _ = precision_recall_curve(tg_bin[:, i], scores[:, i])
-            avg_precision[r] = average_precision_score(tg_bin[:, i], scores[:, i])
-            precision[r] = precision[r].tolist()
-            recall[r] = recall[r].tolist()
+        #for i,r in enumerate(classes):
+         #   precision[r], recall[r], _ = precision_recall_curve(tg_bin[:, i], scores[:, i])
+         #   avg_precision[r] = average_precision_score(tg_bin[:, i], scores[:, i])
+         #   precision[r] = precision[r].tolist()
+         #   recall[r] = recall[r].tolist()
         # on average
         precision["micro"], recall["micro"], _ = precision_recall_curve(
             tg_bin.ravel(), scores.ravel()
@@ -153,7 +153,10 @@ class Evaluator(object):
         classes = {}
         for gt, p in zip(self.ned_groundtruth, self.ned_prediction):
             for k,v in gt.items():
-                target.append(self.embedding2id[tuple(v.tolist())])
+                try:
+                    target.append(self.embedding2id[tuple(v.tolist())])
+                except:
+                    continue
                 classes[self.embedding2id[tuple(v.tolist())]] = 0
                 try:
                     tmp = p[k]
@@ -169,10 +172,11 @@ class Evaluator(object):
                 classes[pred[i]]
             except:
                 pred[i] = random.choice(list(classes.keys()))
-        print(skm.classification_report(target, pred, labels=list(self.embedding2id.values())))
+        #print(skm.classification_report(target, pred, labels=list(self.embedding2id.values())))
+        print(skm.classification_report(target, pred, labels=list(classes.keys())))
         return (skm.classification_report(target, pred, labels=list(self.embedding2id.values()), output_dict=True), skm.confusion_matrix(target, pred, labels=list(self.embedding2id.values())))
 
-    def re_report(self):
+    def re_report(self, ignore_classes=None):
         target, pred, scores = [], [], []
         classes = {}
         for gt, p, s in zip(self.re_groundtruth, self.re_prediction, self.re_scores):
@@ -181,14 +185,21 @@ class Evaluator(object):
                 classes[self.re_classes[gt[k]]] = 0
                 try:
                     pred.append(self.re_classes[p[k]])
-                    scores.append(s[k])
                 except:
                     pred.append('***ERR***')
+                try:
+                    scores.append(s[k])
+                except:
                     scores.append('***ERR***')
         #print(list(zip(pred, target)))
-        scores = torch.vstack(scores)#.cpu().numpy()
+        for s in scores:
+            if not torch.is_tensor(s):
+                print(s)
+        scores = torch.vstack(scores)
         #print(scores.shape)
-        #classes.pop('NA')
+        if ignore_classes != None and ignore_classes[0] != None:
+            for i in ignore_classes:
+                classes.pop(i)
         labels = [v for v in self.re_classes.values() if v in classes.keys()]
         #tg = list(filter(('NA').__ne__, target))
         #print(tg)
@@ -208,14 +219,14 @@ class Evaluator(object):
                 pr_curve)
         #return (skm.classification_report(target, pred, labels=list(self.re_classes.values()), output_dict=True), skm.confusion_matrix(target, pred, labels=list(self.re_classes.values())).tolist())
 
-    def classification_report(self, data):
+    def classification_report(self, data, ignore_classes=None):
         self.eval(data)
         cr = []
         if self.NER:
             cr.append(self.ner_report())
         if self.NED:
             cr.append(self.ned_report())
-        cr.append(self.re_report())
+        cr.append(self.re_report(ignore_classes=ignore_classes))
         return cr
 
 
