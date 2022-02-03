@@ -79,7 +79,7 @@ class Trainer(object):
                                   collate_fn=self.train_set.collate_fn)
         # BERT layers unfreezing
         k = 0  # counter for bert layers unfreezing
-        one_3rd = int(len(train_loader) / 3) # after 1/3 of the data we unfreeze a layer
+        one_3rd = int(len(train_loader) / 3) if epochs > 1 else int(len(train_loader) / 5) # after 1/3 of the data we unfreeze a layer
         print_step = int(len(train_loader) / 5)
         # loss plots
         plots = {

@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import json, numpy, sys, pickle, argparse, re
-from utils import collect_scores, violin_plot, collect_results, collect_confusion_m, confusion_m_heat_plot, collect_PR_curve, PR_curve_plot
+from utils import collect_scores, violin_plot, collect_results, collect_confusion_m, confusion_m_heat_plot, collect_PR_curve, PR_curve_plot, f1_var_supp_correlation
 from dataset import Stat
 
 parser = argparse.ArgumentParser(description='Plot results.')
@@ -10,7 +10,7 @@ parser.add_argument('--compare', nargs='+')
 parser.add_argument('--stat')
 args = parser.parse_args()
 
-font = {'size': 14}
+font = {'size': 30}
 rc('font', **font)
 
 supp = None
@@ -23,7 +23,7 @@ if args.stat != None:
 if args.res != None:
     res, res_kg, rels = (args.res[0::2], args.res[1::2], []) if args.res != None else ([], [], [])
     for r, rkg in zip(res, res_kg):
-        fig, ax = plt.subplots(1, 1, figsize=(16,9), dpi=400)
+        fig, ax = plt.subplots(1, 1, figsize=(32,16), dpi=400)
         # collect data
         rr, m, pr = collect_results(r)
         rrkg, mkg, pr_kg = collect_results(rkg)
@@ -32,16 +32,20 @@ if args.res != None:
         rels.append(list(rr.keys())[:-2])
         sp = { k: supp[k] for k in rr.keys() if k not in {'micro avg', 'macro avg'}} if supp != None else None
         violin_plot(rr, rrkg, classes=None, support=sp, ax=ax)
+        ax.set_ylabel(r'$F1$')
         plt.tight_layout()
         if input('> Save figure? (y/n)\n') == 'y':
             plt.savefig(input('> Save figure to:\n'), format='pdf')
         plt.show()
+        f1_var_supp_correlation(rr, rrkg, rel_supp=sp)
         # P-R curve
         font = {'size': 30}
         rc('font', **font)
         fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
         #pr, pr_kg = collect_PR_curve(r), collect_PR_curve(rkg)
+        print('>> PR Curve Baseline')
         PR_curve_plot(*pr, ax=ax)
+        print('>> PR Curve with Graph Embedding')
         PR_curve_plot(*pr_kg, ax=ax)
         plt.tight_layout()
         if input('> Save figure? (y/n)\n') == 'y':

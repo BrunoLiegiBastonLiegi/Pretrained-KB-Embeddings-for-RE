@@ -7,3 +7,5 @@ __pycache__/
 *.bak
 *.log
 *.json
+*~
+#*#

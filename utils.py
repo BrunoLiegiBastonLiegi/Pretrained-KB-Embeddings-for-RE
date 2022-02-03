@@ -6,7 +6,8 @@ from matplotlib.patches import Patch
 from sklearn.manifold import TSNE
 from sklearn.metrics import ConfusionMatrixDisplay, PrecisionRecallDisplay
 from scipy.spatial import distance_matrix
-import seaborn as sns
+from scipy import stats
+from scipy.optimize import curve_fit
 from sklearn.cluster import SpectralCoclustering
 
 
@@ -98,9 +99,10 @@ def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], cl
     assert len(legend) == len(results)
     results = list(results)
     if support != None:
+        #support = dict(sorted(support.items(), key=lambda x: x[1], reverse=True))
+        support = dict(sorted(support.items(), key=lambda x: x[1], reverse=True)[:30])
         support['micro avg'] = -1
         support['macro avg'] = -2
-        support = dict(sorted(support.items(), key=lambda x: x[1], reverse=True))
         results = [ { k: r[k] for k in support.keys() } for i,r in enumerate(results) ]
     #if len(classes) > 0:
     if classes != None:
@@ -115,7 +117,8 @@ def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], cl
     #i = 0
     for r,l in zip(results, legend):
         col, score = list(zip(*r.items()))
-        ax.scatter(range(1,len(col)+1), numpy.array(score).mean(-1), label=l)
+        ax.scatter(range(1,len(col)+1), numpy.array(score).mean(-1), label=l, s=100)
+        #ax.scatter(range(1,len(col)+1), numpy.array(score).mean(-1), label=l)
         #if support != None and i < 1:
         #    for s,x,y in zip(list(support.values())[:-2], range(1,len(col)-1), numpy.array(score[:-2]).mean(-1)): # [-2:] to avoid annotation of micro/macro avg, they don't have a support value!
         #        ax.annotate(s, xy=(x, y), xytext=(x+0.1,y))
@@ -123,6 +126,7 @@ def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], cl
         ax.violinplot(score)
         ax.set_xticks(range(1,len(col)+1))
         ax.set_xticklabels([ c.split('/')[-1] for c in col], rotation=90)
+    plt.axvline(30.5, color='black', linewidth=0.5)
     #ax.legend()
     
 
@@ -222,8 +226,7 @@ def rel_embedding_plot(triplets: list, head_tail_diff: bool = False, proj=TSNE(n
     return dist
 
 def PR_curve_plot(*curves, **kwargs):
-    mean, low, high, var = ({'precision': {}, 'recall':{}} for i in range(4))
-    print(list(curves[0].keys()))
+    mean, low, high, var = ({'precision': {}} for i in range(4))
     bins = numpy.linspace(0,1,1000)
     for k in curves[0]['recall'].keys():
         rec, prec = zip(*[ smooth_curve(c['recall'][k], c['precision'][k], bins=bins) for c in curves ])
@@ -232,8 +235,12 @@ def PR_curve_plot(*curves, **kwargs):
         rec, prec = rec[0], numpy.vstack(prec)
         mean['precision'][k] = prec.mean(0)
         var['precision'][k] = numpy.sqrt(prec.var(0)) # with or without sqrt?
-        #high['precision'][k] = prec.max(0)
-        #low['precision'][k] = prec.min(0)
+        high['precision'][k] = prec.max(0)
+        low['precision'][k] = prec.min(0)
+
+    #print(list(curves[0]['avg_precision'].keys()))
+    avg_precision = numpy.array([c['avg_precision']['micro'] for c in curves]).mean()
+    print(avg_precision)
     #for c in (mean, low, high):
     #display = PrecisionRecallDisplay(
     #    recall=curves[0]['recall']["micro"],
@@ -241,6 +248,9 @@ def PR_curve_plot(*curves, **kwargs):
     #)
     #display.plot()
     #plt.show()
+    pat1 = mean['precision']['micro'][numpy.argmin(numpy.abs(rec-0.1))]
+    pat3 = mean['precision']['micro'][numpy.argmin(numpy.abs(rec-0.3))]
+    print(f">> P@10: {pat1} \t P@30: {pat3}")
     try:
         ax = kwargs['ax']
     except:
@@ -248,12 +258,16 @@ def PR_curve_plot(*curves, **kwargs):
 
     #ax.plot(mean['recall']['micro'], mean['precision']['micro'])
     zoom = int(0.4*len(rec))
-    ax[0].plot(rec, mean['precision']['micro'])
+    ax[0].plot(rec, mean['precision']['micro'], label='Average Precision: {:.3f}'.format(avg_precision))
+    ax[0].legend()
     ax[1].plot(rec[:zoom], mean['precision']['micro'][:zoom])
-    #ax.fill_between(mean['recall']['micro'], low['precision']['micro'], high['precision']['micro'], alpha=0.4)
-    #ax.fill_between(rec, low['precision']['micro'], high['precision']['micro'], alpha=0.2)
+    #ax[0].fill_between(rec, low['precision']['micro'], high['precision']['micro'], alpha=0.4)
+    #ax[1].fill_between(rec, low['precision']['micro'], high['precision']['micro'], alpha=0.4)
     ax[0].fill_between(rec, mean['precision']['micro'] - var['precision']['micro'], mean['precision']['micro'] + var['precision']['micro'], alpha=0.2)
     ax[1].fill_between(rec[:zoom], mean['precision']['micro'][:zoom] - var['precision']['micro'][:zoom], mean['precision']['micro'][:zoom] + var['precision']['micro'][:zoom], alpha=0.2)
+    for i in (0,1):
+        ax[i].set_xlabel(r'$R$')
+        ax[i].set_ylabel(r'$P$')
     #plt.show()
 
 def smooth_curve(x, y, bins=numpy.linspace(0,1,100)):
@@ -273,3 +287,99 @@ def smooth_curve(x, y, bins=numpy.linspace(0,1,100)):
     #        curve[bins[i]] = [yy]
     xy = numpy.array([ (k,numpy.mean(v)) for k,v in sorted(curve.items(), key=lambda x: x[0])])
     return xy[:,0], xy[:,1]
+
+def f1_var_supp_correlation(*rel2f1, rel_supp):
+    plt.hist(list(rel_supp.values()), bins='auto')
+    plt.show()
+    fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
+    for i,f in enumerate([numpy.var, numpy.mean]):
+        for rel in rel2f1:
+            rel2f = {r: f(numpy.array(v)) for r,v in rel.items()}
+            rel2f.pop('micro avg')
+            rel2f.pop('macro avg')
+            x, y = numpy.array([[rel_supp[r], v] for r,v in rel2f.items() if v !=0.]).T
+            logx, logy = numpy.log(x), numpy.log(y)
+            #x, y = numpy.array([rel_supp[r] for r in rel2var.keys()]), numpy.array(list(rel2var.values())) #+ 1e-12
+            #print(list(zip(numpy.log(x),numpy.log(y))))
+            ax[i].scatter(
+                logx,
+                logy,
+                s=80
+            )
+            deg = 1 if i == 0 else 3 
+            #fit = numpy.polyfit(numpy.log(logx), logy, 1)
+            #fit, cov = numpy.polyfit(logx, logy, deg, cov='unscaled')
+            linspace = numpy.linspace(min(logx), max(logx), 1000)
+            if i == 0:
+                fit = stats.linregress(logx, logy)
+                coeff, pval, rval, err = [fit.slope, fit.intercept], fit.pvalue, fit.rvalue, [fit.stderr, fit.intercept_stderr]
+                print(">> Fit: " +
+                      ' + '.join([ '({:.2f} +- {:.2f})*x^{}'.format(coeff[j], err[j], deg-j)
+                                   for j in range(len(coeff))])
+                )
+                print(f">> PValue: {pval} \n>> RValue: {fit.rvalue}")
+                #lab = (r"\begin{eqnarray*}"
+                #       r"y={:.2f}x {:.2f} \\"
+                #       r"r^2={:.2f}"
+                #       r"\end{eqnarray*}".format(coeff[0], coeff[1], rval**2))
+                #ax[i].plot(linspace, list(map(lambda x: numpy.sum([ fit[d]*x**(deg-d) for d in range(deg+1)]), linspace)), label=(r"$y={:.2f}x {:.2f}$ ($r^2={:.2f}$)".format(coeff[0], coeff[1], rval**2)))
+                ax[i].plot(linspace, list(map(lambda x: numpy.sum([ fit[d]*x**(deg-d) for d in range(deg+1)]), linspace)), label=(r"$r^2={:.2f}$".format(rval**2)), linewidth=5)
+            else:
+                plt.axvline(numpy.log(1000), color='black', linestyle='--', linewidth=3, alpha=0.4)
+                def fit_fun(x, a, b, c):
+                    return a*numpy.arctan(b*x) + c
+                coeff, cov = curve_fit(fit_fun, logx, logy)
+                #ax[i].plot(linspace, list(map(lambda x: fit_fun(x, *coeff), linspace)))
+            #ax[i].plot(linspace, list(map(lambda x: fit[0]*numpy.log(x)+fit[1], linspace)))
+            #print(sorted(rel2var.items(), key=lambda x: x[1]))
+    ax[0].set_xlabel(r"log$\,S$"), ax[0].set_ylabel(r"log$\;\sigma^2(F1)$")
+    ax[1].set_xlabel(r"log$\,S$"), ax[1].set_ylabel(r"log$\;\overline{F1}$")
+    ax[0].legend(prop={'size': 28})
+    fig.tight_layout()
+    plt.savefig('log(var)_log(mean)_vs_log(supp).pdf', format='pdf')
+    plt.show()
+    fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
+    rel2gap = {
+        r: (numpy.mean(rel2f1[1][r]) - numpy.mean(rel2f1[0][r])) / numpy.array([rel2f1[0][r], rel2f1[1][r]]).mean()
+        for r in rel2f1[0].keys()
+    }
+    rel2gap.pop('micro avg')
+    rel2gap.pop('macro avg')
+    for i,sign in enumerate(('+', '-')):
+        if sign == '+':
+            x, y = numpy.array([[rel_supp[r], v] for r,v in rel2gap.items() if v > 0.]).T
+        elif sign == '-':
+            x, y = numpy.array([[rel_supp[r], -v] for r,v in rel2gap.items() if v < 0.]).T
+        logx, logy = numpy.log(x), numpy.log(y)
+        ax[i].scatter(
+            logx,
+            logy,
+            c = 'red' if sign == '+' else 'black'
+        )
+        fit = numpy.polyfit(logx, logy, 1)
+        linspace = numpy.linspace(0, max(logx), 1000)
+        print(f">> Linear Fit: {fit}")
+        ax[i].plot(linspace, list(map(lambda x: fit[0]*x + fit[1], linspace)), c = 'red' if sign == '+' else 'black')
+    plt.show()
+    
+    fig, ax = plt.subplots(1, 1, figsize=(16,16), dpi=400)
+    gap_vs_f1 = [
+        (numpy.array([rel2f1[0][r], rel2f1[1][r]]).mean(),
+        numpy.mean(rel2f1[1][r]) - numpy.mean(rel2f1[0][r]))
+        for r in rel2f1[0].keys() if r not in ('micro avg', 'macro avg')
+    ]
+    x, y = zip(*gap_vs_f1)
+    maxdim = 500
+    dotsize = numpy.array([rel_supp[r] for r in rel2f1[0].keys() if r not in ('micro avg', 'macro avg')])
+    #dotsize = (maxdim / max(dotsize))*dotsize
+    print(len(dotsize), len(x))
+    ax.scatter(x, y, c = 'dimgrey', s=2*dotsize**(1/2))
+    ax.set_xlabel(r"$\overline{F1}$"), ax.set_ylabel(r"$\Delta \overline{F1}$")
+    plt.axhline(y=0, color='black', linestyle='--', alpha=0.9)
+    plt.axhline(y=numpy.mean(y), color='red', linestyle='--', alpha=0.9)
+    plt.axhline(y=numpy.median(y), color='purple', linestyle='--', alpha=0.9)
+    #ax.text(-0.05, numpy.median(y)+0.005, r'Mean', color='red', fontsize=20)
+    fig.tight_layout()
+    plt.savefig('gap_vs_f1.pdf', format='pdf')
+    print(numpy.median(y))
+    plt.show()
