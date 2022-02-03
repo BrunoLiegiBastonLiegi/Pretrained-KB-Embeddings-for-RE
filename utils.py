@@ -1,322 +1,385 @@
-import random, torch
-import numpy as np
-from abc import ABC, abstractmethod
+import json, numpy, torch
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+from matplotlib.patches import Patch
+from sklearn.manifold import TSNE
+from sklearn.metrics import ConfusionMatrixDisplay, PrecisionRecallDisplay
+from scipy.spatial import distance_matrix
+from scipy import stats
+from scipy.optimize import curve_fit
+from sklearn.cluster import SpectralCoclustering
 
 
+def plot_embedding(embeddings, colors='blue', method='TSNE'):
+    """
+    Plot the projection in the 2d space of the graph embeddings.
+    """
+    assert method in {'PCA', 'TSNE'}
+    if method == 'PCA':
+        pca = PCA(n_components=2)
+        pca.fit(embeddings)
+        comp = pca.transform(embeddings)
+        fig, axs = plt.subplots()
+        axs.scatter(x=comp[:,0], y=comp[:,1])
+        plt.show()
+    elif method == 'TSNE':
+        proj = TSNE(n_components=2).fit_transform(embeddings)
+        fig, axs = plt.subplots()
+        axs.scatter(x=proj[:,0], y=proj[:,1], c=colors, cmap='Accent')
+        plt.show()
 
-# ------------------------ NER tagging schemes ----------------------------------------
+def collect_results(res_file):
+    print(f">> Opening {res_file}")
+    with open(res_file, 'r') as f:
+        res = json.load(f)
+    return collect_scores(res), collect_confusion_m(res), collect_PR_curve(res)
 
+def collect_scores(res):
+    """
+    Collect the final scores for each class for each experiment from the results file.
+    """
+    #with open(res_file, 'r') as f:
+    #    res = json.load(f)
+    f1 = {}
+    p,r = {'micro avg': [], 'macro avg': []}, {'micro avg': [], 'macro avg': []}
+    for v in res.values():
+        p['macro avg'].append(v['scores']['macro avg']['precision'])
+        r['macro avg'].append(v['scores']['macro avg']['recall'])
+        try:
+            p['micro avg'].append(v['scores']['micro avg']['precision'])
+            r['micro avg'].append(v['scores']['micro avg']['recall'])
+        except:
+            p['micro avg'].append(v['scores']['accuracy'])
+            r['micro avg'].append(v['scores']['accuracy'])
+        for k,c in v['scores'].items(): # [0] because in principle we could have the results also for the NER and
+            if k == 'accuracy':            # NED task, however at the moment we are just considering RE
+                try:
+                    f1['micro avg'].append(c)
+                except:
+                    f1['micro avg'] = [c]
+            elif k != 'weighted avg':
+                try:
+                    f1[k].append(c['f1-score'])
+                except:
+                    f1[k] = [c['f1-score']]
+    print(f">> MICRO AVG\n > PRECISION: {numpy.mean(p['micro avg'])}\t RECALL: {numpy.mean(r['micro avg'])}\t F1: {numpy.mean(f1['micro avg'])}\n>> MACRO AVG\n > PRECISION: {numpy.mean(p['macro avg'])}\t RECALL: {numpy.mean(r['macro avg'])}\t F1: {numpy.mean(f1['macro avg'])}")
+    return f1
 
+def collect_confusion_m(res: str) -> list:
+    """
+    Collect the confusion matrices for each experiment from the results file.
+    """
+    #with open(res_file, 'r') as f:
+    #    res = json.load(f)
+    #for v in res.values():
+    #    print(len(v['scores']), list(v['scores'].keys()))
+    #    print(numpy.array(v['confusion matrix']).shape)
+    return [ v['confusion matrix'] for v in res.values() ]
 
-class Scheme(ABC):
+def collect_PR_curve(res: str) -> list:
+    #with open(res_file, 'r') as f:
+    #    res = json.load(f)
+    #for run in res.values():
+    #    for metric in ('precision', 'recall'):
+    #        for k,v in run['pr_curve'][metric].items():
+    #            run['pr_curve'][metric][k] = numpy.array(v)
+    return [ r['pr_curve'] for r in res.values() ]
+
+def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], classes=None, support=None, **kwargs):
+    """
+    Prepare the violin plot for comparing *results. 
+    By default we want to compare results with and without 
+    graph embeddings enabled.
+    """
+    try:
+        ax = kwargs['ax']
+    except:
+        fig, ax = plt.subplots()
+    assert len(legend) == len(results)
+    results = list(results)
+    if support != None:
+        #support = dict(sorted(support.items(), key=lambda x: x[1], reverse=True))
+        support = dict(sorted(support.items(), key=lambda x: x[1], reverse=True)[:30])
+        support['micro avg'] = -1
+        support['macro avg'] = -2
+        results = [ { k: r[k] for k in support.keys() } for i,r in enumerate(results) ]
+    #if len(classes) > 0:
+    if classes != None:
+        if type(classes) == list:
+            for i,r in enumerate(results):
+                results[i] = { c: r[c] for c in classes }
+        elif type(classes) == int:
+            for i,r in enumerate(results):
+                results[i] = dict(zip(list(r.keys())[:classes], list(r.values())[:classes]))
+                results[i]['micro avg'] = r['micro avg']
+                results[i]['macro avg'] = r['macro avg']
+    #i = 0
+    for r,l in zip(results, legend):
+        col, score = list(zip(*r.items()))
+        ax.scatter(range(1,len(col)+1), numpy.array(score).mean(-1), label=l, s=100)
+        #ax.scatter(range(1,len(col)+1), numpy.array(score).mean(-1), label=l)
+        #if support != None and i < 1:
+        #    for s,x,y in zip(list(support.values())[:-2], range(1,len(col)-1), numpy.array(score[:-2]).mean(-1)): # [-2:] to avoid annotation of micro/macro avg, they don't have a support value!
+        #        ax.annotate(s, xy=(x, y), xytext=(x+0.1,y))
+        #    i += 1
+        ax.violinplot(score)
+        ax.set_xticks(range(1,len(col)+1))
+        ax.set_xticklabels([ c.split('/')[-1] for c in col], rotation=90)
+    plt.axvline(30.5, color='black', linewidth=0.5)
+    #ax.legend()
     
-    @abstractmethod
-    def __init__(self):
-        pass
 
-    @property
-    def space_dim(self):
-        return len(self.tag2index)
-        
-    def to_tensor(self, *tag, index=False):
-        if index:
-            return torch.tensor([ self.tag2index[i] for i in tag ]) # return only index of the class
-        else:
-            t = torch.zeros((len(tag),self.space_dim))
-            j = 0
-            for i in tag:
-                t[j][self.tag2index[i]] = 1
-                j += 1
-            return t                                               # return 1-hot encoding tensor
-        
-
-    def to_tag(self, tensor, index=False):
-        if index:
-            return int(torch.argmax(tensor))
-        else:
-            return self.index2tag[int(torch.argmax(tensor))]
-
-    @abstractmethod
-    def transition_M(self):
-        pass
-
+def confusion_m_heat_plot(m, rels, **kwargs):
+    """
+    ax.imshow(m, **kwargs)
     
-class BIOES(Scheme):
+    # We want to show all ticks...
+    ax.set_xticks(numpy.arange(len(rels)))
+    ax.set_yticks(numpy.arange(len(rels)))
+    # ... and label them with the respective list entries
+    ax.set_xticklabels(rels)
+    ax.set_yticklabels(rels)
     
-    def __init__(self, entity_types):
-        self.e_types = entity_types
-        self.tag2index = {}
-        i = 0
-        for e in self.e_types:
-            self.tag2index['B-' + e] = i
-            i +=1
-            self.tag2index['I-' + e] = i
-            i +=1
-            self.tag2index['E-' + e] = i
-            i +=1
-            self.tag2index['S-' + e] = i
-            i +=1
-        self.tag2index['O'] = i
-        self.index2tag = {v: k for k, v in self.tag2index.items()}
+    # Rotate the tick labels and set their alignment.
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+             rotation_mode="anchor")
+    
+    # Loop over data dimensions and create text annotations.
+    for i in range(len(rels)):
+        for j in range(len(rels)):
+            text = ax.text(j, i, "{:.1f}".format(m[i, j]),
+                           ha="center", va="center", color="w")
+    """
+    disp = ConfusionMatrixDisplay(confusion_matrix=m, display_labels=rels)
+    disp.plot(ax=kwargs['ax'])
+    kwargs['ax'].tick_params(axis='x', labelrotation = 45)    
+    
 
-    # WARNING: to be tested!
-    def transition_M(self):
-        p = 1./( 8*len(self.e_types) + 4*len(self.e_types) + 1)
-        self.intra_transition = torch.tensor([ [0,p,p,0],
-                                               [0,p,p,0],
-                                               [p,0,0,p],
-                                               [p,0,0,p] ])
+def rel_embedding_plot(triplets: list, head_tail_diff: bool = False, proj=TSNE(n_components=2), **kwargs):
+    try:
+        axs = kwargs['ax']
+    except:
+        fig, axs = plt.subplots(1,2)
         
-        self.inter_transition = torch.tensor([ [0,0,0,0],
-                                               [0,0,0,0],
-                                               [p,0,0,p],
-                                               [p,0,0,p] ])
-
-        # should I consider transitions from initial tag <s> as well?
-        
-        boundary = torch.tensor([p,0,0,p])
-        for j in range(len(self.e_types) - 1):
-            boundary = torch.cat((boundary, self.intra_transition[2]))
-        
-        for i in range(len(self.e_types)):
-            row = self.intra_transition if i == 0 else self.inter_transition
-            for j in range(len(self.e_types) - 1):
-                row = torch.hstack((row,self.intra_transition)) if i == j else torch.hstack((tmp,self.inter_transition))
-            transition_M = row if i == 0 else torch.vstack((transition_M,row))
-
-        transition_M = torch.vstack(transition_M, boundary)
-        transition_M = torch.hstack(transition_M, torch.transpose(boundary.view(-1,1)))
-            
-        return transition_M
-
-
-
-# ------------------------ Training -------------------------------------------------------
-
-
-
-
-class Trainer(object):
-
-    def __init__(self, train_data, test_data, model, tokenizer, optim, loss_f, device, save=True, wNED=1, batchsize=32):     
-        self.model = model
-        self.tokenizer = tokenizer
-        self.optim = optim
-        self.loss_f = loss_f
-        self.device = device     
-        self.train_set = train_data
-        self.test_set = test_data
-        self.save = save
-        self.wNED = wNED
-        self.mse = torch.nn.MSELoss(reduction='sum')
-
-    def train(self, epochs):
-
-        # BERT layers unfreezing
-        k = 0  # counter for bert layers unfreezing
-        one_3rd = int(len(self.train_set) / 3) # after 1/3 of the data we unfreeze a layer
-        # Losses weights
-        l_re = 0. # RE loss weight, gradually increased to 1
-        l_ned = 0.
-        # Losses plots
-        self.loss_plots = {
-            'train': {'NER':[], 'NED':[], 'RE':[]},
-            'test': {'NER':[], 'NED':[], 'RE':[]}
-        }
-        
-        for epoch in range(epochs):
-
-            running_loss = 0.0
-            ner_running_loss = 0.0
-            ned_running_loss1 = 0.0
-            ned_running_loss2 = 0.0
-            re_running_loss = 0.0
-            # shuffle training set
-            random.shuffle(self.train_set)
-            # set model in train mode
-            self.model.train()
-
-            for i in range(len(self.train_set)):
-                #print(list(self.model.ned_lin0.parameters()))
-
-                if k < 4:
-                    if i == one_3rd:
-                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
-                        k += 1
-                    elif i == 2*one_3rd:
-                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
-                        k += 1
-                    elif i == len(self.train_set):
-                        self.model.unfreeze_bert_layer(k) # gradually unfreeze the last layers
-                        k += 1
-
-                inputs = self.tokenizer(self.train_set[i][0], return_tensors="pt")
-                ner_target = self.train_set[i][1]
-                ned_target = self.train_set[i][2]
-                re_target = self.train_set[i][3]
-
-                # move inputs and labels to device
-                if self.device != torch.device("cpu"):
-                    inputs = inputs.to(self.device)
-                    ner_target = ner_target.to(self.device)
-                    ned_target = ned_target.to(self.device)
-                    re_target = re_target.to(self.device)
-
-                # zero the parameter gradients
-                self.optim.zero_grad()
-
-                # forward 
-                ner_output, ned_output, re_output= self.model(inputs)
-                # losses
-                ner_loss = self.loss_f(ner_output, ner_target)
-                self.loss_plots['train']['NER'].append(ner_loss)
-                ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(1., device=self.device), torch.tensor(1., device=self.device))
-                #ned_loss = torch.tensor(1., device=self.device)
-                self.loss_plots['train']['NED'].append(ned_loss1)
-                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
-                self.loss_plots['train']['RE'].append(re_loss)
-                if epoch == 0:
-                    l_re = i / len(self.train_set)
-                    l_ned = min(3*l_re, 1)
-                #loss = ner_loss + l_re * re_loss + self.wNED*(l_ned * 100*ned_loss) # wNED is used for discovering the benefit of NED
-                loss = ner_loss + l_re * re_loss + self.wNED*(l_re * (100*ned_loss1 + ned_loss2)) # wNED is used for discovering the benefit of NED
-                # backprop
-                loss.backward()
-                # optimize
-                self.optim.step()
-
-                # print statistics
-                ner_running_loss += ner_loss.item()
-                ned_running_loss1 += ned_loss1.item()
-                ned_running_loss2 += ned_loss2.item()
-                re_running_loss += re_loss.item()
-                running_loss += loss.item()
-
-                if i % 500 == 499:    # print every 500 sentences
-                    print('[%d, %5d] Total loss: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
-                          (epoch + 1, i + 1, running_loss / 500, ner_running_loss / 500, ned_running_loss1 / 500, ned_running_loss2 / 500, re_running_loss / 500))
-                    running_loss = 0.0
-                    ner_running_loss = 0.
-                    ned_running_loss1 = 0.
-                    ned_running_loss2 = 0.
-                    re_running_loss = 0.
-                    
-            test_loss = self.test_loss()
-            print('> Test Loss\n Total: %.3f, NER: %.3f, NED1: %.3f, NED2: %.3f, RE: %.3f' %
-                  (test_loss[0], test_loss[1], test_loss[2], test_loss[3], test_loss[4]), '\n')
-
-        if self.save:
-            # save the model
-            print('> Save model to PATH (leave blank for not saving): ')
-            PATH = input()
-            if PATH != '':
-                torch.save(self.model.state_dict(), PATH)
-                print('> Model saved to ', PATH)
+    rel_emb = {}
+    head, tail = {}, {}
+    X = []
+    for t in triplets:
+        X.append(t[0])
+        X.append(t[1])
+        try:
+            if head_tail_diff:
+                rel_emb[t[2]].append(t[1]-t[0])
             else:
-                print('> Model not saved.')
+                rel_emb[t[2]].append(t[0])
+                rel_emb[t[2]].append(t[1])
+                head[t[2]].append(t[0])
+                tail[t[2]].append(t[1])
+        except:
+            if head_tail_diff:
+                rel_emb[t[2]] = [t[1]-t[0]]
+            else:
+                rel_emb[t[2]] = [t[0], t[1]]
+                head[t[2]] = [t[0]]
+                tail[t[2]] = [t[1]]
 
-        self.model.eval()
-        return self.loss_plots
+    proj.fit(torch.vstack(X))
+    colors = ['r' for i in range(len(head['Work_For']))]
+    colors += ['b' for i in range(len(tail['Work_For']))]
+    ht = proj.fit_transform(torch.vstack(head['Work_For'] + tail['Work_For']))
+    plt.scatter(ht[:,0], ht[:,1], c=colors)
+    plt.show()
+    
+    
+    mean_emb = torch.vstack( 
+        list(map( lambda x: torch.vstack(x).mean(0),
+             rel_emb.values() ))
+    )
+    #g = sns.clustermap(mean_emb.numpy(), col_cluster=False)
+    #plt.show()
+    p = proj.fit_transform(mean_emb)
+    axs[0].scatter(x=p[:,0], y=p[:,1], c=range(len(rel_emb)), cmap='Accent')
+    for (x,y),t in zip(p, rel_emb.keys()):
+        axs[0].annotate(t, xy=(x, y), xytext=(x+0.1,y))
 
-    def test_loss(self):
-        # set model in eval mode
-        self.model.eval()
-        with torch.no_grad():
-            loss = 0.
-            test_ner_loss = torch.tensor(0., device=self.device)
-            test_ned_loss1 = torch.tensor(0., device=self.device)
-            test_ned_loss2 = torch.tensor(0., device=self.device)
-            test_re_loss = torch.tensor(0., device=self.device)
-            
-            for i in self.test_set:
-                inputs = self.tokenizer(i[0], return_tensors="pt")
-                ner_target = i[1]
-                ned_target = i[2]
-                re_target = i[3]
+    dist = distance_matrix( mean_emb, mean_emb )
+    cluster_m = SpectralCoclustering(n_clusters=2, random_state=0)
+    cluster_m.fit(dist)
+    fit_data = dist[numpy.argsort(cluster_m.row_labels_)]
+    fit_data = fit_data[:, numpy.argsort(cluster_m.column_labels_)]
+    #g = sns.clustermap(dist)
+    #plt.show()
+    im = axs[1].imshow(dist)
+    #im = axs[1].imshow(fit_data)
+    cbar = axs[1].figure.colorbar(im, ax=axs[1])
+    axs[1].set_xticks(numpy.arange(dist.shape[0]))
+    axs[1].set_yticks(numpy.arange(dist.shape[1]))
+    axs[1].set_xticklabels(rel_emb.keys())
+    axs[1].set_yticklabels(rel_emb.keys())
+    plt.setp(axs[1].get_xticklabels(), rotation=45, ha="right",
+         rotation_mode="anchor")
+    #for i in range(dist.shape[0]):
+    #    for j in range(dist.shape[1]):
+    #        text = axs[1].text(j, i, "{:.5f}".format(dist[i, j]),
+    #                       ha="center", va="center", color="w")
+    return dist
 
-                # move inputs and labels to device
-                if self.device != torch.device("cpu"):
-                    inputs = inputs.to(self.device)
-                    ner_target = ner_target.to(self.device)
-                    ned_target = ned_target.to(self.device)
-                    re_target = re_target.to(self.device)
+def PR_curve_plot(*curves, **kwargs):
+    mean, low, high, var = ({'precision': {}} for i in range(4))
+    bins = numpy.linspace(0,1,1000)
+    for k in curves[0]['recall'].keys():
+        rec, prec = zip(*[ smooth_curve(c['recall'][k], c['precision'][k], bins=bins) for c in curves ])
+        for i in prec:
+            print(len(i))
+        rec, prec = rec[0], numpy.vstack(prec)
+        mean['precision'][k] = prec.mean(0)
+        var['precision'][k] = numpy.sqrt(prec.var(0)) # with or without sqrt?
+        high['precision'][k] = prec.max(0)
+        low['precision'][k] = prec.min(0)
 
-                ner_output, ned_output, re_output = self.model(inputs)
-                ner_loss = self.loss_f(ner_output, ner_target)
-                self.loss_plots['test']['NER'].append(ner_loss)
-                ned_loss1, ned_loss2 = self.NED_loss(ned_output, ned_target) if ned_output != None else (torch.tensor(1., device=self.device), torch.tensor(1., device=self.device)) 
-                self.loss_plots['test']['NED'].append(ned_loss1)
-                re_loss = self.RE_loss(re_output, re_target) if re_output != None else torch.tensor(1., device=self.device)
-                self.loss_plots['test']['RE'].append(re_loss)
-                loss += ner_loss.item() + ned_loss1.item() + ned_loss2.item() + re_loss.item()
-                test_ner_loss += ner_loss.item()
-                test_ned_loss1 += ned_loss1.item()
-                test_ned_loss2 += ned_loss2.item()
-                test_re_loss += re_loss.item()
+    #print(list(curves[0]['avg_precision'].keys()))
+    avg_precision = numpy.array([c['avg_precision']['micro'] for c in curves]).mean()
+    print(avg_precision)
+    #for c in (mean, low, high):
+    #display = PrecisionRecallDisplay(
+    #    recall=curves[0]['recall']["micro"],
+    #    precision=curves[0]['precision']["micro"],
+    #)
+    #display.plot()
+    #plt.show()
+    pat1 = mean['precision']['micro'][numpy.argmin(numpy.abs(rec-0.1))]
+    pat3 = mean['precision']['micro'][numpy.argmin(numpy.abs(rec-0.3))]
+    print(f">> P@10: {pat1} \t P@30: {pat3}")
+    try:
+        ax = kwargs['ax']
+    except:
+        fig, ax = plt.subplots(2)
 
-            return (loss / len(self.test_set), test_ner_loss / len(self.test_set), test_ned_loss1 / len(self.test_set), test_ned_loss2 / len(self.test_set), test_re_loss / len(self.test_set))
+    #ax.plot(mean['recall']['micro'], mean['precision']['micro'])
+    zoom = int(0.4*len(rec))
+    ax[0].plot(rec, mean['precision']['micro'], label='Average Precision: {:.3f}'.format(avg_precision))
+    ax[0].legend()
+    ax[1].plot(rec[:zoom], mean['precision']['micro'][:zoom])
+    #ax[0].fill_between(rec, low['precision']['micro'], high['precision']['micro'], alpha=0.4)
+    #ax[1].fill_between(rec, low['precision']['micro'], high['precision']['micro'], alpha=0.4)
+    ax[0].fill_between(rec, mean['precision']['micro'] - var['precision']['micro'], mean['precision']['micro'] + var['precision']['micro'], alpha=0.2)
+    ax[1].fill_between(rec[:zoom], mean['precision']['micro'][:zoom] - var['precision']['micro'][:zoom], mean['precision']['micro'][:zoom] + var['precision']['micro'][:zoom], alpha=0.2)
+    for i in (0,1):
+        ax[i].set_xlabel(r'$R$')
+        ax[i].set_ylabel(r'$P$')
+    #plt.show()
 
-    def RE_loss(self, re_out, groundtruth):
-        loss = 0.
-        pred = []
-        target = []
-        
-        gt = dict(zip(map(tuple, groundtruth[:,:2].tolist()), groundtruth[:,2]))
-        re = dict(zip(map(tuple, re_out[0].tolist()), re_out[1]))
-
-        for k,v in gt.items():
-            try:
-                p = re.pop(k)
-                target.append(v)
-                pred.append(p)
-            except:
-                pass
-        if self.model.training:
-            for v in re.values():
-                pred.append(v)
-                target.append(torch.tensor(0, device=self.device))
- 
-        if len(pred) > 1:
-            return self.loss_f(torch.vstack(pred), torch.hstack(target))
+def smooth_curve(x, y, bins=numpy.linspace(0,1,100)):
+    ind = numpy.digitize(x, bins, right=True)
+    curve = {}
+    y = numpy.array(y)
+    for i,j in enumerate(bins):
+        k = (ind == i).nonzero()
+        if len(k[0]) > 0:
+            curve[j] = y[k].mean(0)
         else:
-            return torch.tensor(1., device=self.device)
-        
-    def NED_loss(self, ned_out, groundtruth):
-        loss1, loss2 = torch.tensor(0., device=self.device), torch.tensor(0., device=self.device)
-        ned_dim = self.model.ned_dim
-        gt = dict(zip(groundtruth[:,0].int().tolist(), groundtruth[:,1:]))
-        ned_2 = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1][1]))
-        ned_1 = dict(zip(torch.flatten(ned_out[0]).tolist(), ned_out[1][0]))
+            curve[j] = curve[bins[i-1]]
+    #for i,yy in zip(ind, y):
+    #    try:
+    #        curve[bins[i]].append(yy)
+    #    except:
+    #        curve[bins[i]] = [yy]
+    xy = numpy.array([ (k,numpy.mean(v)) for k,v in sorted(curve.items(), key=lambda x: x[0])])
+    return xy[:,0], xy[:,1]
 
-        fake_target = torch.zeros(ned_dim, device=self.device)
-
-        ned_2_scores = []
-        ned_2_targets = []
-        for k, v in gt.items():
-            try:
-                candidates = ned_2[k][:,1:]
-                if v in candidates:
-                    ned_2_scores.append(ned_2[k][:,0])
-                    ind = ((ned_2[k][:,1:]-v).sum(-1)==0).nonzero()
-                    if len(ind) == 1:
-                        ned_2_targets.append(ind.view(1))
-                    else:
-                        ned_2_targets.append(ind[0].view(1)) # it happened to have two equal neighbors, strange...
-                loss1 += torch.sqrt(self.mse(ned_1.pop(k), v)) # pop cause we get rid of the already calculated {entity:embedding} pair
-            except:
-                #loss += torch.sqrt(mse(fake_target, v))
-                pass
-        if self.model.training:
-            for v in ned_1.values():
-                loss1 += torch.sqrt(self.mse(v, fake_target))
-                
-        if len(ned_2_scores) > 0 :
-            loss2 = self.loss_f(torch.vstack(ned_2_scores), torch.hstack(ned_2_targets))
-        else:
-            loss2 = torch.tensor(2.3, device=self.device)
-                
-        if loss1 != 0: 
-            return loss1, loss2
-        else:
-            return torch.tensor(1., device=self.device), torch.tensor(1., device=self.device)
-            
+def f1_var_supp_correlation(*rel2f1, rel_supp):
+    plt.hist(list(rel_supp.values()), bins='auto')
+    plt.show()
+    fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
+    for i,f in enumerate([numpy.var, numpy.mean]):
+        for rel in rel2f1:
+            rel2f = {r: f(numpy.array(v)) for r,v in rel.items()}
+            rel2f.pop('micro avg')
+            rel2f.pop('macro avg')
+            x, y = numpy.array([[rel_supp[r], v] for r,v in rel2f.items() if v !=0.]).T
+            logx, logy = numpy.log(x), numpy.log(y)
+            #x, y = numpy.array([rel_supp[r] for r in rel2var.keys()]), numpy.array(list(rel2var.values())) #+ 1e-12
+            #print(list(zip(numpy.log(x),numpy.log(y))))
+            ax[i].scatter(
+                logx,
+                logy,
+                s=80
+            )
+            deg = 1 if i == 0 else 3 
+            #fit = numpy.polyfit(numpy.log(logx), logy, 1)
+            #fit, cov = numpy.polyfit(logx, logy, deg, cov='unscaled')
+            linspace = numpy.linspace(min(logx), max(logx), 1000)
+            if i == 0:
+                fit = stats.linregress(logx, logy)
+                coeff, pval, rval, err = [fit.slope, fit.intercept], fit.pvalue, fit.rvalue, [fit.stderr, fit.intercept_stderr]
+                print(">> Fit: " +
+                      ' + '.join([ '({:.2f} +- {:.2f})*x^{}'.format(coeff[j], err[j], deg-j)
+                                   for j in range(len(coeff))])
+                )
+                print(f">> PValue: {pval} \n>> RValue: {fit.rvalue}")
+                #lab = (r"\begin{eqnarray*}"
+                #       r"y={:.2f}x {:.2f} \\"
+                #       r"r^2={:.2f}"
+                #       r"\end{eqnarray*}".format(coeff[0], coeff[1], rval**2))
+                #ax[i].plot(linspace, list(map(lambda x: numpy.sum([ fit[d]*x**(deg-d) for d in range(deg+1)]), linspace)), label=(r"$y={:.2f}x {:.2f}$ ($r^2={:.2f}$)".format(coeff[0], coeff[1], rval**2)))
+                ax[i].plot(linspace, list(map(lambda x: numpy.sum([ fit[d]*x**(deg-d) for d in range(deg+1)]), linspace)), label=(r"$r^2={:.2f}$".format(rval**2)), linewidth=5)
+            else:
+                plt.axvline(numpy.log(1000), color='black', linestyle='--', linewidth=3, alpha=0.4)
+                def fit_fun(x, a, b, c):
+                    return a*numpy.arctan(b*x) + c
+                coeff, cov = curve_fit(fit_fun, logx, logy)
+                #ax[i].plot(linspace, list(map(lambda x: fit_fun(x, *coeff), linspace)))
+            #ax[i].plot(linspace, list(map(lambda x: fit[0]*numpy.log(x)+fit[1], linspace)))
+            #print(sorted(rel2var.items(), key=lambda x: x[1]))
+    ax[0].set_xlabel(r"log$\,S$"), ax[0].set_ylabel(r"log$\;\sigma^2(F1)$")
+    ax[1].set_xlabel(r"log$\,S$"), ax[1].set_ylabel(r"log$\;\overline{F1}$")
+    ax[0].legend(prop={'size': 28})
+    fig.tight_layout()
+    plt.savefig('log(var)_log(mean)_vs_log(supp).pdf', format='pdf')
+    plt.show()
+    fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
+    rel2gap = {
+        r: (numpy.mean(rel2f1[1][r]) - numpy.mean(rel2f1[0][r])) / numpy.array([rel2f1[0][r], rel2f1[1][r]]).mean()
+        for r in rel2f1[0].keys()
+    }
+    rel2gap.pop('micro avg')
+    rel2gap.pop('macro avg')
+    for i,sign in enumerate(('+', '-')):
+        if sign == '+':
+            x, y = numpy.array([[rel_supp[r], v] for r,v in rel2gap.items() if v > 0.]).T
+        elif sign == '-':
+            x, y = numpy.array([[rel_supp[r], -v] for r,v in rel2gap.items() if v < 0.]).T
+        logx, logy = numpy.log(x), numpy.log(y)
+        ax[i].scatter(
+            logx,
+            logy,
+            c = 'red' if sign == '+' else 'black'
+        )
+        fit = numpy.polyfit(logx, logy, 1)
+        linspace = numpy.linspace(0, max(logx), 1000)
+        print(f">> Linear Fit: {fit}")
+        ax[i].plot(linspace, list(map(lambda x: fit[0]*x + fit[1], linspace)), c = 'red' if sign == '+' else 'black')
+    plt.show()
+    
+    fig, ax = plt.subplots(1, 1, figsize=(16,16), dpi=400)
+    gap_vs_f1 = [
+        (numpy.array([rel2f1[0][r], rel2f1[1][r]]).mean(),
+        numpy.mean(rel2f1[1][r]) - numpy.mean(rel2f1[0][r]))
+        for r in rel2f1[0].keys() if r not in ('micro avg', 'macro avg')
+    ]
+    x, y = zip(*gap_vs_f1)
+    maxdim = 500
+    dotsize = numpy.array([rel_supp[r] for r in rel2f1[0].keys() if r not in ('micro avg', 'macro avg')])
+    #dotsize = (maxdim / max(dotsize))*dotsize
+    print(len(dotsize), len(x))
+    ax.scatter(x, y, c = 'dimgrey', s=2*dotsize**(1/2))
+    ax.set_xlabel(r"$\overline{F1}$"), ax.set_ylabel(r"$\Delta \overline{F1}$")
+    plt.axhline(y=0, color='black', linestyle='--', alpha=0.9)
+    plt.axhline(y=numpy.mean(y), color='red', linestyle='--', alpha=0.9)
+    plt.axhline(y=numpy.median(y), color='purple', linestyle='--', alpha=0.9)
+    #ax.text(-0.05, numpy.median(y)+0.005, r'Mean', color='red', fontsize=20)
+    fig.tight_layout()
+    plt.savefig('gap_vs_f1.pdf', format='pdf')
+    print(numpy.median(y))
+    plt.show()

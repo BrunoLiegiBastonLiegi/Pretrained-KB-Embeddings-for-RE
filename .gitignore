@@ -5,3 +5,9 @@ __pycache__/
 *.pkl
 *.rel
 *.bak
+*.log
+*.json
+*~
+#*#
+*.pdf
+*.png
