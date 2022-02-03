@@ -22,7 +22,7 @@ If you find our work useful please consider citing us:
 ### Results Visualization
 - **plot_results.py**: Script for generating the plots shown in the paper.
 - **utils.py**: Various helper functions mainly used by **plot_results.py**.
-- **kg.py**: Little implementation of a Knowledge Graph object to visualize the graph of entities and relations.
+- **graph.py**: Little implementation of a Knowledge Graph object to visualize the graph of entities and relations.
 ### Datasets
 Directories containing all the files relevant to the corpora, such as the train and test files, saved results and/or saved models
 
