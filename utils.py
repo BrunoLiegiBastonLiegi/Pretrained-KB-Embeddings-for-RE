@@ -66,7 +66,7 @@ def collect_scores(res):
     print(f">> MICRO AVG\n > PRECISION: {numpy.mean(p['micro avg'])}\t RECALL: {numpy.mean(r['micro avg'])}\t F1: {numpy.mean(f1['micro avg'])}\n>> MACRO AVG\n > PRECISION: {numpy.mean(p['macro avg'])}\t RECALL: {numpy.mean(r['macro avg'])}\t F1: {numpy.mean(f1['macro avg'])}")
     return f1
 
-def collect_confusion_m(res: str) -> list:
+def collect_confusion_m(res):
     """
     Collect the confusion matrices for each experiment from the results file.
     """
@@ -131,8 +131,9 @@ def violin_plot(*results, legend=['no graph embeddings', 'graph embeddings'], cl
     
 
 def confusion_m_heat_plot(m, rels, **kwargs):
-    """
-    ax.imshow(m, **kwargs)
+    
+    ax = kwargs['ax']
+    ax.imshow(m)
     
     # We want to show all ticks...
     ax.set_xticks(numpy.arange(len(rels)))
@@ -142,18 +143,18 @@ def confusion_m_heat_plot(m, rels, **kwargs):
     ax.set_yticklabels(rels)
     
     # Rotate the tick labels and set their alignment.
-    plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+    plt.setp(ax.get_xticklabels(), rotation=90, ha="right",
              rotation_mode="anchor")
     
     # Loop over data dimensions and create text annotations.
-    for i in range(len(rels)):
-        for j in range(len(rels)):
-            text = ax.text(j, i, "{:.1f}".format(m[i, j]),
-                           ha="center", va="center", color="w")
-    """
-    disp = ConfusionMatrixDisplay(confusion_matrix=m, display_labels=rels)
-    disp.plot(ax=kwargs['ax'])
-    kwargs['ax'].tick_params(axis='x', labelrotation = 45)    
+    #for i in range(len(rels)):
+    #    for j in range(len(rels)):
+    #        text = ax.text(j, i, "{:.1f}".format(m[i, j]),
+    #                       ha="center", va="center", color="w")
+    
+    #disp = ConfusionMatrixDisplay(confusion_matrix=m, display_labels=rels)
+    #disp.plot(ax=kwargs['ax'])
+    #kwargs['ax'].tick_params(axis='x', labelrotation = 90)    
     
 
 def rel_embedding_plot(triplets: list, head_tail_diff: bool = False, proj=TSNE(n_components=2), **kwargs):
@@ -291,20 +292,43 @@ def smooth_curve(x, y, bins=numpy.linspace(0,1,100)):
 def f1_var_supp_correlation(*rel2f1, rel_supp):
     plt.hist(list(rel_supp.values()), bins='auto')
     plt.show()
+
+    z = {}
+    for r,v in rel2f1[0].items():
+        mean = numpy.mean(numpy.array(v))
+        var = numpy.var(numpy.array(v))
+        if mean == 0. or var == 0.:
+            z[r] = {'Support': rel_supp[r], 'MeanF1': mean, 'VarF1': var}
+    z = dict(sorted(z.items(), key=lambda x: x[1]['Support']))
+    with open('tmp.json','w') as f:
+        json.dump(z,f,indent=4)
+        
     fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
     for i,f in enumerate([numpy.var, numpy.mean]):
-        for rel in rel2f1:
+        for c,rel in enumerate(rel2f1):
             rel2f = {r: f(numpy.array(v)) for r,v in rel.items()}
             rel2f.pop('micro avg')
             rel2f.pop('macro avg')
-            x, y = numpy.array([[rel_supp[r], v] for r,v in rel2f.items() if v !=0.]).T
+            x, y = numpy.array([[rel_supp[r], v] for r,v in rel2f.items() if v!=0.]).T
+            x_z, y_z = numpy.array([[rel_supp[r]+1e-6, v+1e-6] for r,v in rel2f.items() if v==0.]).T
+            print(min(x_z), max(x_z), x_z.mean())
             logx, logy = numpy.log(x), numpy.log(y)
+            logx_z, logy_z = numpy.log(x_z), numpy.log(y_z)
             #x, y = numpy.array([rel_supp[r] for r in rel2var.keys()]), numpy.array(list(rel2var.values())) #+ 1e-12
             #print(list(zip(numpy.log(x),numpy.log(y))))
             ax[i].scatter(
                 logx,
                 logy,
-                s=80
+                s=80,
+                c='tab:blue' if c==0 else 'tab:orange'
+            )
+            ax[i].scatter(
+                logx_z,
+                logy_z,
+                s=80,
+                marker='x' if c==0 else '+',
+                c='black' if c==0 else 'dimgray',
+                alpha=0.4
             )
             deg = 1 if i == 0 else 3 
             #fit = numpy.polyfit(numpy.log(logx), logy, 1)
@@ -338,33 +362,33 @@ def f1_var_supp_correlation(*rel2f1, rel_supp):
     fig.tight_layout()
     plt.savefig('log(var)_log(mean)_vs_log(supp).pdf', format='pdf')
     plt.show()
-    fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
-    rel2gap = {
-        r: (numpy.mean(rel2f1[1][r]) - numpy.mean(rel2f1[0][r])) / numpy.array([rel2f1[0][r], rel2f1[1][r]]).mean()
-        for r in rel2f1[0].keys()
-    }
-    rel2gap.pop('micro avg')
-    rel2gap.pop('macro avg')
-    for i,sign in enumerate(('+', '-')):
-        if sign == '+':
-            x, y = numpy.array([[rel_supp[r], v] for r,v in rel2gap.items() if v > 0.]).T
-        elif sign == '-':
-            x, y = numpy.array([[rel_supp[r], -v] for r,v in rel2gap.items() if v < 0.]).T
-        logx, logy = numpy.log(x), numpy.log(y)
-        ax[i].scatter(
-            logx,
-            logy,
-            c = 'red' if sign == '+' else 'black'
-        )
-        fit = numpy.polyfit(logx, logy, 1)
-        linspace = numpy.linspace(0, max(logx), 1000)
-        print(f">> Linear Fit: {fit}")
-        ax[i].plot(linspace, list(map(lambda x: fit[0]*x + fit[1], linspace)), c = 'red' if sign == '+' else 'black')
-    plt.show()
+    #fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
+    #rel2gap = {
+    #    r: (numpy.mean(rel2f1[1][r]) - numpy.mean(rel2f1[0][r])) / numpy.array([rel2f1[0][r], rel2f1[1][r]]).mean()
+    #    for r in rel2f1[0].keys()
+    #}
+    #rel2gap.pop('micro avg')
+    #rel2gap.pop('macro avg')
+    #for i,sign in enumerate(('+', '-')):
+    #    if sign == '+':
+    #        x, y = numpy.array([[rel_supp[r], v] for r,v in rel2gap.items() if v > 0.]).T
+    #    elif sign == '-':
+    #        x, y = numpy.array([[rel_supp[r], -v] for r,v in rel2gap.items() if v < 0.]).T
+    #    logx, logy = numpy.log(x), numpy.log(y)
+    #    ax[i].scatter(
+    #        logx,
+    #        logy,
+    #        c = 'red' if sign == '+' else 'black'
+    #    )
+    #    fit = numpy.polyfit(logx, logy, 1)
+    #    linspace = numpy.linspace(0, max(logx), 1000)
+    #    print(f">> Linear Fit: {fit}")
+    #    ax[i].plot(linspace, list(map(lambda x: fit[0]*x + fit[1], linspace)), c = 'red' if sign == '+' else 'black')
+    #plt.show()
     
     fig, ax = plt.subplots(1, 1, figsize=(16,16), dpi=400)
     gap_vs_f1 = [
-        (numpy.array([rel2f1[0][r], rel2f1[1][r]]).mean(),
+        (numpy.concatenate((rel2f1[0][r], rel2f1[1][r])).mean(),
         numpy.mean(rel2f1[1][r]) - numpy.mean(rel2f1[0][r]))
         for r in rel2f1[0].keys() if r not in ('micro avg', 'macro avg')
     ]
@@ -372,12 +396,12 @@ def f1_var_supp_correlation(*rel2f1, rel_supp):
     maxdim = 500
     dotsize = numpy.array([rel_supp[r] for r in rel2f1[0].keys() if r not in ('micro avg', 'macro avg')])
     #dotsize = (maxdim / max(dotsize))*dotsize
-    print(len(dotsize), len(x))
-    ax.scatter(x, y, c = 'dimgrey', s=2*dotsize**(1/2))
-    ax.set_xlabel(r"$\overline{F1}$"), ax.set_ylabel(r"$\Delta \overline{F1}$")
+    print(len(dotsize), len(x), len(y))
+    ax.scatter(x, y, c = 'darkblue', s=2*dotsize**(1/2))
+    ax.set_xlabel(r"$MF1$"), ax.set_ylabel(r"$\Delta \overline{F1}$")
     plt.axhline(y=0, color='black', linestyle='--', alpha=0.9)
     plt.axhline(y=numpy.mean(y), color='red', linestyle='--', alpha=0.9)
-    plt.axhline(y=numpy.median(y), color='purple', linestyle='--', alpha=0.9)
+    plt.axhline(y=numpy.median(y), color='lime', linestyle='--', alpha=0.9)
     #ax.text(-0.05, numpy.median(y)+0.005, r'Mean', color='red', fontsize=20)
     fig.tight_layout()
     plt.savefig('gap_vs_f1.pdf', format='pdf')

@@ -19,6 +19,7 @@ if args.stat != None:
         stat = json.load(f)
     supp = { k: stat['train']['relation_types'][k] 
              for k in stat['test']['relation_types'].keys() }
+    t_supp = stat['test']['relation_types']
 
 if args.res != None:
     res, res_kg, rels = (args.res[0::2], args.res[1::2], []) if args.res != None else ([], [], [])
@@ -38,33 +39,42 @@ if args.res != None:
             plt.savefig(input('> Save figure to:\n'), format='pdf')
         plt.show()
         f1_var_supp_correlation(rr, rrkg, rel_supp=sp)
-        # P-R curve
-        font = {'size': 30}
-        rc('font', **font)
-        fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
-        #pr, pr_kg = collect_PR_curve(r), collect_PR_curve(rkg)
-        print('>> PR Curve Baseline')
-        PR_curve_plot(*pr, ax=ax)
-        print('>> PR Curve with Graph Embedding')
-        PR_curve_plot(*pr_kg, ax=ax)
-        plt.tight_layout()
-        if input('> Save figure? (y/n)\n') == 'y':
-            plt.savefig(input('> Save figure to:\n'), format='pdf')
-        plt.show()
+        try:
+            a
+            # P-R curve
+            font = {'size': 30}
+            rc('font', **font)
+            fig, ax = plt.subplots(1, 2, figsize=(32,16), dpi=400)
+            #pr, pr_kg = collect_PR_curve(r), collect_PR_curve(rkg)
+            print('>> PR Curve Baseline')
+            PR_curve_plot(*pr, ax=ax)
+            print('>> PR Curve with Graph Embedding')
+            PR_curve_plot(*pr_kg, ax=ax)
+            plt.tight_layout()
+            if input('> Save figure? (y/n)\n') == 'y':
+                plt.savefig(input('> Save figure to:\n'), format='pdf')
+            plt.show()
+        except:
+            print('> PR curve not available.')
+    print('>> Confusion Matrix')
     for r, rkg, rel in zip(res, res_kg, rels):
-        fig, ax = plt.subplots(1, 3, figsize=(16,9), dpi=400)
+        fig, ax = plt.subplots(1, 1, figsize=(16,9), dpi=400)
         #[ print(numpy.asarray(i).shape) for i in collect_confusion_m(rkg)]
         #print('MEAN:\n',numpy.mean(collect_confusion_m(r), axis=0))
         #print('MEAN:\n',numpy.mean(collect_confusion_m(rkg), axis=0))
-        m, mkg = numpy.mean(collect_confusion_m(r), axis=0), numpy.mean(collect_confusion_m(rkg), axis=0)
-        confusion_m_heat_plot(m-mkg, rel, ax=ax[2])
+        m, mkg = numpy.mean(m, axis=0), numpy.mean(mkg, axis=0)
+        #confusion_m_heat_plot(m-mkg, rels=rel, ax=ax[2])
         numpy.fill_diagonal(m, 0.) # manually set diagonal to zero to better see off-diagonal elements
         numpy.fill_diagonal(mkg, 0.) # manually set diagonal to zero to better see off-diagonal elements
         print(m.shape, mkg.shape)
         print(len(rel), rel)
-        confusion_m_heat_plot(m, rel, ax=ax[0])
-        confusion_m_heat_plot(mkg, rel, ax=ax[1])
+        font = {'size': 15}
+        rc('font', **font)
+        confusion_m_heat_plot(m, rels=rel, ax=ax)
+        #confusion_m_heat_plot(mkg, rels=rel, ax=ax[1])
         fig.tight_layout()
+        if input('> Save figure? (y/n)\n') == 'y':
+            plt.savefig(input('> Save figure to:\n'), format='pdf')
         plt.show()
         
 if args.compare != None:
