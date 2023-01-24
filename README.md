@@ -1,14 +1,27 @@
 # Pretrained Knowledge Base Embeddings for improved Sentential Relation Extraction
 
-Implementation of what is discussed in the paper [url](url).
+Implementation of what is discussed in the paper [https://aclanthology.org/2022.acl-srw.29/](https://aclanthology.org/2022.acl-srw.29/).
 
 ## Citation
 
 If you find our work useful please consider citing us:
 
 ```
-@something{Papaluca2022
-...
+@inproceedings{papaluca-etal-2022-pretrained,
+    title = "Pretrained Knowledge Base Embeddings for improved Sentential Relation Extraction",
+    author = "Papaluca, Andrea  and
+      Krefl, Daniel  and
+      Suominen, Hanna  and
+      Lenskiy, Artem",
+    booktitle = "Proceedings of the 60th Annual Meeting of the Association for Computational Linguistics: Student Research Workshop",
+    month = may,
+    year = "2022",
+    address = "Dublin, Ireland",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2022.acl-srw.29",
+    doi = "10.18653/v1/2022.acl-srw.29",
+    pages = "373--382",
+    abstract = "In this work we put forward to combine pretrained knowledge base graph embeddings with transformer based language models to improve performance on the sentential Relation Extraction task in natural language processing. Our proposed model is based on a simple variation of existing models to incorporate off-task pretrained graph embeddings with an on-task finetuned BERT encoder. We perform a detailed statistical evaluation of the model on standard datasets. We provide evidence that the added graph embeddings improve the performance, making such a simple approach competitive with the state-of-the-art models that perform explicit on-task training of the graph embeddings. Furthermore, we ob- serve for the underlying BERT model an interesting power-law scaling behavior between the variance of the F1 score obtained for a relation class and its support in terms of training examples.",
 }
 ```
 
